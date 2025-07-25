@@ -1,27 +1,38 @@
 package com.ledger.domain;
 
-public class SubCategory {
-    private String name;
-    private Category parentCategory;
+import java.util.Collections;
+import java.util.List;
 
-    public SubCategory(String name, Category parentCategory) {
-        this.name = name;
-        this.parentCategory = parentCategory;
+public class SubCategory extends CategoryComponent {
+    private CategoryComponent parent;
+
+    public SubCategory(String name, String type) {
+        super(name, type);
+    }
+    @Override
+    public void remove(CategoryComponent child) {
+        throw new UnsupportedOperationException("SubCategory does not support remove operation");
+    }
+    @Override
+    public void add(CategoryComponent child) {
+        throw new UnsupportedOperationException("SubCategory does not support add operation");
+    }
+    @Override
+    public List<CategoryComponent> getChildren() {
+        return Collections.emptyList(); //ritorna una lista vuota immutabile
+        //throw new UnsupportedOperationException("SubCategory does not support getChildren operation");
+    }
+    public void setParent(CategoryComponent parent) {
+        this.parent = parent;
+    }
+    public CategoryComponent getParent() {
+        return this.parent;
+    }
+    @Override
+    public void display(String indent) {
+        System.out.println(indent + "- " + name + " (" + type + ")");
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Category getParentCategory() {
-        return parentCategory;
-    }
-
-    public void setParentCategory(Category parentCategory) {
-        this.parentCategory = parentCategory;
-    }
 }
+
+
