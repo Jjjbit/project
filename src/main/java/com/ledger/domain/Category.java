@@ -9,10 +9,12 @@ public class Category extends CategoryComponent {
     public Category(String name, String type) {
         super(name, type);
     }
+
     @Override
     public void remove(CategoryComponent child) {
         children.remove(child);
     }
+
     @Override
     public void add(CategoryComponent child) { // Aggiunge una SubCategory a Category
         if (child instanceof SubCategory) {
@@ -20,9 +22,19 @@ public class Category extends CategoryComponent {
         }
         children.add(child); // Aggiunge una SubCategory a Category
     }
+
     @Override
     public List<CategoryComponent> getChildren() {
         return children;
+    }
+
+    @Override
+    public List<Transaction> getTransactions() {
+        List<Transaction> all = new ArrayList<>(this.transactions);
+        for (CategoryComponent child : children) {
+            all.addAll(child.getTransactions());
+        }
+        return all;
     }
     public void display(String indent) {
         System.out.println(indent + "- " + name + " (" + type + ")");
