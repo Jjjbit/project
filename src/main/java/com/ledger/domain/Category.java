@@ -28,13 +28,24 @@ public class Category extends CategoryComponent {
         return children;
     }
 
-    @Override
     public List<Transaction> getTransactions() {
         List<Transaction> all = new ArrayList<>(this.transactions);
         for (CategoryComponent child : children) {
             all.addAll(child.getTransactions());
         }
         return all;
+    }
+
+    @Override
+    public void printTransactionSummary() {
+        System.out.println("Transaction summary for: " + name);
+        for (CategoryComponent sub : this.children) {
+            sub.printTransactionSummary();
+        }
+    }
+
+    public CategoryComponent getParent() {
+        return null; // Le categorie non hanno un parent, ma le subcategorie sì
     }
     public void display(String indent) {
         System.out.println(indent + "- " + name + " (" + type + ")");
