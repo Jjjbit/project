@@ -1,6 +1,5 @@
 package com.ledger.domain;
 
-import java.util.Collections;
 import java.util.List;
 
 public class SubCategory extends CategoryComponent {
@@ -19,12 +18,10 @@ public class SubCategory extends CategoryComponent {
     }
     @Override
     public List<CategoryComponent> getChildren() {
-        return Collections.emptyList(); //ritorna una lista vuota immutabile
-        //throw new UnsupportedOperationException("SubCategory does not support getChildren operation");
+        //return Collections.emptyList(); //ritorna una lista vuota immutabile
+        throw new UnsupportedOperationException("SubCategory does not support getChildren operation");
     }
-    public void setParent(CategoryComponent parent) {
-        this.parent = parent;
-    }
+    @Override
     public CategoryComponent getParent() {
         return this.parent;
     }
@@ -32,7 +29,9 @@ public class SubCategory extends CategoryComponent {
     public void display(String indent) {
         System.out.println(indent + "- " + name + " (" + type + ")");
     }
-
+    public void setParent(CategoryComponent parent) { //cambia o assegna il parent della SubCategory
+        this.parent = parent;
+    }
 }
 
 
