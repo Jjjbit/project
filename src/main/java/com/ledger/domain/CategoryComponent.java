@@ -16,7 +16,10 @@ public abstract class CategoryComponent {
     public abstract void add(CategoryComponent child);
     public abstract List<CategoryComponent> getChildren();
     public abstract void display(String indent);
-
+    public abstract CategoryComponent getParent();
+    public String getName() {
+        return name;
+    }
     public String getType() {
         return type;
     }
