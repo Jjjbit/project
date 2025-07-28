@@ -1,14 +1,16 @@
 package com.ledger.domain;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 
-public class OutgoingLoanRecord extends LoanRecord {
+public class Lending extends BorrowingandLending {
     private List<Account> paymentAccounts;
 
-    public OutgoingLoanRecord(String borrower, Currency currency, BigDecimal amount, Account paymentAccount, String notes, Ledger ledger) {
-        super(borrower, amount, notes, ledger, currency);
+    public Lending(String borrower, Currency currency, BigDecimal amount, Account paymentAccount, String notes) {
+        super(borrower, amount, notes, currency);
+        paymentAccounts=new ArrayList<>();
         paymentAccounts.add(paymentAccount);
         paymentAccount.debit(amount);
     }

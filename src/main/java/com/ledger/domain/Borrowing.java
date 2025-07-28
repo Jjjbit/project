@@ -1,13 +1,15 @@
 package com.ledger.domain;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
-public class IncomingLoanRecord extends LoanRecord {
+public class Borrowing extends BorrowingandLending {
     private List<Account> depositAccounts; //può essere null
 
-    public IncomingLoanRecord(String lender, Currency currency, BigDecimal amount, Account depositAccount, String notes, Ledger ledger) {
-        super(lender, amount, notes, ledger, currency);
+    public Borrowing(String lender, Currency currency, BigDecimal amount, Account depositAccount, String notes) {
+        super(lender, amount, notes, currency);
+        depositAccounts = new ArrayList<>();
         depositAccounts.add(depositAccount);
         depositAccount.credit(amount);
     }

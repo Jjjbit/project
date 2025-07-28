@@ -3,22 +3,21 @@ package com.ledger.domain;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public abstract class LoanRecord {
+public abstract class BorrowingandLending {
     protected String name;
     protected BigDecimal totalAmount;
     protected BigDecimal repaidAmount= BigDecimal.ZERO;
     protected LocalDate loanDate= LocalDate.now();
     protected String notes; //può essere null
-    protected Ledger ledger;
     protected Currency currency;
     protected boolean includedInNetWorth = true;
+    protected float interestRate = 0.0f;
     protected boolean isEnded = false;
 
-    public LoanRecord(String name, BigDecimal amount, String notes, Ledger ledger, Currency currency) {
+    public BorrowingandLending(String name, BigDecimal amount, String notes, Currency currency) {
         this.name = name;
         this.totalAmount = amount;
         this.notes = notes;
-        this.ledger = ledger;
         this.currency = currency;
 
     }
@@ -52,6 +51,9 @@ public abstract class LoanRecord {
     }
     public void setloanDate(LocalDate loanDate) {
         this.loanDate = loanDate;
+    }
+    public void setInterestRate(float interestRate) {
+        this.interestRate = interestRate;
     }
 
 
