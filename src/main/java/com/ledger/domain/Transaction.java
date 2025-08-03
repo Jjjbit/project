@@ -12,7 +12,11 @@ public abstract class Transaction {
     protected CategoryComponent category;
 
     public Transaction(LocalDate date, BigDecimal amount, String description, Account account, Ledger ledger, CategoryComponent category) {
-        this.date = date;
+        if(date == null){
+            this.date= LocalDate.now();
+        }else{
+            this.date = date;
+        }
         this.amount = amount;
         this.description = description;
         this.account = account;
