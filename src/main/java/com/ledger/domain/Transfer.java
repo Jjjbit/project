@@ -13,9 +13,13 @@ public class Transfer extends Transaction{
     }
 
     public void execute() {
-        account.debit(amount);
-        toAccount.credit(amount);
-        ledger.addTransaction(this);
+        if (!account.hidden && !toAccount.hidden) {
+            if (account.selectable) {
+                account.debit(amount);
+                toAccount.credit(amount);
+                ledger.addTransaction(this);
+            }
+        }
     }
 }
 
