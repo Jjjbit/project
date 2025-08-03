@@ -8,8 +8,12 @@ public class Income extends Transaction {
     }
     @Override
     public void execute() {
-        account.credit(amount);
-        category.addTransaction(this);
+        if (!account.hidden && account.selectable) {
+            account.credit(amount);
+            category.addTransaction(this);
+            ledger.addTransaction(this);
+        }
+
     }
 }
 
