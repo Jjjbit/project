@@ -9,8 +9,12 @@ public class Expense extends Transaction {
     }
     @Override
     public void execute() {
-        account.debit(amount);
-        category.addTransaction(this);
+        if (!account.hidden && account.selectable){
+            account.debit(amount);
+            category.addTransaction(this);
+            ledger.addTransaction(this);
+        }
+
     }
 
 }
