@@ -1,8 +1,11 @@
 package com.ledger.domain;
 
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+@Entity
 public class InstallmentPlan {
 
     public enum FeeStrategy {
@@ -11,13 +14,22 @@ public class InstallmentPlan {
         FINAL
     }
 
+    @Id
+    private Long id; // Unique identifier for the installment plan
+
     private BigDecimal totalAmount;
     private int totalPeriods;
     private BigDecimal feeRate;
     private int paidPeriods = 0;
+
+    @Enumerated
     private FeeStrategy feeStrategy = FeeStrategy.EVENLY_SPLIT;
+
+    @ManyToOne
+    @JoinColumn(name = "linked_account_id")
     private Account linkedAccount;
 
+    public InstallmentPlan() {}
     public InstallmentPlan(BigDecimal totalAmount, int totalPeriods, BigDecimal feeRate, int paidPeriods, FeeStrategy feeStrategy, Account linkedAccount) {
         this.totalAmount = totalAmount;
         this.totalPeriods = totalPeriods;
