@@ -1,8 +1,14 @@
 package com.ledger.domain;
 
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
 import java.math.BigDecimal;
 
+@Entity
+@DiscriminatorValue("BasicAccount")
 public class BasicAccount extends Account {
+    public BasicAccount() {}
     public BasicAccount(
             String name,
             BigDecimal balance,
@@ -14,13 +20,9 @@ public class BasicAccount extends Account {
             AccountCategory category,
             User owner
     ) {
-        super(name, balance,type,category, owner, currency, note, includedInNetWorth, selectable);
+        super(name, balance, type,category, owner, currency, note, includedInNetWorth, selectable);
     }
 
-    /*@Override
-    public Map<String, Object> getMetadata() {
-        return Collections.emptyMap();
-    }*/
 }
 
 
