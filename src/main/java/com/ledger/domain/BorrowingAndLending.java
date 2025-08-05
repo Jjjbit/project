@@ -1,31 +1,62 @@
 package com.ledger.domain;
 
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public abstract class BorrowingandLending {
-    protected String name;
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+public abstract class BorrowingAndLending {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id; // identificatore univoco del prestito o del debito
+
+    @Column(name="name", length = 100, nullable = false)
+    protected String name; // nome del prestito o del debito
+    @ManyToOne
+    @JoinColumn(name = "owner_id")
+    protected User owner; // proprietario del prestito o del debito, può essere null
+
+    @Column(name = "total_amount", precision = 15, scale = 2, nullable = false)
     protected BigDecimal totalAmount;
+
+    @Column(name = "repaid_amount", precision = 15, scale = 2, nullable = false)
     protected BigDecimal repaidAmount= BigDecimal.ZERO;
+
+    @Column(name = "loan_date", nullable = false)
     protected LocalDate loanDate= LocalDate.now();
+
+    @Column(name = "notes", length = 500)
     protected String notes; //può essere null
+
+    @Transient
     protected Currency currency;
+
+    @Column(name = "included_in_net_worth", nullable = false)
     protected boolean includedInNetWorth = true;
-    protected float interestRate = 0.0f;
+
+    //@Column(name = "interest_rate", precision = 3, scale = 2, nullable = false)
+    //protected BigDecimal interestRate =BigDecimal.ZERO;
+
+    @Column(name = "is_ended", nullable = false)
     protected boolean isEnded = false;
 
-    public BorrowingandLending(String name, BigDecimal amount, String notes, Currency currency) {
+    public BorrowingAndLending() {}
+    public BorrowingAndLending(String name, BigDecimal amount, String notes, Currency currency, User owner) {
         this.name = name;
         this.totalAmount = amount;
         this.notes = notes;
         this.currency = currency;
-
+        this.owner = owner;
     }
-    public BigDecimal getTotalAmount() { return totalAmount; }
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
     public BigDecimal getRepaidAmount() { return repaidAmount; }
-    public boolean isFullyRepaid() {
+    /*public boolean isFullyRepaid() {
         return repaidAmount.compareTo(totalAmount) >= 0;
-    }
+    }*/
     public BigDecimal getRemaining() {
         return totalAmount.subtract(repaidAmount);
     }
@@ -49,18 +80,11 @@ public abstract class BorrowingandLending {
     public void setIncludedInNetWorth(boolean includedInNetWorth) {
         this.includedInNetWorth = includedInNetWorth;
     }
-    public void setloanDate(LocalDate loanDate) {
-        this.loanDate = loanDate;
-    }
-    public void setInterestRate(float interestRate) {
+    /*public void setInterestRate(BigDecimal interestRate) {
         this.interestRate = interestRate;
-    }
+    }*/
 
-
-    public void endLoan() {
-        isEnded = true;
-    }
-    private void checkAndUpdateStatus() {
+    public void checkAndUpdateStatus() {
         if (repaidAmount.compareTo(totalAmount) >= 0) {
             isEnded = true;
         }
