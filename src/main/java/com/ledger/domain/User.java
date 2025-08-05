@@ -126,6 +126,7 @@ public class User {
         BigDecimal totalBorrowing = borrowings.stream()
                 .filter(BorrowingAndLending::isIncoming)
                 .filter(record -> record.includedInNetWorth)
+                .filter(record -> !record.isEnded)
                 .map(record -> record.getTotalAmount().subtract(record.getRepaidAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
