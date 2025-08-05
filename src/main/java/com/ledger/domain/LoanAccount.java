@@ -1,9 +1,14 @@
 package com.ledger.domain;
 
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.MonthDay;
 
+@Entity
+@DiscriminatorValue("LoanAccount")
 public class LoanAccount extends Account {
 
     public enum RepaymentType {
@@ -13,15 +18,30 @@ public class LoanAccount extends Account {
         INTEREST_BEFORE_PRINCIPAL
     }
 
+    @Column(name = "total_periods", nullable = false)
+    @Max(value = 480, message = "Total periods cannot exceed 480")
     private int totalPeriods;
-    private int repaidPeriods;
-    private BigDecimal annualInterestRate;
-    private BigDecimal loanAmount;
-    private Account receivingAccount;
-    private MonthDay repaymentDate;
-    private RepaymentType repaymentType;
-    private BigDecimal monthlyRate = annualInterestRate.divide(BigDecimal.valueOf(12), 10, RoundingMode.HALF_UP);
 
+    @Column(name = "repaid_periods", nullable = false)
+    private int repaidPeriods;
+
+    @Column(name = "annual_interest_rate", precision = 3, scale = 2)
+    private BigDecimal annualInterestRate;
+
+    @Column(name = "loan_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal loanAmount;
+
+    @ManyToOne
+    @JoinColumn(name = "receiving_account_id")
+    private Account receivingAccount;
+
+    @Column(name = "repayment_date")
+    private MonthDay repaymentDate;
+
+    @Enumerated(EnumType.STRING)
+    private RepaymentType repaymentType;
+
+    public LoanAccount() {}
     public LoanAccount(
             String name,
             BigDecimal balance,
@@ -52,6 +72,13 @@ public class LoanAccount extends Account {
 
     }
 
+    public BigDecimal getMonthlyRate() {
+        if (annualInterestRate == null) return BigDecimal.ZERO;
+        return annualInterestRate
+                .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
+                .divide(BigDecimal.valueOf(12), 10, RoundingMode.HALF_UP);
+    }
+
     public void repay(Account fromAccount) {
         BigDecimal monthlyRepayment = getMonthlyRepayment(repaidPeriods + 1);
         if(fromAccount != null) {
@@ -73,6 +100,7 @@ public class LoanAccount extends Account {
     // total periods n: totalPeriods
     // loan amount P: loanAmount
     public BigDecimal getMonthlyRepayment(int period){
+        BigDecimal monthlyRate = getMonthlyRate();
         switch(this.repaymentType) {
             case EQUAL_INTEREST:
                 // For EQUAL_INTEREST, the monthly repayment is calculated as follows:
@@ -137,6 +165,7 @@ public class LoanAccount extends Account {
     }
 
     private BigDecimal calculateEqualInterestRepayment() {
+        BigDecimal monthlyRate = getMonthlyRate();
         BigDecimal numerator = loanAmount.multiply(monthlyRate).multiply(
                 (BigDecimal.ONE.add(monthlyRate)).pow(totalPeriods)
         );
@@ -145,6 +174,7 @@ public class LoanAccount extends Account {
         return monthlyPayment.multiply(BigDecimal.valueOf(totalPeriods)).setScale(2, RoundingMode.HALF_UP);
     }
     private BigDecimal calculateEqualPrincipalRepayment() {
+        BigDecimal monthlyRate = getMonthlyRate();
         BigDecimal monthlyPrincipal = loanAmount.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP); //monthlyPrincipal=loanAmount/totalPeriods
         BigDecimal count= BigDecimal.ZERO;
         for (int i = 1; i <= totalPeriods; i++) {
@@ -156,19 +186,20 @@ public class LoanAccount extends Account {
         return count.setScale(2, RoundingMode.HALF_UP); //total repayment
     }
     private BigDecimal calculateEqualPrincipalAndInterestRepayment() {
+        BigDecimal monthlyRate = getMonthlyRate();
         //totalInterest+loanAmount
         BigDecimal totalInterest = loanAmount.multiply(monthlyRate).multiply(BigDecimal.valueOf(totalPeriods)); //totalInterest=loanAmount*monthlyRate*totalPeriods
         return totalInterest.add(loanAmount).setScale(2, RoundingMode.HALF_UP); // total repayment=fixedPayment*totalPeriods
     }
     private BigDecimal calculateInterestBeforePrincipalRepayment() {
+        BigDecimal monthlyRate = getMonthlyRate();
         //(totalPeriods - 1) * monthlyInterest + (loanAmount + monthlyInterest)
         BigDecimal monthlyInterest=loanAmount.multiply(monthlyRate).setScale(2, RoundingMode.HALF_UP); //monthlyInterest=loanAmount*monthlyRate
         // For the first totalPeriods - 1 periods, only interest is paid
-        BigDecimal interestbeforefinal = monthlyInterest.multiply(BigDecimal.valueOf(totalPeriods - 1)); //interestBeforeFinal=monthlyInterest*(totalPeriods-1)
+        BigDecimal interestBeforeFinal = monthlyInterest.multiply(BigDecimal.valueOf(totalPeriods - 1)); //interestBeforeFinal=monthlyInterest*(totalPeriods-1)
         // In the last period, the full loan amount is repaid along with the last interest
         BigDecimal finalPayment = loanAmount.add(monthlyInterest); //finalPayment=loanAmount+monthlyInterest
-        return interestbeforefinal.add(finalPayment).setScale(2, RoundingMode.HALF_UP); // total repayment=interestBeforeFinal+finalPayment
-
+        return interestBeforeFinal.add(finalPayment).setScale(2, RoundingMode.HALF_UP); // total repayment=interestBeforeFinal+finalPayment
     }
 
 }
