@@ -13,8 +13,13 @@ public abstract class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Long id;
 
+    @Column(name= "date", nullable = false)
     protected LocalDate date;
+
+    @Column(name = "amount", precision = 15, scale = 2, nullable = false)
     protected BigDecimal amount;
+
+    @Column(name = "note", length = 500)
     protected String note;
 
     @ManyToOne
