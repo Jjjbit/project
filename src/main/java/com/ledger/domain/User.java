@@ -57,8 +57,15 @@ public class User {
     public String getUsername() {
         return username;
     }
+    public String getPasswordHash(){return password;}
     public void setUsername(String username) {
         this.username = username;
+    }
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    public Long getId() {
+        return id;
     }
     public void createLedger(String name) {
         Ledger ledger = new Ledger(name, this);
@@ -70,6 +77,7 @@ public class User {
     public void setBudget(BigDecimal amount, Budget.BudgetPeriod p, CategoryComponent c) {
         budgets.add(new Budget(amount, p, c,this));
     }
+
     public void hideAccount(Account account) {
         account.hide();
     }
