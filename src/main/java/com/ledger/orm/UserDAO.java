@@ -1,41 +1,11 @@
 package com.ledger.orm;
 
 import com.ledger.domain.User;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.NoResultException;
-import jakarta.persistence.PersistenceContext;
-import jakarta.transaction.Transactional;
 
-@Transactional
-public class UserDAO {
-    @PersistenceContext
-    private EntityManager em;
-
-
-    public void save(User user) {
-        em.persist(user);
-    } // Save a new user to the database
-    public User findById(Long id) {
-        return em.find(User.class, id);
-    }
-    public User findByUsername(String username) {
-        try {
-            return em.createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
-                    .setParameter("username", username)
-                    .getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
-    }
-
-    public void update(User user) {
-        em.merge(user);
-    }
-    public void delete(Long id) {
-        User user = em.find(User.class, id);
-        if (user != null) {
-            em.remove(user);
-        }
-    }
-
+public interface UserDAO {
+    void save(User user); // Save a new user to the database
+    User findById(Long id); // Find a user by ID
+    User findByUsername(String username); // Find a user by username
+    void update(User user); // Update an existing user
+    void delete(Long id); // Delete a user by ID
 }
