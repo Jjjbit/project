@@ -1,9 +1,13 @@
 package com.ledger.business;
 
+import com.ledger.domain.Account;
+import com.ledger.domain.Ledger;
 import com.ledger.domain.PasswordUtils;
 import com.ledger.domain.User;
 import com.ledger.orm.UserDAO;
 import jakarta.transaction.Transactional;
+
+import java.util.List;
 
 public class UserController {
     private UserDAO userDAO;
@@ -11,6 +15,7 @@ public class UserController {
     public UserController( UserDAO userDAO) {
         this.userDAO = userDAO;
     }
+
     public String login(String username, String password) {
         User user = userDAO.findByUsername(username);
         if (user == null) return "User not found";
@@ -37,5 +42,13 @@ public class UserController {
             userDAO.update(user);
         }
     }
+    public List<Account> getAccountsByUserId(Long userId) {
+        return userDAO.findById(userId).getAccounts();
+    }
+
+    public List<Ledger> getLedgersByUserId(Long userId) {
+        return userDAO.findById(userId).getLedgers();
+    }
+
 
 }
