@@ -1,6 +1,8 @@
 package com.ledger.business;
 
-import com.ledger.domain.*;
+import com.ledger.domain.Account;
+import com.ledger.domain.Transaction;
+import com.ledger.domain.User;
 import com.ledger.orm.AccountDAO;
 import com.ledger.orm.UserDAO;
 import jakarta.transaction.Transactional;
@@ -13,66 +15,105 @@ public class AccountController {
     private AccountDAO accountDAO;
     private UserDAO userDAO;
 
-    public AccountController(AccountDAO accountDAO) {
+    public AccountController(AccountDAO accountDAO, UserDAO userDAO) {
         this.accountDAO = accountDAO;
+        this.userDAO = userDAO;
     }
 
-    public void createAccount(Account account) {
-        accountDAO.save(account);
-    }
     public Account getAccount(Long id) {
         return accountDAO.findById(id);
     }
-    public List<Account> getAccountsByUserId(Long userId) {
-        return accountDAO.findByUserId(userId);
-    }
-
-    public void updateAccount(Account account) {
-        accountDAO.update(account);
-    }
+    
+    @Transactional
     public void deleteAccount(Long id) {
+        Account account = accountDAO.findById(id);
         accountDAO.delete(id);
+        if (account == null) {
+            throw new IllegalArgumentException("Account not found");
+        }
+        User owner = account.getOwner();
+        owner.deleteAccount(account);
+        userDAO.update(owner);
     }
 
     @Transactional
     public void hideAccount(Long accountId) {
-        accountDAO.setHidden(accountId);
+        Account account = accountDAO.findById(accountId);
+        if (account == null) {
+            throw new IllegalArgumentException("Account not found");
+        }else{
+            account.hide();
+            accountDAO.update(account);
+        }
+    }
+    @Transactional
+    public void setIncludedInNetAsset(Long accountId, boolean included) {
+        Account account = accountDAO.findById(accountId);
+        if( account == null) {
+            throw new IllegalArgumentException("Account not found");
+        }else{
+            account.setIncludedInNetAsset(included);
+            accountDAO.update(account);
+            userDAO.update(account.getOwner());
+        }
+    }
+
+    @Transactional
+    public void setSelectable(Long accountId, boolean selectable) {
+        Account account = accountDAO.findById(accountId);
+        if (account == null) {
+            throw new IllegalArgumentException("Account not found");
+        } else {
+            account.setSelectable(selectable);
+            accountDAO.update(account);
+        }
+    }
+
+
+    @Transactional
+    public void debitAccount(Long accountId, BigDecimal amount) {
+        Account account = accountDAO.findById(accountId);
+        if (account != null) {
+            account.debit(amount);
+            accountDAO.update(account);
+            userDAO.update(account.getOwner());
+        } else {
+            throw new IllegalArgumentException("Account not found");
+        }
+    }
+
+    @Transactional
+    public void creditAccount(Long accountId, BigDecimal amount) {
+        Account account = accountDAO.findById(accountId);
+        if (account != null) {
+            account.credit(amount);
+            accountDAO.update(account);
+            userDAO.update(account.getOwner());
+        } else {
+            throw new IllegalArgumentException("Account not found");
+        }
+    }
+
+
+    @Transactional
+    public void updateAccount(Long accountId, Account updatedAccount) {
+        Account account = accountDAO.findById(accountId);
+        if (account != null) {
+            account.setName(updatedAccount.getName());
+            account.setNotes(updatedAccount.getNotes());
+            account.setBalance(updatedAccount.getBalance());
+            account.setIncludedInNetAsset(updatedAccount.getIncludedInNetAsset());
+            account.setSelectable(updatedAccount.getSelectable());
+
+            accountDAO.update(account);
+            userDAO.update(account.getOwner());
+        } else {
+            throw new IllegalArgumentException("Account not found");
+        }
     }
 
     public List<Transaction> getTransactionsForMonth(Long accountId, YearMonth month) {
-        return accountDAO.findTransactionsByAccountAndMonth(accountId, month);
+        Account account = accountDAO.findById(accountId);
+        return account.getTransactionsForMonth(month);
     }
-
-    @Transactional
-    public void repayDeb(Long creditAccountId, BigDecimal amount, Long fromAccountId, Long userId) {
-        CreditAccount creditAccount = (CreditAccount) accountDAO.findById(creditAccountId);
-        Account fromAccount = (fromAccountId != null) ? accountDAO.findById(fromAccountId) : null;
-        User user = userDAO.findById(userId);
-
-        if (creditAccount != null) {
-            creditAccount.repayDebt(amount, fromAccount);
-            accountDAO.update(creditAccount);
-            if (fromAccount != null) {
-                accountDAO.update(fromAccount);
-            }
-            userDAO.update(user);
-        }
-    }
-
-    @Transactional
-    public void repayLoan(Long loanAccountId, Long fromAccountId) {
-        LoanAccount loanAccount = (LoanAccount) accountDAO.findById(loanAccountId);
-        Account fromAccount = (fromAccountId != null) ? accountDAO.findById(fromAccountId) : null;
-
-        if (loanAccount != null) {
-            loanAccount.repayLoan(fromAccount);
-            accountDAO.update(loanAccount);
-            if (fromAccount != null) {
-                accountDAO.update(fromAccount);
-            }
-        }
-    }
-
-
-
 }
