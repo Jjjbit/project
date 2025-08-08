@@ -44,12 +44,9 @@ public class LoanAccount extends Account {
     public LoanAccount() {}
     public LoanAccount(
             String name,
-            BigDecimal balance,
             User owner,
             String note,
-            Currency currency,
             boolean includedInNetWorth,
-            boolean selectable,
             int totalPeriods,
             int repaidPeriods,
             BigDecimal interestRate,
@@ -57,7 +54,7 @@ public class LoanAccount extends Account {
             Account receivingAccount,
             MonthDay repaymentDate,
             RepaymentType repaymentType) {
-        super(name, balance, AccountType.LOAN, AccountCategory.CREDIT, owner, currency, note, includedInNetWorth, selectable);
+        super(name, null, AccountType.LOAN, AccountCategory.CREDIT, owner, note, includedInNetWorth, false);
         this.totalPeriods = totalPeriods;
         this.repaidPeriods = repaidPeriods;
         this.annualInterestRate = interestRate;
@@ -69,9 +66,19 @@ public class LoanAccount extends Account {
         }else{
             this.repaymentType = repaymentType;
         }
-
+        this.owner.updateTotalLiabilities();
+        this.owner.updateNetAsset();
     }
 
+    @Override
+    public void debit(BigDecimal amount) {
+        throw new UnsupportedOperationException("Debit operation is not supported for LoanAccount");
+    }
+
+    @Override
+    public void credit(BigDecimal amount) {
+        throw new UnsupportedOperationException("Credit operation is not supported for LoanAccount");
+    }
     public BigDecimal getMonthlyRate() {
         if (annualInterestRate == null) return BigDecimal.ZERO;
         return annualInterestRate
@@ -79,7 +86,7 @@ public class LoanAccount extends Account {
                 .divide(BigDecimal.valueOf(12), 10, RoundingMode.HALF_UP);
     }
 
-    public void repay(Account fromAccount) {
+    public void repayLoan(Account fromAccount) {
         BigDecimal monthlyRepayment = getMonthlyRepayment(repaidPeriods + 1);
         if(fromAccount != null) {
             fromAccount.debit(monthlyRepayment);
@@ -87,9 +94,11 @@ public class LoanAccount extends Account {
             this.owner.updateNetAssetsAndLiabilities(monthlyRepayment);
         }
         this.repaidPeriods++;
+        this.owner.updateTotalAssets();
+        this.owner.updateTotalLiabilities();
+        this.owner.updateNetAsset();
     }
     public BigDecimal getRemainingAmount() {
-        //remaining amount = loanAmount - (monthly repayment * repaid periods)
         BigDecimal total = BigDecimal.ZERO;
         for (int i = repaidPeriods + 1; i <= totalPeriods; i++) {
             total = total.add(getMonthlyRepayment(i));
