@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 
 @Entity
 public class Budget {
@@ -36,19 +37,23 @@ public class Budget {
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
+
     public Budget(){}
     public Budget(BigDecimal amount, BudgetPeriod period, CategoryComponent category, User owner) {
         this.amount = amount;
         this.period = period;
         this.category = category;
         this.owner = owner;
-        this.startDate = getStartDateForPeriod(LocalDate.now(), this.period);
+        this.startDate = getStartDateForPeriod(this.period);
+        this.endDate= getEndDateForPeriod(this.period);
     }
-    public static LocalDate getStartDateForPeriod(LocalDate today, BudgetPeriod period) {
+    public static LocalDate getStartDateForPeriod(BudgetPeriod period) {
         return switch (period) {
-            case YEARLY -> LocalDate.of(today.getYear(), 1, 1);
-            case MONTHLY -> LocalDate.of(today.getYear(), today.getMonth(), 1);
-            case WEEKLY -> today.with(DayOfWeek.SUNDAY);
+            case YEARLY -> LocalDate.of(LocalDate.now().getYear(), 1, 1);
+            case MONTHLY -> LocalDate.of(LocalDate.now().getYear(), LocalDate.now().getMonthValue(), 1);
+            case WEEKLY -> LocalDate.now().with(DayOfWeek.MONDAY); //primo giorno è lunedì
         };
     }
 
@@ -64,17 +69,21 @@ public class Budget {
     public User getOwner() {
         return owner;
     }
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
     public boolean isForCategory() {
         return category != null;
     }
 
-    public boolean isTransactionInPeriod(Transaction t, BudgetPeriod p) {
+    public static boolean isTransactionInPeriod( Transaction t, BudgetPeriod p) {
         LocalDate txDate = t.getDate();
         return switch (p) {
-            case MONTHLY -> txDate.getYear() == startDate.getYear()
-                    && txDate.getMonth() == startDate.getMonth();
-            case WEEKLY -> ChronoUnit.WEEKS.between(startDate, txDate) == 0;
-            case YEARLY -> txDate.getYear() == startDate.getYear();
+            case MONTHLY -> txDate.getYear() == getStartDateForPeriod(p).getYear()
+                    && txDate.getMonth() == getStartDateForPeriod(p).getMonth();
+            case WEEKLY -> ChronoUnit.WEEKS.between(getStartDateForPeriod(p), txDate) == 0;
+            case YEARLY -> txDate.getYear() == getStartDateForPeriod(p).getYear();
         };
     }
     public boolean belongsTo(CategoryComponent cc) {
@@ -86,6 +95,17 @@ public class Budget {
             case MONTHLY -> date.isBefore(startDate.plusMonths(1));
             case WEEKLY -> date.isBefore(startDate.plusWeeks(1));
             case YEARLY -> date.isBefore(startDate.plusYears(1));
+        };
+    }
+
+    public LocalDate getEndDateForPeriod(BudgetPeriod p){
+        if (startDate == null) {
+            return null;
+        }
+        return switch (p){
+            case YEARLY -> startDate.with(TemporalAdjusters.lastDayOfYear());
+            case MONTHLY -> startDate.with(TemporalAdjusters.lastDayOfMonth());
+            case WEEKLY -> startDate.with(DayOfWeek.SUNDAY);
         };
     }
     
