@@ -25,9 +25,6 @@ public class Expense extends Transaction {
             if (!account.getCategory().equals(AccountCategory.CREDIT) && account.balance.compareTo(amount) < 0) {
                 throw new IllegalArgumentException("Insufficient funds in the account to execute this transaction.");
             }
-            if (account.getCategory().equals(AccountCategory.CREDIT) && amount.compareTo(BigDecimal.ZERO) < 0) {
-
-            }
             account.debit(amount);
             account.addTransaction(this);
             category.addTransaction(this);
