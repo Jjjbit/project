@@ -18,11 +18,15 @@ public class Lending extends BorrowingAndLending {
     private List<Account> paymentAccounts;
 
     public Lending() {}
-    public Lending(String borrower, Currency currency, BigDecimal amount, Account paymentAccount, String notes, User owner) {
-        super(borrower, amount, notes, currency, owner);
+    public Lending(String borrower, Currency currency, BigDecimal amount, Account paymentAccount, String notes, User owner, Ledger ledger) {
+        super(borrower, amount, notes, currency, owner, ledger);
         paymentAccounts=new ArrayList<>();
         paymentAccounts.add(paymentAccount);
         paymentAccount.debit(amount);
+        if(!includedInNetWorth) {
+            owner.updateTotalAssets();
+            owner.updateNetAsset();
+        }
     }
 
     @Override
