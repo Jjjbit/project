@@ -30,7 +30,7 @@ public class User {
     public List<Budget> budgets= new ArrayList<>();
 
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
-    public List<BorrowingAndLending> borrowings;
+    public List<BorrowingAndLending> bAndL;
 
     @Column(name = "total_assets", columnDefinition = "DECIMAL(15,2) DEFAULT 0.00", nullable = false)
     public BigDecimal totalAssets;
@@ -41,6 +41,9 @@ public class User {
     @Column(name = "net_assets", columnDefinition = "DECIMAL(15,2) DEFAULT 0.00", nullable = false)
     public BigDecimal netAssets;
 
+    @Column(name = "is_admin", nullable = false)
+    public boolean isAdmin = false;
+
     public User (){}
     public User(String username, String password){
         this.username = username;
@@ -48,7 +51,7 @@ public class User {
         ledgers= new ArrayList<>();
         createLedger("Default Ledger");
         accounts = new ArrayList<>();
-        borrowings = new ArrayList<>();
+        bAndL = new ArrayList<>();
         this.totalAssets = getTotalAssets();
         this.totalLiabilities = getTotalLiabilities();
         this.netAssets = getNetAssets();
@@ -64,12 +67,21 @@ public class User {
     public void setPassword(String password) {
         this.password = password;
     }
+    public void setAdmin(boolean isAdmin) {
+        this.isAdmin = isAdmin;
+    }
     public Long getId() {
         return id;
     }
     public void createLedger(String name) {
         Ledger ledger = new Ledger(name, this);
         ledgers.add(ledger);
+    }
+    public List<Ledger> getLedgers() {
+        return ledgers;
+    }
+    public List<Account> getAccounts() {
+        return accounts;
     }
     public List<Budget> getBudgets() {
         return budgets;
@@ -107,12 +119,39 @@ public class User {
         accounts.add(account);
     }
 
+    public BigDecimal getTotalLending(){
+        return bAndL.stream()
+                .filter(record -> !record.isIncoming())
+                .filter(record -> record.includedInNetWorth)
+                .filter(record -> !record.isEnded)
+                .map(BorrowingAndLending::getRemaining)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal getTotalBorrowing() {
+        return bAndL.stream()
+                .filter(BorrowingAndLending::isIncoming)
+                .filter(record -> record.includedInNetWorth)
+                .filter(record -> !record.isEnded)
+                .map(BorrowingAndLending::getRemaining)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     public BigDecimal getTotalAssets() {
-        return accounts.stream()
+        BigDecimal totalBalance = accounts.stream()
                 .filter(account -> !account.getType().equals(AccountType.LOAN))
                 .filter(account -> account.includedInNetAsset && !account.hidden)
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalLending = bAndL.stream()
+                .filter(record -> !record.isIncoming())
+                .filter(record -> !record.includedInNetWorth)
+                .filter(record -> !record.isEnded)
+                .map(record -> record.getRemaining())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return totalBalance.subtract(totalLending);
     }
 
     public BigDecimal getNetAssets() {
@@ -126,13 +165,6 @@ public class User {
                 .map(account -> ((CreditAccount) account).getCurrentDebt())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalBorrowing = borrowings.stream()
-                .filter(BorrowingAndLending::isIncoming)
-                .filter(record -> record.includedInNetWorth)
-                .filter(record -> !record.isEnded)
-                .map(record -> record.getTotalAmount().subtract(record.getRepaidAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         BigDecimal totalUnpaidLoan = accounts.stream()
                 .filter(account -> account.getCategory() == AccountCategory.CREDIT)
                 .filter(account -> account instanceof LoanAccount)
@@ -140,7 +172,7 @@ public class User {
                 .map(account -> ((LoanAccount) account).getRemainingAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return totalCreditDebt.add(totalBorrowing).add(totalUnpaidLoan);
+        return totalCreditDebt.add(getTotalBorrowing()).add(totalUnpaidLoan);
     }
     public void updateNetAssetsAndLiabilities(BigDecimal amount) {
         this.totalLiabilities = getTotalLiabilities().subtract(amount);
