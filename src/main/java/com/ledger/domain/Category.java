@@ -1,9 +1,9 @@
 package com.ledger.domain;
 
-import jakarta.persistence.DiscriminatorValue;
-import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 
+import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -12,20 +12,21 @@ import java.util.stream.Collectors;
 @Entity
 @DiscriminatorValue("Category")
 public class Category extends CategoryComponent {
+
     @OneToMany(mappedBy = "parent", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
     private List<CategoryComponent> children = new ArrayList<>();
 
     public Category() {}
-    public Category(String name, String type) {
+    public Category(String name, CategoryType type) {
         super(name, type);
     }
 
-    public void changeLevel(CategoryComponent root, CategoryComponent parent) {
-        if (this instanceof Category && this.getChildren().isEmpty()) {
+    public void changeLevel( CategoryComponent parent) {
+        if (this instanceof Category && this.getChildren().isEmpty() && this.type != CategoryType.ROOT) {
             SubCategory sub = new SubCategory(this.name, this.type);
             sub.transactions.addAll(this.getTransactions()); // Copia le transazioni dalla categoria alla subcategoria
             parent.add(sub);
-            root.remove(this);
+            this.parent.remove(this);
         }else {
             System.out.println("Cannot demote a category with subcategory.");
         }
@@ -37,11 +38,17 @@ public class Category extends CategoryComponent {
     }
 
     @Override
-    public void add(CategoryComponent child) { // Aggiunge una SubCategory a Category
-        if (child instanceof SubCategory) {
-            ((SubCategory) child).setParent(this); // Imposta il parent della SubCategory
+    public void add(CategoryComponent child) {
+        if (this.type == CategoryType.ROOT &&
+                (child.type != CategoryType.ROOT)) {
+            children.add(child);
+            child.setParent(this);
+        } else if (this.type != CategoryType.ROOT && child.type == this.type) {
+            children.add(child);
+            child.setParent(this);
+        } else {
+            throw new IllegalArgumentException("Invalid category hierarchy");
         }
-        children.add(child); // Aggiunge una SubCategory a Category
     }
 
     @Override
@@ -61,6 +68,47 @@ public class Category extends CategoryComponent {
                 .collect(Collectors.toList());
     }
 
+    //ritorna una lista di budget di questa categoria e delle sue subcategorie
+    public List<Budget> getBudgetsForPeriod(Budget.BudgetPeriod p) {
+        List<Budget> result = new ArrayList<>();
+        result.add(super.getBudgetForPeriod(p));
+
+        children.forEach(sc -> result.add(sc.getBudgetForPeriod(p)));
+
+        return result;
+    }
+
+    @Override
+    public List<Transaction> getTransactionsForMonth(YearMonth month) {
+       return getTransactions().stream()
+                .filter(t -> t.getDate().getYear() == month.getYear() && t.getDate().getMonth() == month.getMonth())
+                .sorted(Comparator.comparing(Transaction::getDate).reversed())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public BigDecimal getTotalBudgetForPeriod(Budget.BudgetPeriod period) {
+        BigDecimal ownBudget = super.getTotalBudgetForPeriod(period);
+
+        BigDecimal subBudgets = children.stream()
+                .map(sc -> sc.getTotalBudgetForPeriod(period))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return ownBudget.add(subBudgets);
+    }
+
+    @Override
+    public BigDecimal getTotalSpendingForPeriod(User user, Budget.BudgetPeriod period) {
+        BigDecimal ownSpending = super.getTotalSpendingForPeriod(user, period);
+
+        BigDecimal subSpending = children.stream()
+                .map(sc -> sc.getTotalSpendingForPeriod(user, period))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return ownSpending.add(subSpending);
+    }
+
+
     //stampa un riepilogo delle transazioni della categoria in ordine decrescente di data
     @Override
     public void printTransactionSummary() {
@@ -71,9 +119,15 @@ public class Category extends CategoryComponent {
         }
     }
 
+    @Override
     public CategoryComponent getParent() {
-        return null; // Le categorie non hanno un parent, ma le subcategorie sì
+        if(this.type==CategoryType.ROOT) {
+            return null; // Le categorie di tipo ROOT non hanno un parent
+        }else{
+            return this.parent; //altrimenti
+        }
     }
+    @Override
     public void display(String indent) {
         System.out.println(indent + "- " + name + " (" + type + ")");
         for (CategoryComponent child : children) {
