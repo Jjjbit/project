@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+
+import static com.ledger.domain.Budget.getStartDateForPeriod;
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
@@ -52,11 +55,16 @@ public abstract class Transaction {
         this.ledger = ledger;
         this.category = category;
         this.type = type;
-        this.id++;
     }
     public abstract void execute();
     public LocalDate getDate() {
         return date;
+    }
+    public TransactionType getType() {
+        return type;
+    }
+    public Long getId() {
+        return id;
     }
     public BigDecimal getAmount() {
         return amount;
@@ -69,6 +77,9 @@ public abstract class Transaction {
     }
     public Ledger getLedger() {
         return ledger;
+    }
+    public CategoryComponent getCategory() {
+        return category;
     }
     public void setAmount(BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -97,6 +108,14 @@ public abstract class Transaction {
     }
     public void setLedger(Ledger ledger){
         this.ledger = ledger;
+    }
+    public boolean isInPeriod(Budget.BudgetPeriod p) {
+        return switch (p) {
+            case MONTHLY -> date.getYear() == getStartDateForPeriod(p).getYear()
+                    && date.getMonth() == getStartDateForPeriod(p).getMonth();
+            case WEEKLY -> ChronoUnit.WEEKS.between(getStartDateForPeriod(p), date) == 0;
+            case YEARLY -> date.getYear() == getStartDateForPeriod(p).getYear();
+        };
     }
 }
 
