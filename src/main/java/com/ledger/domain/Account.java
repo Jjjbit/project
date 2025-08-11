@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,11 +26,11 @@ public abstract class Account {
     protected BigDecimal balance;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name= "account_type", nullable = false)
     protected AccountType type;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name= "account_category", nullable = false)
     protected AccountCategory category;
 
     @ManyToOne
@@ -37,8 +38,8 @@ public abstract class Account {
     protected User owner;
 
     //@JoinColumn(name = "currency_id")
-    @Transient
-    protected Currency currency;
+    //@Transient
+    //protected Currency currency;
 
     @Column(length = 500)
     protected String notes;
@@ -46,22 +47,22 @@ public abstract class Account {
     @Column(name = "is_hidden", nullable = false)
     protected boolean hidden=false;
 
-    @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "account",cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = false)
     protected List<Transaction> transactions = new ArrayList<>(); //account -> più transazioni. relazione tra Account e Transaction è aggregazione
 
     @Column(name = "included_in_net_asset", nullable = false)
     protected boolean includedInNetAsset = true;
 
-    @Column(nullable = false)
+    @Column(name= "selectable", nullable = false)
     protected boolean selectable = true;
 
     public Account() {}
-    public Account(String name,
+    public Account(
+                   String name,
                    BigDecimal balance,
                    AccountType type,
                    AccountCategory category,
                    User owner,
-                   Currency currency,
                    String notes,
                    boolean includedInNetAsset,
                    boolean selectable) {
@@ -70,7 +71,7 @@ public abstract class Account {
         this.type = type;
         this.category = category;
         this.owner = owner;
-        this.currency = currency;
+        //this.currency = currency;
         this.notes = notes;
         this.includedInNetAsset = includedInNetAsset;
         this.selectable = selectable;
@@ -78,10 +79,10 @@ public abstract class Account {
 
     public void credit(BigDecimal amount) {
         balance = balance.add(amount);
+        owner.updateTotalAssets();
+        owner.updateNetAsset();
     }
-    public void debit(BigDecimal amount) {
-        balance = balance.subtract(amount);
-    }
+    public abstract void debit(BigDecimal amount);
     public void hide() {
         this.hidden = true;
     }
@@ -89,29 +90,34 @@ public abstract class Account {
         transactions.add(transaction);
     }
 
-    public void setIncludedInNetWorth(){
-        this.includedInNetAsset =false;
+    public void setIncludedInNetAsset(boolean includedInNetAsset) {
+        this.includedInNetAsset =includedInNetAsset;
     }
-    public void setSelectable(){
-        this.selectable = false;
+    public void setSelectable(boolean selectable) {
+        this.selectable = selectable;
      }
     public void setOwner(User owner) {
         this.owner = owner;
     }
-    public void setCurrencyCode(Currency currency) {
+    /*public void setCurrencyCode(Currency currency) {
         this.currency = currency;
-    }
+    }*/
     public void setId(Long id) {
         this.id = id;
     }
     public void setName(String name) {
         this.name = name;
     }
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
     public void setBalance(BigDecimal balance) {
         if (balance.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Balance cannot be negative.");
         }
         this.balance = balance;
+        this.owner.updateTotalAssets();
+        this.owner.updateNetAsset();
     }
 
     public AccountType getType() { return type; }
@@ -121,8 +127,13 @@ public abstract class Account {
     public String getName() {
         return name;
     }
-    public List<Transaction> getTransactions() {
-        return transactions;
+    public User getOwner() {
+        return owner;
+    }
+    public List<Transaction> getTransactions() { //ritorna tutte le transazioni associate a questo account
+        return transactions.stream()
+                .sorted(Comparator.comparing(Transaction::getDate).reversed())
+                .collect(Collectors.toList());
     }
     public BigDecimal getBalance() {
         return this.balance;
@@ -130,13 +141,25 @@ public abstract class Account {
     public Long getId() {
         return id;
     }
+    public String getNotes() {
+        return notes;
+    }
+    public Boolean getSelectable() {
+        return selectable;
+    }
+    public Boolean getHidden() {
+        return hidden;
+    }
+    public Boolean getIncludedInNetAsset() {
+        return includedInNetAsset;
+    }
 
     public List<Transaction> getTransactionsForMonth(YearMonth month) {
         return transactions.stream()
-                .filter(tx -> YearMonth.from(tx.getDate()).equals(month))
+                .filter(t -> t.getDate().getYear() == month.getYear() && t.getDate().getMonth() == month.getMonth())
+                .sorted(Comparator.comparing(Transaction::getDate).reversed())
                 .collect(Collectors.toList());
     }
-
 
 }
 
