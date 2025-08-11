@@ -121,4 +121,7 @@ public class AccountController {
         Account account = accountDAO.findById(accountId);
         return account.getTransactionsForMonth(month);
     }
+    public List<Account> getAccountsByUserId(Long userId) {
+        return userDAO.findById(userId).getAccounts();
+    }
 }
