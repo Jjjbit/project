@@ -7,6 +7,7 @@ import java.time.LocalDate;
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
 public abstract class BorrowingAndLending {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -14,6 +15,7 @@ public abstract class BorrowingAndLending {
 
     @Column(name="name", length = 100, nullable = false)
     protected String name; // nome del prestito o del debito
+
     @ManyToOne
     @JoinColumn(name = "owner_id")
     protected User owner; // proprietario del prestito o del debito, può essere null
@@ -36,6 +38,10 @@ public abstract class BorrowingAndLending {
     @Column(name = "included_in_net_worth", nullable = false)
     protected boolean includedInNetWorth = true;
 
+    @ManyToOne
+    @JoinColumn(name = "ledger_id", nullable = false)
+    protected Ledger ledger;
+
     //@Column(name = "interest_rate", precision = 3, scale = 2, nullable = false)
     //protected BigDecimal interestRate =BigDecimal.ZERO;
 
@@ -43,17 +49,21 @@ public abstract class BorrowingAndLending {
     protected boolean isEnded = false;
 
     public BorrowingAndLending() {}
-    public BorrowingAndLending(String name, BigDecimal amount, String notes, Currency currency, User owner) {
+    public BorrowingAndLending(String name, BigDecimal amount, String notes, Currency currency, User owner, Ledger ledger) {
         this.name = name;
         this.totalAmount = amount;
         this.notes = notes;
         this.currency = currency;
         this.owner = owner;
+        this.ledger = ledger;
     }
     public BigDecimal getTotalAmount() {
         return totalAmount;
     }
     public BigDecimal getRepaidAmount() { return repaidAmount; }
+    public LocalDate getDate() {
+        return loanDate;
+    }
     /*public boolean isFullyRepaid() {
         return repaidAmount.compareTo(totalAmount) >= 0;
     }*/
@@ -89,8 +99,5 @@ public abstract class BorrowingAndLending {
             isEnded = true;
         }
     }
-
-
-
 
 }
