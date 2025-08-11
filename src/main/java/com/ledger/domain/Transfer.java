@@ -27,17 +27,31 @@ public class Transfer extends Transaction{
         this.account = from;
         this.toAccount = to;
     }
+    public Account getToAccount() {
+        return toAccount;
+    }
 
     public void execute() {
-        if (!account.hidden && !toAccount.hidden) {
-            if (account.selectable && toAccount.selectable) {
-                account.debit(amount);
-                account.addTransaction(this);
-                toAccount.credit(amount);
-                toAccount.addTransaction(this);
-                ledger.addTransaction(this);
-            }
+        if (account == null || toAccount == null) {
+            throw new IllegalStateException("Accounts must not be null.");
         }
+        if (account.equals(toAccount)) {
+            throw new IllegalArgumentException("Cannot transfer to the same account.");
+        }
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be positive.");
+        }
+        if (!account.selectable || !toAccount.selectable || account.hidden || toAccount.hidden) {
+            throw new IllegalStateException("Accounts are not valid for transfer.");
+        }
+
+        account.debit(amount);
+        account.addTransaction(this);
+
+        toAccount.credit(amount);
+        toAccount.addTransaction(this);
+
+        ledger.addTransaction(this);
     }
 }
 
