@@ -2,7 +2,6 @@ package com.ledger.business;
 
 import com.ledger.domain.Account;
 import com.ledger.domain.Transaction;
-import com.ledger.domain.User;
 import com.ledger.orm.AccountDAO;
 import com.ledger.orm.UserDAO;
 import jakarta.transaction.Transactional;
@@ -23,17 +22,23 @@ public class AccountController {
     public Account getAccount(Long id) {
         return accountDAO.findById(id);
     }
-    
+
+    @Transactional
+    public void createAccount(Account account) {
+        accountDAO.save(account);
+    }
+
     @Transactional
     public void deleteAccount(Long id) {
         Account account = accountDAO.findById(id);
-        accountDAO.delete(id);
+
         if (account == null) {
             throw new IllegalArgumentException("Account not found");
         }
-        User owner = account.getOwner();
-        owner.deleteAccount(account);
-        userDAO.update(owner);
+        accountDAO.delete(id);
+        //User owner = account.getOwner();
+        //owner.deleteAccount(account);
+        //userDAO.update(owner);
     }
 
     @Transactional
@@ -54,7 +59,7 @@ public class AccountController {
         }else{
             account.setIncludedInNetAsset(included);
             accountDAO.update(account);
-            userDAO.update(account.getOwner());
+            //userDAO.update(account.getOwner());
         }
     }
 
@@ -76,7 +81,7 @@ public class AccountController {
         if (account != null) {
             account.debit(amount);
             accountDAO.update(account);
-            userDAO.update(account.getOwner());
+            //userDAO.update(account.getOwner());
         } else {
             throw new IllegalArgumentException("Account not found");
         }
@@ -88,7 +93,7 @@ public class AccountController {
         if (account != null) {
             account.credit(amount);
             accountDAO.update(account);
-            userDAO.update(account.getOwner());
+            //userDAO.update(account.getOwner());
         } else {
             throw new IllegalArgumentException("Account not found");
         }
@@ -106,7 +111,7 @@ public class AccountController {
             account.setSelectable(updatedAccount.getSelectable());
 
             accountDAO.update(account);
-            userDAO.update(account.getOwner());
+            //userDAO.update(account.getOwner());
         } else {
             throw new IllegalArgumentException("Account not found");
         }
