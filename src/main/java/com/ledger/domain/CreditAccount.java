@@ -31,19 +31,21 @@ public class CreditAccount extends Account {
                          BigDecimal balance,
                          User owner,
                          String notes,
-                         Currency currency,
                          boolean includedInNetWorth,
                          boolean selectable,
                          BigDecimal creditLimit,
-                         BigDecimal currentDebt,
+                         BigDecimal currentDebt, //contiene importo residuo delle rate
                          MonthDay billDate,
                          MonthDay dueDate, AccountType type) {
-        super(name, balance, type, AccountCategory.CREDIT, owner, currency, notes, includedInNetWorth, selectable);
+        super(name, balance, type, AccountCategory.CREDIT, owner, notes, includedInNetWorth, selectable);
         this.creditLimit = creditLimit;
         this.currentDebt = currentDebt;
         this.billDate = billDate;
         this.dueDate = dueDate;
         this.installmentPlans = new ArrayList <>();
+        this.owner.updateTotalAssets();
+        this.owner.updateTotalLiabilities();
+        this.owner.updateNetAsset();
     }
 
     public BigDecimal getCurrentDebt() {
@@ -52,16 +54,19 @@ public class CreditAccount extends Account {
 
     @Override
     public void debit(BigDecimal amount) {
-        if (amount.compareTo(balance) > 0) {
-            if (currentDebt.add(amount.subtract(balance)).compareTo(creditLimit) > 0) {
+        if (amount.compareTo(balance) > 0) { //amount>balance
+            if (currentDebt.add(amount.subtract(balance)).compareTo(creditLimit) > 0) { //currentDebt+(amount-balance)>creditLimit
                 throw new IllegalArgumentException("Amount exceeds credit limit");
             }else{
                 balance = BigDecimal.ZERO;
                 currentDebt = currentDebt.add(amount.subtract(balance));
             }
+        }else{
+            balance = balance.subtract(amount);
         }
-        currentDebt = currentDebt.add(amount);
-        this.owner.updateNetAssetsAndLiabilities(amount.negate());
+        this.owner.updateTotalLiabilities();
+        this.owner.updateTotalAssets();
+        this.owner.updateNetAsset();
     }
     public void addNewDebt(BigDecimal amount) {
         currentDebt = currentDebt.add(amount);
@@ -75,6 +80,9 @@ public class CreditAccount extends Account {
         }else {
             this.owner.updateNetAssetsAndLiabilities(amount);
         }
+        this.owner.updateTotalAssets();
+        this.owner.updateTotalLiabilities();
+        this.owner.updateNetAsset();
     }
 
     public List<InstallmentPlan> getInstallmentPlans() {
@@ -82,8 +90,24 @@ public class CreditAccount extends Account {
     }
     public void addInstallmentPlan(InstallmentPlan installmentPlan) {
         installmentPlans.add(installmentPlan);
-        //currentDebt = currentDebt.add(installmentPlan.getRemainingAmount());
+        currentDebt = currentDebt.add(installmentPlan.getRemainingAmount());
     }
+    public void removeInstallmentPlan(InstallmentPlan installmentPlan) {
+        installmentPlans.remove(installmentPlan);
+        currentDebt = currentDebt.subtract(installmentPlan.getRemainingAmount());
+    }
+    public void repayInstallmentPlan(InstallmentPlan installmentPlan) {
+        if (installmentPlans.contains(installmentPlan)) {
+            BigDecimal amount = installmentPlan.getMonthlyPayment(installmentPlan.getPaidPeriods() + 1);
+            installmentPlan.repayOnePeriod();
+            currentDebt = currentDebt.subtract(amount);
+            this.owner.updateNetAssetsAndLiabilities(amount);
+        } else {
+            throw new IllegalArgumentException("Installment plan not found in this account");
+        }
+    }
+
+    //ritorna il totale delle rate ancora da pagare collegate a questo account
     public BigDecimal getRemainingInstallmentDebt(){
         return installmentPlans.stream()
                 .map(InstallmentPlan::getRemainingAmount)
