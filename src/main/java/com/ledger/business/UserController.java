@@ -1,19 +1,20 @@
 package com.ledger.business;
 
-import com.ledger.domain.Account;
-import com.ledger.domain.Ledger;
 import com.ledger.domain.PasswordUtils;
 import com.ledger.domain.User;
+import com.ledger.orm.CategoryComponentDAO;
 import com.ledger.orm.UserDAO;
 import jakarta.transaction.Transactional;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 public class UserController {
     private UserDAO userDAO;
+    private CategoryComponentDAO categoryComponentDAO;
 
-    public UserController( UserDAO userDAO) {
+    public UserController( UserDAO userDAO, CategoryComponentDAO categoryComponentDAO) {
         this.userDAO = userDAO;
+        this.categoryComponentDAO = categoryComponentDAO;
     }
 
     public String login(String username, String password) {
@@ -42,7 +43,11 @@ public class UserController {
             userDAO.update(user);
         }
     }
-    public List<Account> getAccountsByUserId(Long userId) {
+    public User getUserById(Long userId) {
+        return userDAO.findById(userId);
+    }
+
+    /*public List<Account> getAccountsByUserId(Long userId) {
         return userDAO.findById(userId).getAccounts();
     }
 
@@ -50,5 +55,46 @@ public class UserController {
         return userDAO.findById(userId).getLedgers();
     }
 
+    public BigDecimal getTotalBudgetByUserId(Long userId, Budget.BudgetPeriod period) {
+        User user = userDAO.findById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found");
+        }
+        BudgetManager budgetManager = new BudgetManager(user.getBudgets());
+        return budgetManager.getUserTotalBudget(user, period);
+    }
+
+    public BigDecimal getCategoryBudgetsByUserId(Long userId, Long categoryId, Budget.BudgetPeriod period) {
+        User user = userDAO.findById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found");
+        }
+        CategoryComponent category = categoryComponentDAO.findById(categoryId);
+        BudgetManager budgetManager = new BudgetManager(user.getBudgets());
+        return budgetManager.getCategoryBudgets(user, period, category);
+    }*/
+
+    public BigDecimal getTotalNetAssetByUserId(Long userId) {
+        User user = userDAO.findById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found");
+        }
+        return user.getNetAssets();
+    }
+
+    public BigDecimal getTotalAssetsByUserId(Long userId) {
+        User user = userDAO.findById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found");
+        }
+        return user.getTotalAssets();
+    }
+    public BigDecimal getTotalLiabilitiesByUserId(Long userId) {
+        User user = userDAO.findById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found");
+        }
+        return user.getTotalLiabilities();
+    }
 
 }
