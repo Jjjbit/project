@@ -15,11 +15,19 @@ public class InstallmentPlan {
     }
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // Unique identifier for the installment plan
 
+    @Column(name = "total_amount", precision = 15, scale = 2, nullable = false)
     private BigDecimal totalAmount;
+
+    @Column(name = "total_periods", nullable = false)
     private int totalPeriods;
+
+    @Column(name = "fee_rate", precision = 5, scale = 4)
     private BigDecimal feeRate;
+
+    @Column(name = "paid_periods")
     private int paidPeriods = 0;
 
     @Enumerated
@@ -39,6 +47,12 @@ public class InstallmentPlan {
         this.linkedAccount = linkedAccount;
     }
 
+    public void setLinkedAccount(Account linkedAccount) {
+        this.linkedAccount = linkedAccount;
+    }
+    public int getPaidPeriods() {
+        return paidPeriods;
+    }
     public BigDecimal getMonthlyPayment(int period) {
         BigDecimal base = totalAmount.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP); //base amount per period
         BigDecimal fee = totalAmount.multiply(feeRate); //total fee for the installment
@@ -73,6 +87,7 @@ public class InstallmentPlan {
             BigDecimal amountToPay = getMonthlyPayment(paidPeriods + 1);
             linkedAccount.debit(amountToPay); // Debit the amount from the linked account
             paidPeriods++;
+            linkedAccount.owner.updateNetAssetsAndLiabilities(amountToPay);
         } else {
             throw new IllegalStateException("All periods have already been paid.");
         }
@@ -90,3 +105,5 @@ public class InstallmentPlan {
         return paidPeriods >= totalPeriods;
     }
 }
+
+
