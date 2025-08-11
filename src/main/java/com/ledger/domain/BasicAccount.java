@@ -12,7 +12,6 @@ public class BasicAccount extends Account {
     public BasicAccount(
             String name,
             BigDecimal balance,
-            Currency currency,
             String note,
             boolean includedInNetWorth,
             boolean selectable,
@@ -20,7 +19,14 @@ public class BasicAccount extends Account {
             AccountCategory category,
             User owner
     ) {
-        super(name, balance, type,category, owner, currency, note, includedInNetWorth, selectable);
+        super(name, balance, type,category, owner, note, includedInNetWorth, selectable);
+    }
+
+    @Override
+    public void debit(BigDecimal amount) {
+        balance = balance.subtract(amount);
+        owner.updateTotalAssets();
+        owner.updateNetAsset();
     }
 
 }
