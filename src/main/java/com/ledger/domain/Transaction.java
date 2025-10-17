@@ -4,13 +4,9 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-
-import static com.ledger.domain.Budget.getStartDateForPeriod;
 
 @Entity
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
+@Inheritance(strategy = InheritanceType.JOINED)
 public abstract class Transaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,45 +22,58 @@ public abstract class Transaction {
     protected String note;
 
     @ManyToOne
-    @JoinColumn(name = "account_id")
-    protected Account account; //relaizone tra Transaction e Account è associazione. più transazioni->un account
+    @JoinColumn(name = "from_account_id")
+    //@JsonIgnoreProperties({"outgoingTransactions", "incomingTransactions", "transactions"})
+    protected Account fromAccount; //relaizone tra Transaction e Account è associazione. più transazioni->un account
+
+    @ManyToOne
+    @JoinColumn(name = "to_account_id")
+    //@JsonIgnoreProperties({"outgoingTransactions", "incomingTransactions", "transactions"})
+    protected Account toAccount; //per i trasferimenti tra conti
 
     @ManyToOne
     @JoinColumn(name = "ledger_id")
+    //@JsonBackReference("ledger-transactions")
     protected Ledger ledger; //relazione tra Transaction e Ledger è aggregazione. più transazioni -> un ledger
 
     @ManyToOne
     @JoinColumn(name = "category_id")
-    protected CategoryComponent category;
+    //@JsonBackReference("category-transactions")
+    protected LedgerCategory category;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "transaction_type", nullable = false)
     protected TransactionType type;
 
     public Transaction() {}
     public Transaction(LocalDate date,
                        BigDecimal amount,
                        String description,
-                       Account account,
+                       Account fromAccount,
+                       Account toAccount,
                        Ledger ledger,
-                       CategoryComponent category,
+                       LedgerCategory category,
                        TransactionType type) {
         this.date = date != null ? date : LocalDate.now();
         this.amount = amount;
         this.note = description;
-        this.account = account;
+        this.fromAccount = fromAccount;
+        this.toAccount = toAccount;
         this.ledger = ledger;
         this.category = category;
         this.type = type;
     }
-    public abstract void execute();
-    public LocalDate getDate() {
-        return date;
+    public LedgerCategory getCategory() {
+        return category;
+    }
+    public Long getId() {
+        return id;
     }
     public TransactionType getType() {
         return type;
     }
-    public Long getId() {
-        return id;
+    public LocalDate getDate() {
+        return date;
     }
     public BigDecimal getAmount() {
         return amount;
@@ -72,14 +81,14 @@ public abstract class Transaction {
     public String getNote() {
         return note;
     }
-    public Account getAccount() {
-        return account;
+    public Account getFromAccount() {
+        return fromAccount;
+    }
+    public Account getToAccount() {
+        return toAccount;
     }
     public Ledger getLedger() {
         return ledger;
-    }
-    public CategoryComponent getCategory() {
-        return category;
     }
     public void setAmount(BigDecimal amount) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -100,25 +109,16 @@ public abstract class Transaction {
     public void setNote(String note) {
         this.note = note;
     }
-    public void setCategory(CategoryComponent category) {
+    public void setCategory(LedgerCategory category) {
         this.category = category;
     }
-    public void setAccount(Account account) {
-        this.account = account;
+    public void setFromAccount(Account account) {
+        this.fromAccount = account;
+    }
+    public void setToAccount(Account toAccount) {
+        this.toAccount = toAccount;
     }
     public void setLedger(Ledger ledger){
         this.ledger = ledger;
     }
-    public boolean isInPeriod(Budget.BudgetPeriod p) {
-        return switch (p) {
-            case MONTHLY -> date.getYear() == getStartDateForPeriod(p).getYear()
-                    && date.getMonth() == getStartDateForPeriod(p).getMonth();
-            case WEEKLY -> ChronoUnit.WEEKS.between(getStartDateForPeriod(p), date) == 0;
-            case YEARLY -> date.getYear() == getStartDateForPeriod(p).getYear();
-        };
-    }
 }
-
-
-
-
