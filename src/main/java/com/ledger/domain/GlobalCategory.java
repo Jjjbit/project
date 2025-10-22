@@ -1,0 +1,52 @@
+package com.ledger.domain;
+
+import jakarta.persistence.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = "global_categories")
+public class GlobalCategory { // General category not tied to a specific ledger
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(length = 100, nullable = false)
+    private String name;
+
+    @ManyToOne
+    @JoinColumn(name = "parent_id")
+    private GlobalCategory parent;
+
+    @Column(length = 20, nullable = false)
+    protected CategoryType type;
+
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<GlobalCategory> children = new ArrayList<>();
+
+    public GlobalCategory() {}
+    public GlobalCategory(String name, CategoryType type) {
+        this.type = type;
+        this.name = name;
+    }
+
+    // --- Getter/Setter ---
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getParentId() {
+        return parent != null ? parent.getId() : 0;
+    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public void setChildren(List<GlobalCategory> children) { this.children = children; }
+    public CategoryType getType() { return type; }
+    public void setType(CategoryType type) { this.type = type; }
+    public GlobalCategory getParent() { return parent; }
+    public void setParent(GlobalCategory parent) { this.parent = parent; }
+    public List<GlobalCategory> getChildren() { return children; }
+
+}
+
+
