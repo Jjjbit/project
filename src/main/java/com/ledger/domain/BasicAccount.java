@@ -1,12 +1,12 @@
 package com.ledger.domain;
 
-import jakarta.persistence.DiscriminatorValue;
-import jakarta.persistence.Entity;
+import jakarta.persistence.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Entity
-@DiscriminatorValue("BasicAccount")
+@Table(name = "basic_account")
 public class BasicAccount extends Account {
     public BasicAccount() {}
     public BasicAccount(
@@ -24,9 +24,7 @@ public class BasicAccount extends Account {
 
     @Override
     public void debit(BigDecimal amount) {
-        balance = balance.subtract(amount);
-        owner.updateTotalAssets();
-        owner.updateNetAsset();
+        this.balance = this.balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
     }
 
 }
