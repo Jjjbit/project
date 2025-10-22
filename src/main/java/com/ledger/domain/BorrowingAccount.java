@@ -7,7 +7,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 
 @Entity
-//@DiscriminatorValue("BORROWING")
 @Table(name = "borrowing_account")
 public class BorrowingAccount extends Account{
 
