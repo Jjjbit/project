@@ -7,7 +7,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "global_categories")
-public class GlobalCategory { // General category not tied to a specific ledger
+public class Category { // General category not tied to a specific ledger
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -17,17 +17,17 @@ public class GlobalCategory { // General category not tied to a specific ledger
 
     @ManyToOne
     @JoinColumn(name = "parent_id")
-    private GlobalCategory parent;
+    private Category parent;
 
     @Column(length = 20, nullable = false)
     protected CategoryType type;
 
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<GlobalCategory> children = new ArrayList<>();
+    private List<Category> children = new ArrayList<>();
 
-    public GlobalCategory() {}
-    public GlobalCategory(String name, CategoryType type) {
+    public Category() {}
+    public Category(String name, CategoryType type) {
         this.type = type;
         this.name = name;
     }
@@ -40,12 +40,12 @@ public class GlobalCategory { // General category not tied to a specific ledger
     }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public void setChildren(List<GlobalCategory> children) { this.children = children; }
+    public void setChildren(List<Category> children) { this.children = children; }
     public CategoryType getType() { return type; }
     public void setType(CategoryType type) { this.type = type; }
-    public GlobalCategory getParent() { return parent; }
-    public void setParent(GlobalCategory parent) { this.parent = parent; }
-    public List<GlobalCategory> getChildren() { return children; }
+    public Category getParent() { return parent; }
+    public void setParent(Category parent) { this.parent = parent; }
+    public List<Category> getChildren() { return children; }
 
 }
 
