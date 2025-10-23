@@ -9,75 +9,61 @@ import java.util.Comparator;
 import java.util.List;
 
 @Entity
+@Table(name = "ledgers")
 public class Ledger {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 50, nullable = false, unique = true)
+    @Column(length =50, nullable= false, unique = true)
     private String name;
 
     @ManyToOne
-    @JoinColumn(name = "owner_id")
+    @JoinColumn(name = "user_id")
     private User owner;
 
-    @OneToMany(mappedBy = "ledger", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = false)
-    private List<Transaction> transactions=new ArrayList<>(); //relazione tra Transaction e Ledger è aggregazione
+    @OneToMany(mappedBy = "ledger", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Transaction> transactions=new ArrayList<>(); //relazione tra Transaction e Ledger è composizione
 
     @OneToMany(mappedBy = "ledger", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BorrowingAndLending> loanRecords = new ArrayList<>(); // relazione tra LoanRecord e Ledger è aggregazione
-
+    private List<LedgerCategory> categories = new ArrayList<>();
 
     public Ledger() {}
     public Ledger(String name, User owner) {
         this.name = name;
         this.owner = owner;
     }
-    public void addTransaction(Transaction tx) {
-        transactions.add(tx); // Aggiunge una transazione al ledger
+
+    public String getName(){return this.name;}
+    public void setName(String name){this.name=name;}
+    public User getOwner(){return this.owner;}
+    public void setOwner(User owner){this.owner=owner;}
+    public List<Transaction> getTransactions() {
+        return transactions;
     }
-    public void removeTransaction(Transaction tx) {
-        transactions.remove(tx); // Rimuove una transazione dal ledger
+    public void setTransactions(List<Transaction> transactions) {
+        this.transactions = transactions;
     }
-    public void addLoanRecord(BorrowingAndLending loanRecord) {
-        loanRecords.add(loanRecord);
-    }
-    public void setName(String name) {
-        this.name = name;
-    }
+    public List<LedgerCategory> getCategories(){return categories;}
+    public void setCategories(List<LedgerCategory> categories){this.categories=categories;}
+
     public Long getId() {
         return id;
     }
-    public List<Transaction> getTransactions() {
-        return transactions.stream()
-                .sorted(Comparator.comparing(Transaction::getDate).reversed())
-                .toList();
-    }
-    public List<BorrowingAndLending> getLoanRecords() {
-        return loanRecords.stream()
-                .sorted(Comparator.comparing(BorrowingAndLending::getDate).reversed())
-                .toList();
+    public void setId(Long id) {
+        this.id = id;
     }
 
+
+    //does not matter income or expense
     public List<Transaction> getTransactionsForMonth(YearMonth month) {
         return transactions.stream()
                 .filter(t -> t.getDate().getYear() == month.getYear() && t.getDate().getMonth() == month.getMonth())
                 .sorted(Comparator.comparing(Transaction::getDate).reversed())
                 .toList();
     }
-    public List<Transaction> getTransactionsForYear(int year) {
-        return transactions.stream()
-                .filter(tx -> tx.getDate().getYear() == year)
-                .sorted(Comparator.comparing(Transaction::getDate).reversed())
-                .toList();
-    }
-    public String getName() {
-        return name;
-    }
-    public User getOwner() {
-        return owner;
-    }
-    public BigDecimal getTotalIncomeForMonth(YearMonth month) {
+
+    public BigDecimal getTotalIncomeForMonth(YearMonth month) { //used by test
         return getTransactionsForMonth(month).stream()
                 .filter(tx -> tx.getType() == TransactionType.INCOME)
                 .map(Transaction::getAmount)
@@ -90,32 +76,6 @@ public class Ledger {
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
-
-    public BigDecimal getRemainingForMonth(YearMonth month) {
-        BigDecimal totalIncome = getTotalIncomeForMonth(month);
-        BigDecimal totalExpense = getTotalExpenseForMonth(month);
-        return totalIncome.subtract(totalExpense);
-
-    }
-    public BigDecimal getTotalIncomeForYear(int year) {
-        return getTransactionsForYear(year).stream()
-                .filter(tx ->  tx.getType() == TransactionType.INCOME)
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-    public BigDecimal getTotalExpenseForYear(int year) {
-        return getTransactionsForYear(year).stream()
-                .filter(tx -> tx.getType() == TransactionType.EXPENSE)
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    public BigDecimal getRemainingForYear(int year) {
-        BigDecimal totalIncome = getTotalIncomeForYear(year);
-        BigDecimal totalExpense = getTotalExpenseForYear(year);
-        return totalIncome.subtract(totalExpense);
-    }
-
 }
 
 
