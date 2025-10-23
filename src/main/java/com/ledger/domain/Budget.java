@@ -3,16 +3,15 @@ package com.ledger.domain;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalAdjusters;
+import java.time.YearMonth;
 
 @Entity
+@Table(name = "budgets")
 public class Budget {
 
-    public enum BudgetPeriod {
-        WEEKLY, MONTHLY, YEARLY
+    public enum Period {
+        MONTHLY, YEARLY
     }
 
     @Id
@@ -24,14 +23,14 @@ public class Budget {
 
     @Column(name = "period", nullable = false)
     @Enumerated(EnumType.STRING)
-    private BudgetPeriod period; // e.g., "monthly", "yearly", "weekly"
+    private Period period; // e.g., "monthly", "yearly"
 
     @ManyToOne
     @JoinColumn(name = "category_id")
-    private CategoryComponent category; // Category or subcategory
+    private LedgerCategory category; // Category or subcategory
 
     @ManyToOne
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User owner; // User ID or name
 
     @Column(name = "start_date", nullable = false)
@@ -41,74 +40,80 @@ public class Budget {
     private LocalDate endDate;
 
     public Budget(){}
-    public Budget(BigDecimal amount, BudgetPeriod period, CategoryComponent category, User owner) {
+    public Budget(BigDecimal amount, Period period, LedgerCategory category, User owner) {
         this.amount = amount;
         this.period = period;
         this.category = category;
         this.owner = owner;
-        this.startDate = getStartDateForPeriod(this.period);
-        this.endDate= getEndDateForPeriod(this.period);
+        this.startDate = calculateStartDateForPeriod(LocalDate.now(), this.period);
+        this.endDate = calculateEndDateForPeriod(this.startDate, this.period);
     }
-    public static LocalDate getStartDateForPeriod(BudgetPeriod period) {
+    public static LocalDate calculateStartDateForPeriod(LocalDate today, Period budgetPeriod) {
+        return switch (budgetPeriod) {
+            case YEARLY -> LocalDate.of(today.getYear(), 1, 1);
+            case MONTHLY -> LocalDate.of(today.getYear(), today.getMonth(), 1);
+        };
+    }
+    public static LocalDate calculateEndDateForPeriod(LocalDate startDate, Period period) {
         return switch (period) {
-            case YEARLY -> LocalDate.of(LocalDate.now().getYear(), 1, 1);
-            case MONTHLY -> LocalDate.of(LocalDate.now().getYear(), LocalDate.now().getMonthValue(), 1);
-            case WEEKLY -> LocalDate.now().with(DayOfWeek.MONDAY); //primo giorno è lunedì
+            case YEARLY -> LocalDate.of(startDate.getYear(), 12, 31);
+            case MONTHLY -> YearMonth.from(startDate).atEndOfMonth();
         };
     }
 
+
+    public void setCategory(LedgerCategory category) {
+        this.category = category;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
     public BigDecimal getAmount() {
         return amount;
     }
-    public CategoryComponent getCategory() {
+    public LedgerCategory getCategory() {
         return category;
     }
-    public BudgetPeriod getPeriod() {
+    public Period getPeriod() {
         return period;
     }
     public User getOwner() {
         return owner;
     }
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
+    public void setOwner(User owner) {
+        this.owner = owner;
+    }
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+    public void setPeriod(Period period) {
+        this.period = period;
+    }
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+    public LocalDate getEndDate() {
+        return endDate;
     }
 
-    public boolean isForCategory() {
-        return category != null;
-    }
 
-    public static boolean isTransactionInPeriod( Transaction t, BudgetPeriod p) {
-        LocalDate txDate = t.getDate();
-        return switch (p) {
-            case MONTHLY -> txDate.getYear() == getStartDateForPeriod(p).getYear()
-                    && txDate.getMonth() == getStartDateForPeriod(p).getMonth();
-            case WEEKLY -> ChronoUnit.WEEKS.between(getStartDateForPeriod(p), txDate) == 0;
-            case YEARLY -> txDate.getYear() == getStartDateForPeriod(p).getYear();
-        };
-    }
-    public boolean belongsTo(CategoryComponent cc) {
-        return category != null && category.equals(cc);
-    }
-
-    public boolean isInPeriod(LocalDate date) {
+    public boolean isActive(LocalDate date) {
         return switch (period) {
             case MONTHLY -> date.isBefore(startDate.plusMonths(1));
-            case WEEKLY -> date.isBefore(startDate.plusWeeks(1));
             case YEARLY -> date.isBefore(startDate.plusYears(1));
         };
     }
 
-    public LocalDate getEndDateForPeriod(BudgetPeriod p){
-        if (startDate == null) {
-            return null;
-        }
-        return switch (p){
-            case YEARLY -> startDate.with(TemporalAdjusters.lastDayOfYear());
-            case MONTHLY -> startDate.with(TemporalAdjusters.lastDayOfMonth());
-            case WEEKLY -> startDate.with(DayOfWeek.SUNDAY);
-        };
-    }
-    
 }
 
 
