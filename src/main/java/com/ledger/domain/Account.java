@@ -3,6 +3,7 @@ package com.ledger.domain;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -11,10 +12,8 @@ import java.util.stream.Collectors;
 
 
 @Entity
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "account_type", discriminatorType = DiscriminatorType.STRING)
+@Inheritance(strategy = InheritanceType.JOINED)
 public abstract class Account {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Long id;
@@ -23,7 +22,7 @@ public abstract class Account {
     protected String name;
 
     @Column(precision = 15, scale = 2)
-    protected BigDecimal balance;
+    protected BigDecimal balance = BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)
     @Column(name= "account_type", nullable = false)
@@ -34,60 +33,53 @@ public abstract class Account {
     protected AccountCategory category;
 
     @ManyToOne
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     protected User owner;
 
-    //@JoinColumn(name = "currency_id")
-    //@Transient
-    //protected Currency currency;
-
-    @Column(length = 500)
+    @Column(name = "notes", length = 500)
     protected String notes;
 
     @Column(name = "is_hidden", nullable = false)
-    protected boolean hidden=false;
+    protected Boolean hidden=false;
 
-    @OneToMany(mappedBy = "account",cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = false)
-    protected List<Transaction> transactions = new ArrayList<>(); //account -> più transazioni. relazione tra Account e Transaction è aggregazione
+    @OneToMany(mappedBy = "fromAccount", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = false)
+    protected List<Transaction> outgoingTransactions = new ArrayList<>();
+
+    @OneToMany(mappedBy = "toAccount", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = false)
+    protected List<Transaction> incomingTransactions = new ArrayList<>();
 
     @Column(name = "included_in_net_asset", nullable = false)
-    protected boolean includedInNetAsset = true;
+    protected Boolean includedInNetAsset = true;
 
     @Column(name= "selectable", nullable = false)
-    protected boolean selectable = true;
+    protected Boolean selectable = true;
 
     public Account() {}
     public Account(
-                   String name,
-                   BigDecimal balance,
-                   AccountType type,
-                   AccountCategory category,
-                   User owner,
-                   String notes,
-                   boolean includedInNetAsset,
-                   boolean selectable) {
+            String name,
+            BigDecimal balance,
+            AccountType type,
+            AccountCategory category,
+            User owner,
+            String notes,
+            boolean includedInNetAsset,
+            boolean selectable) {
         this.name = name;
         this.balance = balance != null ? balance : BigDecimal.ZERO;
         this.type = type;
         this.category = category;
         this.owner = owner;
-        //this.currency = currency;
         this.notes = notes;
         this.includedInNetAsset = includedInNetAsset;
         this.selectable = selectable;
     }
 
     public void credit(BigDecimal amount) {
-        balance = balance.add(amount);
-        owner.updateTotalAssets();
-        owner.updateNetAsset();
+        balance = balance.add(amount).setScale(2, RoundingMode.HALF_UP);
     }
     public abstract void debit(BigDecimal amount);
     public void hide() {
         this.hidden = true;
-    }
-    public void addTransaction(Transaction transaction) {
-        transactions.add(transaction);
     }
 
     public void setIncludedInNetAsset(boolean includedInNetAsset) {
@@ -95,13 +87,10 @@ public abstract class Account {
     }
     public void setSelectable(boolean selectable) {
         this.selectable = selectable;
-     }
+    }
     public void setOwner(User owner) {
         this.owner = owner;
     }
-    /*public void setCurrencyCode(Currency currency) {
-        this.currency = currency;
-    }*/
     public void setId(Long id) {
         this.id = id;
     }
@@ -116,8 +105,6 @@ public abstract class Account {
             throw new IllegalArgumentException("Balance cannot be negative.");
         }
         this.balance = balance;
-        this.owner.updateTotalAssets();
-        this.owner.updateNetAsset();
     }
 
     public AccountType getType() { return type; }
@@ -130,10 +117,17 @@ public abstract class Account {
     public User getOwner() {
         return owner;
     }
-    public List<Transaction> getTransactions() { //ritorna tutte le transazioni associate a questo account
-        return transactions.stream()
-                .sorted(Comparator.comparing(Transaction::getDate).reversed())
-                .collect(Collectors.toList());
+    public List<Transaction> getTransactions() {
+        List<Transaction> allTransactions = new ArrayList<>();
+        allTransactions.addAll(incomingTransactions);
+        allTransactions.addAll(outgoingTransactions);
+        return allTransactions;
+    }
+    public List<Transaction> getIncomingTransactions() {
+        return incomingTransactions;
+    }
+    public List<Transaction> getOutgoingTransactions() {
+        return outgoingTransactions;
     }
     public BigDecimal getBalance() {
         return this.balance;
@@ -153,15 +147,78 @@ public abstract class Account {
     public Boolean getIncludedInNetAsset() {
         return includedInNetAsset;
     }
+    public void setCategory(AccountCategory category) {
+        this.category = category;
+    }
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+    public void setType(AccountType type) {
+        this.type = type;
+    }
+    public void setIncomingTransactions(List<Transaction> incomingTransactions) {
+        this.incomingTransactions = incomingTransactions;
+    }
+    public void setOutgoingTransactions(List<Transaction> outgoingTransactions) {
+        this.outgoingTransactions = outgoingTransactions;
+    }
+
+
+    public void addTransaction(Transaction transaction) { //for test
+        if(transaction instanceof Income){
+            if ( !this.hidden && this.selectable) {
+                credit(transaction.getAmount());
+                incomingTransactions.add(transaction);
+            }
+        } else if (transaction instanceof Expense) {
+            if (!this.hidden && this.selectable) {
+                if (! this.category.equals(AccountCategory.CREDIT) && this.balance.compareTo(transaction.getAmount()) <= 0) {
+                    throw new IllegalArgumentException("Insufficient funds in the account to execute this transaction.");
+                }
+                debit(transaction.getAmount());
+                outgoingTransactions.add(transaction);
+            }
+
+        } else if (transaction instanceof Transfer) {
+            if ((transaction.getFromAccount() != null && transaction.getFromAccount().equals(this))) {
+                if (! this.category.equals(AccountCategory.CREDIT) && this.balance.compareTo(transaction.getAmount()) <= 0) {
+                    throw new IllegalArgumentException("Insufficient funds in the account to execute this transaction.");
+                }
+                debit(transaction.getAmount());
+                outgoingTransactions.add(transaction);
+            }
+            if (transaction.getToAccount() != null &&  transaction.getToAccount().equals(this)) {
+                credit(transaction.getAmount());
+                incomingTransactions.add(transaction);
+            }
+        }
+    }
+
 
     public List<Transaction> getTransactionsForMonth(YearMonth month) {
-        return transactions.stream()
+        return getTransactions().stream()
                 .filter(t -> t.getDate().getYear() == month.getYear() && t.getDate().getMonth() == month.getMonth())
                 .sorted(Comparator.comparing(Transaction::getDate).reversed())
                 .collect(Collectors.toList());
     }
 
+    public BigDecimal getAccountTotalIncomeForMonth(YearMonth month) {
+        return getTransactionsForMonth(month).stream()
+                .filter(tx -> tx.getType() == TransactionType.INCOME
+                        || (tx.getType() == TransactionType.TRANSFER
+                        && tx instanceof Transfer
+                        && ((Transfer) tx).getToAccount().equals(this)))
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+    public BigDecimal getAccountTotalExpenseForMonth(YearMonth month) {
+        return getTransactionsForMonth(month).stream()
+                .filter(tx -> tx.getType() == TransactionType.EXPENSE
+                        || (tx.getType() == TransactionType.TRANSFER
+                        && tx instanceof Transfer
+                        && ((Transfer) tx).getFromAccount().equals(this)))
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
 }
-
-
-
