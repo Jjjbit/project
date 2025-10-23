@@ -7,6 +7,7 @@ import java.time.LocalDate;
 
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
+@Table(name = "transactions")
 public abstract class Transaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -120,5 +121,8 @@ public abstract class Transaction {
     }
     public void setLedger(Ledger ledger){
         this.ledger = ledger;
+    }
+    public void setId(Long id) {
+        this.id = id;
     }
 }
