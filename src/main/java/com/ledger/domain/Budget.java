@@ -1,42 +1,20 @@
 package com.ledger.domain;
 
-import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 
-@Entity
-@Table(name = "budgets")
 public class Budget {
-
     public enum Period {
         MONTHLY, YEARLY
     }
 
-    @Id
-    @GeneratedValue
     private Long id;
-
-    @Column(name = "amount", precision = 15, scale = 2, nullable = false)
     private BigDecimal amount=BigDecimal.ZERO; // Budget amount
-
-    @Column(name = "period", nullable = false)
-    @Enumerated(EnumType.STRING)
     private Period period; // e.g., "monthly", "yearly"
-
-    @ManyToOne
-    @JoinColumn(name = "category_id")
     private LedgerCategory category; // Category or subcategory
-
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
     private User owner; // User ID or name
-
-    @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
-
-    @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
     public Budget(){}
@@ -65,7 +43,6 @@ public class Budget {
     public void setCategory(LedgerCategory category) {
         this.category = category;
     }
-
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
