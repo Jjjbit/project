@@ -1,13 +1,8 @@
 package com.ledger.domain;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Entity
-@Table(name = "transfer")
 public class Transfer extends Transaction{
 
     public Transfer() {}

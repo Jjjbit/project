@@ -1,7 +1,5 @@
 package com.ledger.domain;
 
-import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.YearMonth;
@@ -10,48 +8,18 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
-@Entity
-@Inheritance(strategy = InheritanceType.JOINED)
 public abstract class Account {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Long id;
-
-    @Column(length = 100, nullable = false)
     protected String name;
-
-    @Column(precision = 15, scale = 2)
     protected BigDecimal balance = BigDecimal.ZERO;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name= "account_type", nullable = false)
     protected AccountType type;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name= "account_category", nullable = false)
     protected AccountCategory category;
-
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
     protected User owner;
-
-    @Column(name = "notes", length = 500)
     protected String notes;
-
-    @Column(name = "is_hidden", nullable = false)
     protected Boolean hidden=false;
-
-    @OneToMany(mappedBy = "fromAccount", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = false)
     protected List<Transaction> outgoingTransactions = new ArrayList<>();
-
-    @OneToMany(mappedBy = "toAccount", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = false)
     protected List<Transaction> incomingTransactions = new ArrayList<>();
-
-    @Column(name = "included_in_net_asset", nullable = false)
     protected Boolean includedInNetAsset = true;
-
-    @Column(name= "selectable", nullable = false)
     protected Boolean selectable = true;
 
     public Account() {}

@@ -1,29 +1,16 @@
 package com.ledger.domain;
 
-import jakarta.persistence.*;
-
 import java.math.BigDecimal;
-import java.time.MonthDay;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@DiscriminatorValue("CreditAccount")
 public class CreditAccount extends Account {
-
-    @Column(name = "credit_limit", precision = 15, scale = 2, nullable = false)
-    private BigDecimal creditLimit;
-
-    @Column(name = "current_debt", precision = 15, scale = 2, nullable = false)
-    private BigDecimal currentDebt;
-
-    @Column(name = "bill_date")
-    private MonthDay billDate;
-
-    @Column(name = "due_date")
-    private MonthDay dueDate;
-
-    @OneToMany(mappedBy = "linkedAccount", cascade = CascadeType.ALL, orphanRemoval = true)
+    private BigDecimal creditLimit= BigDecimal.ZERO;
+    private BigDecimal currentDebt = BigDecimal.ZERO;
+    private Integer billDay=null;
+    private Integer dueDay=null;
     private List<InstallmentPlan> installmentPlans;
 
     public CreditAccount(){}
@@ -35,54 +22,74 @@ public class CreditAccount extends Account {
                          boolean selectable,
                          BigDecimal creditLimit,
                          BigDecimal currentDebt, //contiene importo residuo delle rate
-                         MonthDay billDate,
-                         MonthDay dueDate, AccountType type) {
+                         Integer billDate,
+                         Integer dueDate,
+                         AccountType type) {
         super(name, balance, type, AccountCategory.CREDIT, owner, notes, includedInNetWorth, selectable);
         this.creditLimit = creditLimit;
-        this.currentDebt = currentDebt;
-        this.billDate = billDate;
-        this.dueDate = dueDate;
-        this.installmentPlans = new ArrayList <>();
-        this.owner.updateTotalAssets();
-        this.owner.updateTotalLiabilities();
-        this.owner.updateNetAsset();
+        if(currentDebt == null){
+            this.currentDebt=BigDecimal.ZERO;
+        }else {
+            this.currentDebt = currentDebt;
+        }
+        this.billDay = billDate;
+        this.dueDay = dueDate;
+        this.installmentPlans = new ArrayList<>();
     }
 
     public BigDecimal getCurrentDebt() {
         return currentDebt;
     }
+    public BigDecimal getCreditLimit(){return creditLimit;}
+    public Integer getBillDay(){return billDay;}
+    public Integer getDueDay(){return dueDay;}
+    public void setCurrentDebt(BigDecimal currentDebt) {
+        this.currentDebt = currentDebt;
+    }
+    public void setCreditLimit(BigDecimal creditLimit) {
+        this.creditLimit = creditLimit;
+    }
+    public void setBillDay(Integer billDate) {
+        this.billDay = billDate;
+    }
+    public void setDueDay(Integer dueDate) {
+        this.dueDay = dueDate;
+    }
 
     @Override
     public void debit(BigDecimal amount) {
-        if (amount.compareTo(balance) > 0) { //amount>balance
-            if (currentDebt.add(amount.subtract(balance)).compareTo(creditLimit) > 0) { //currentDebt+(amount-balance)>creditLimit
-                throw new IllegalArgumentException("Amount exceeds credit limit");
-            }else{
-                balance = BigDecimal.ZERO;
-                currentDebt = currentDebt.add(amount.subtract(balance));
-            }
-        }else{
-            balance = balance.subtract(amount);
-        }
-        this.owner.updateTotalLiabilities();
-        this.owner.updateTotalAssets();
-        this.owner.updateNetAsset();
-    }
-    public void addNewDebt(BigDecimal amount) {
-        currentDebt = currentDebt.add(amount);
-        this.owner.updateNetAssetsAndLiabilities(amount);
+        balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public void repayDebt(BigDecimal amount, Account fromAccount) {
-        currentDebt = currentDebt.subtract(amount);
+    public void repayDebt(Transaction tx){
+        incomingTransactions.add(tx);
+        currentDebt = currentDebt.subtract(tx.getAmount()).setScale(2, RoundingMode.HALF_UP);
+        if (currentDebt.compareTo(BigDecimal.ZERO) < 0) {
+            currentDebt = BigDecimal.ZERO;
+        }
+    }
+    public void repayDebt(BigDecimal amount, Account fromAccount, Ledger ledger) { //for test
+        Transaction tx = new Transfer(
+                LocalDate.now(),
+                "Repay credit account debt",
+                fromAccount,
+                this,
+                amount,
+                ledger
+        );
+        incomingTransactions.add(tx);
+        if(ledger != null) {
+            ledger.getTransactions().add(tx);
+        }
+
         if(fromAccount != null) {
             fromAccount.debit(amount);
-        }else {
-            this.owner.updateNetAssetsAndLiabilities(amount);
+            fromAccount.outgoingTransactions.add(tx);
         }
-        this.owner.updateTotalAssets();
-        this.owner.updateTotalLiabilities();
-        this.owner.updateNetAsset();
+        currentDebt = currentDebt.subtract(amount).setScale(2, RoundingMode.HALF_UP);
+        if (currentDebt.compareTo(BigDecimal.ZERO) < 0) {
+            currentDebt = BigDecimal.ZERO;
+        }
     }
 
     public List<InstallmentPlan> getInstallmentPlans() {
@@ -90,28 +97,33 @@ public class CreditAccount extends Account {
     }
     public void addInstallmentPlan(InstallmentPlan installmentPlan) {
         installmentPlans.add(installmentPlan);
-        currentDebt = currentDebt.add(installmentPlan.getRemainingAmount());
+        currentDebt = currentDebt.add(installmentPlan.getRemainingAmountWithRepaidPeriods()).setScale(2, RoundingMode.HALF_UP);
     }
     public void removeInstallmentPlan(InstallmentPlan installmentPlan) {
         installmentPlans.remove(installmentPlan);
-        currentDebt = currentDebt.subtract(installmentPlan.getRemainingAmount());
+        currentDebt = currentDebt.subtract(installmentPlan.getRemainingAmountWithRepaidPeriods()).setScale(2, RoundingMode.HALF_UP);
     }
-    public void repayInstallmentPlan(InstallmentPlan installmentPlan) {
+
+    public void repayInstallmentPlan(InstallmentPlan installmentPlan, Ledger ledger) { //for test
         if (installmentPlans.contains(installmentPlan)) {
             BigDecimal amount = installmentPlan.getMonthlyPayment(installmentPlan.getPaidPeriods() + 1);
             installmentPlan.repayOnePeriod();
-            currentDebt = currentDebt.subtract(amount);
-            this.owner.updateNetAssetsAndLiabilities(amount);
+            Transaction tx = new Transfer(
+                    LocalDate.now(),
+                    "Repay installment plan",
+                    this,
+                    null,
+                    amount,
+                    ledger
+            );
+            outgoingTransactions.add(tx);
+            if(ledger != null) {
+                ledger.getTransactions().add(tx);
+            }
+            currentDebt = currentDebt.subtract(amount).setScale(2, RoundingMode.HALF_UP);
         } else {
             throw new IllegalArgumentException("Installment plan not found in this account");
         }
-    }
-
-    //ritorna il totale delle rate ancora da pagare collegate a questo account
-    public BigDecimal getRemainingInstallmentDebt(){
-        return installmentPlans.stream()
-                .map(InstallmentPlan::getRemainingAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
 

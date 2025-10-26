@@ -5,8 +5,6 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-@Entity
-@Table(name = "basic_account")
 public class BasicAccount extends Account {
     public BasicAccount() {}
     public BasicAccount(

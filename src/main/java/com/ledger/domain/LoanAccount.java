@@ -1,14 +1,9 @@
 package com.ledger.domain;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.Max;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.MonthDay;
+import java.time.LocalDate;
 
-@Entity
-@DiscriminatorValue("LoanAccount")
 public class LoanAccount extends Account {
 
     public enum RepaymentType {
@@ -18,30 +13,21 @@ public class LoanAccount extends Account {
         INTEREST_BEFORE_PRINCIPAL
     }
 
-    @Column(name = "total_periods", nullable = false)
-    @Max(value = 480, message = "Total periods cannot exceed 480")
-    private int totalPeriods;
-
-    @Column(name = "repaid_periods", nullable = false)
-    private int repaidPeriods;
-
-    @Column(name = "annual_interest_rate", precision = 3, scale = 2)
+    private int totalPeriods=0;
+    private int repaidPeriods= 0;
     private BigDecimal annualInterestRate;
-
-    @Column(name = "loan_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal loanAmount;
-
-    @ManyToOne
-    @JoinColumn(name = "receiving_account_id")
     private Account receivingAccount;
-
-    @Column(name = "repayment_date")
-    private MonthDay repaymentDate;
-
-    @Enumerated(EnumType.STRING)
+    private LocalDate repaymentDay;
     private RepaymentType repaymentType;
+    private BigDecimal remainingAmount;
+    protected boolean isEnded = false;
 
-    public LoanAccount() {}
+    public LoanAccount() {
+        super();
+        this.type = AccountType.LOAN;
+        this.category = AccountCategory.CREDIT;
+    }
     public LoanAccount(
             String name,
             User owner,
@@ -52,23 +38,85 @@ public class LoanAccount extends Account {
             BigDecimal interestRate,
             BigDecimal loanAmount,
             Account receivingAccount,
-            MonthDay repaymentDate,
+            LocalDate repaymentDate,
             RepaymentType repaymentType) {
-        super(name, null, AccountType.LOAN, AccountCategory.CREDIT, owner, note, includedInNetWorth, false);
+        super(name, BigDecimal.ZERO, AccountType.LOAN, AccountCategory.CREDIT, owner, note, includedInNetWorth, false);
         this.totalPeriods = totalPeriods;
         this.repaidPeriods = repaidPeriods;
         this.annualInterestRate = interestRate;
         this.loanAmount = loanAmount;
         this.receivingAccount = receivingAccount;
-        this.repaymentDate = repaymentDate;
+        this.repaymentDay = repaymentDate;
         if (repaymentType==null){
             this.repaymentType = RepaymentType.EQUAL_INTEREST;
         }else{
             this.repaymentType = repaymentType;
         }
-        this.owner.updateTotalLiabilities();
-        this.owner.updateNetAsset();
+        this.remainingAmount= calculateRemainingLoanAmountWithRepaidPeriods();
     }
+
+    public void setTotalPeriods(int totalPeriods) {
+        if (totalPeriods < 1 || totalPeriods > 480) {
+            throw new IllegalArgumentException("Total periods must be between 1 and 480");
+        }
+        this.totalPeriods = totalPeriods;
+    }
+
+    public void setRepaidPeriods(int repaidPeriods) {
+        if (repaidPeriods < 0 || repaidPeriods > totalPeriods) {
+            throw new IllegalArgumentException("Repaid periods must be between 0 and total periods");
+        }
+        this.repaidPeriods = repaidPeriods;
+    }
+    public void setLoanAmount(BigDecimal loanAmount) {
+        this.loanAmount = loanAmount;
+    }
+    public void setRepaymentDate(LocalDate repaymentDate) {
+        this.repaymentDay = repaymentDate;
+    }
+    public void setRemainingAmount(BigDecimal remainingAmount) {
+        this.remainingAmount = remainingAmount;
+    }
+    public void setEnded(boolean ended) {
+        isEnded = ended;
+    }
+    public void setAnnualInterestRate(BigDecimal annualInterestRate) {
+        if (annualInterestRate == null || annualInterestRate.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Annual interest rate must be non-negative");
+        }
+        this.annualInterestRate = annualInterestRate;
+    }
+    public void setRepaymentType(RepaymentType repaymentType) {
+        if (repaymentType == null) {
+            throw new IllegalArgumentException("Repayment type cannot be null");
+        }
+        this.repaymentType = repaymentType;
+    }
+    public void updateRemainingAmount() { //metodo per aggiornare remainingAmount se si cambia loanAmount, totalPeriods, repaidPeriods o annualInterestRate
+        this.remainingAmount = calculateRemainingLoanAmountWithRepaidPeriods();
+    }
+    public BigDecimal getRemainingAmount() {
+        return remainingAmount;
+    }
+    public BigDecimal getAnnualInterestRate() {
+        return annualInterestRate;
+    }
+    public BigDecimal getLoanAmount() {
+        return loanAmount;
+    }
+    public Account getReceivingAccount() {
+        return receivingAccount;
+    }
+    public LocalDate getRepaymentDay() {
+        return repaymentDay;
+    }
+    public RepaymentType getRepaymentType() {
+        return repaymentType;
+    }
+    public boolean getIsEnded() {
+        return isEnded;
+    }
+
 
     @Override
     public void debit(BigDecimal amount) {
@@ -79,6 +127,10 @@ public class LoanAccount extends Account {
     public void credit(BigDecimal amount) {
         throw new UnsupportedOperationException("Credit operation is not supported for LoanAccount");
     }
+
+    public int getTotalPeriods(){return this.totalPeriods;}
+    public int getRepaidPeriods(){return this.repaidPeriods;}
+
     public BigDecimal getMonthlyRate() {
         if (annualInterestRate == null) return BigDecimal.ZERO;
         return annualInterestRate
@@ -86,30 +138,54 @@ public class LoanAccount extends Account {
                 .divide(BigDecimal.valueOf(12), 10, RoundingMode.HALF_UP);
     }
 
-    public void repayLoan(Account fromAccount) {
-        BigDecimal monthlyRepayment = getMonthlyRepayment(repaidPeriods + 1);
-        if(fromAccount != null) {
-            fromAccount.debit(monthlyRepayment);
-        }else {
-            this.owner.updateNetAssetsAndLiabilities(monthlyRepayment);
-        }
-        this.repaidPeriods++;
-        this.owner.updateTotalAssets();
-        this.owner.updateTotalLiabilities();
-        this.owner.updateNetAsset();
+    public void repayLoan(Transaction tx){ //pay one period
+        this.repaidPeriods = this.repaidPeriods + 1;
+        this.remainingAmount= remainingAmount.subtract(getMonthlyRepayment(repaidPeriods)).setScale(2, RoundingMode.HALF_UP);
+        incomingTransactions.add(tx);
+        checkAndUpdateStatus();
     }
-    public BigDecimal getRemainingAmount() {
+
+    public void repayLoan(Transaction tx, BigDecimal amount){//partial payment
+        //calculate how many periods are repaid
+        BigDecimal paidAmount = BigDecimal.ZERO;
+        int periodsPaid = 0;
+        for (int i = repaidPeriods + 1; i <= totalPeriods; i++) {
+            BigDecimal monthlyRepayment = getMonthlyRepayment(i);
+            if (paidAmount.add(monthlyRepayment).compareTo(amount) <= 0) {
+                paidAmount = paidAmount.add(monthlyRepayment);
+                periodsPaid++;
+            } else {
+                break;
+            }
+        }
+        this.repaidPeriods += periodsPaid;
+        remainingAmount = remainingAmount.subtract(amount).setScale(2, RoundingMode.HALF_UP); //remainingAmount dipende da amount pagato
+        if (remainingAmount.compareTo(BigDecimal.ZERO) < 0) {
+            remainingAmount = BigDecimal.ZERO;
+        }
+        incomingTransactions.add(tx);
+        checkAndUpdateStatus();
+    }
+
+    public BigDecimal calculateRemainingLoanAmountWithRepaidPeriods() { //dipende da repaidPeriods
+        if(repaidPeriods==0 && annualInterestRate.compareTo(BigDecimal.ZERO)==0){
+            return loanAmount;
+        }
         BigDecimal total = BigDecimal.ZERO;
         for (int i = repaidPeriods + 1; i <= totalPeriods; i++) {
             total = total.add(getMonthlyRepayment(i));
         }
         return total.setScale(2, RoundingMode.HALF_UP);
     }
+
     //monthly rate r: annualInterestRate / 12
     // total periods n: totalPeriods
     // loan amount P: loanAmount
     public BigDecimal getMonthlyRepayment(int period){
         BigDecimal monthlyRate = getMonthlyRate();
+        if (monthlyRate.compareTo(BigDecimal.ZERO) == 0) {
+            return loanAmount.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP);
+        }
         switch(this.repaymentType) {
             case EQUAL_INTEREST:
                 // For EQUAL_INTEREST, the monthly repayment is calculated as follows:
@@ -209,6 +285,14 @@ public class LoanAccount extends Account {
         // In the last period, the full loan amount is repaid along with the last interest
         BigDecimal finalPayment = loanAmount.add(monthlyInterest); //finalPayment=loanAmount+monthlyInterest
         return interestBeforeFinal.add(finalPayment).setScale(2, RoundingMode.HALF_UP); // total repayment=interestBeforeFinal+finalPayment
+    }
+    public void checkAndUpdateStatus() {
+        if(remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            this.isEnded = true;
+            this.remainingAmount = BigDecimal.ZERO;
+        } else {
+            this.isEnded = false;
+        }
     }
 
 }

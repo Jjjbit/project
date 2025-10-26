@@ -6,8 +6,6 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Entity
-@Table(name = "expense")
 public class Expense extends Transaction {
 
     public Expense() {}

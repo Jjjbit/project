@@ -1,31 +1,16 @@
 package com.ledger.domain;
 
-import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-@Entity
-@Table(name = "ledgers")
 public class Ledger {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(length =50, nullable= false, unique = true)
     private String name;
-
-    @ManyToOne
-    @JoinColumn(name = "user_id")
     private User owner;
-
-    @OneToMany(mappedBy = "ledger", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Transaction> transactions=new ArrayList<>(); //relazione tra Transaction e Ledger è composizione
-
-    @OneToMany(mappedBy = "ledger", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LedgerCategory> categories = new ArrayList<>();
 
     public Ledger() {}

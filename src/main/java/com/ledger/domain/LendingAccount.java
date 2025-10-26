@@ -1,20 +1,11 @@
 package com.ledger.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 
-@Entity
-@Table(name = "lending_account")
 public class LendingAccount extends Account {
-    @Column
     private boolean isEnded = false; //indica se il borrowing è stato completamente rimborsato
-
-    @Column(name="lending_date")
     private LocalDate date;
 
     public LendingAccount() {}
@@ -29,13 +20,21 @@ public class LendingAccount extends Account {
         this.date = date;
     }
 
-    public void setEnded(boolean ended) {
+    public void setIsEnded(boolean ended) {
         isEnded = ended;
     }
     public void setDate(LocalDate date) {
         this.date = date;
     }
-
+    public boolean getIsEnded() {
+        return isEnded;
+    }
+    public LocalDate getDate() {
+        return date;
+    }
+    public BigDecimal getLendingAmount() {
+        return balance;
+    }
     public void receiveRepayment(Transaction tx, BigDecimal amount){
         balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
         outgoingTransactions.add(tx);

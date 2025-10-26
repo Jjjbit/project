@@ -1,49 +1,17 @@
 package com.ledger.domain;
 
-import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Entity
-@Inheritance(strategy = InheritanceType.JOINED)
-@Table(name = "transactions")
 public abstract class Transaction {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Long id;
-
-    @Column(name= "date", nullable = false)
     protected LocalDate date;
-
-    @Column(name = "amount", precision = 15, scale = 2, nullable = false)
     protected BigDecimal amount;
-
-    @Column(name = "note", length = 500)
     protected String note;
-
-    @ManyToOne
-    @JoinColumn(name = "from_account_id")
-    //@JsonIgnoreProperties({"outgoingTransactions", "incomingTransactions", "transactions"})
     protected Account fromAccount; //relaizone tra Transaction e Account è associazione. più transazioni->un account
-
-    @ManyToOne
-    @JoinColumn(name = "to_account_id")
-    //@JsonIgnoreProperties({"outgoingTransactions", "incomingTransactions", "transactions"})
     protected Account toAccount; //per i trasferimenti tra conti
-
-    @ManyToOne
-    @JoinColumn(name = "ledger_id")
-    //@JsonBackReference("ledger-transactions")
     protected Ledger ledger; //relazione tra Transaction e Ledger è aggregazione. più transazioni -> un ledger
-
-    @ManyToOne
-    @JoinColumn(name = "category_id")
-    //@JsonBackReference("category-transactions")
     protected LedgerCategory category;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "transaction_type", nullable = false)
     protected TransactionType type;
 
     public Transaction() {}

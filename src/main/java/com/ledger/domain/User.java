@@ -1,32 +1,17 @@
 package com.ledger.domain;
 
-import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "users")
+
 public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false, unique = true)
     private String username;
-
-    @Column(nullable = false)
     private String password;
-
-    @OneToMany(mappedBy = "owner",cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Ledger> ledgers= new ArrayList<>();
-
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Account> accounts= new ArrayList<>();
-
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Budget> budgets= new ArrayList<>();
 
     public User (){}
@@ -75,16 +60,16 @@ public class User {
                 .filter(account -> account.includedInNetAsset && !account.hidden)
                 .filter(account -> account.getBalance().compareTo(BigDecimal.ZERO) > 0)
                 .map(Account::getBalance)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
     }
 
     public BigDecimal getTotalBorrowing() {
         return accounts.stream()
                 .filter(account -> account instanceof BorrowingAccount)
                 .filter(account -> account.includedInNetAsset && !account.hidden)
-                .filter(account -> account.getBalance().compareTo(BigDecimal.ZERO) > 0)
-                .map(Account::getBalance)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .filter(account -> ((BorrowingAccount) account).getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
+                .map(account -> ((BorrowingAccount) account).getRemainingAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
     }
 
     public BigDecimal getTotalAssets() {

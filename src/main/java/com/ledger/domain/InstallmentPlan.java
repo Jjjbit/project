@@ -6,8 +6,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 
-@Entity
-@Table(name = "installment_plan")
 public class InstallmentPlan {
 
     public enum FeeStrategy {
@@ -16,52 +14,39 @@ public class InstallmentPlan {
         FINAL
     }
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // Unique identifier for the installment plan
-
-    @Column(name = "total_amount", precision = 15, scale = 2, nullable = false)
     private BigDecimal totalAmount;
-
-    @Column(name = "total_periods", nullable = false)
     private int totalPeriods;
-
-    @Column(name = "fee_rate", precision = 5, scale = 4)
     private BigDecimal feeRate;
-
-    @Column(name = "paid_periods")
     private int paidPeriods = 0;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "fee_strategy", nullable = false)
     private FeeStrategy feeStrategy = FeeStrategy.EVENLY_SPLIT;
-
-    @ManyToOne
-    @JoinColumn(name = "linked_account_id")
     private Account linkedAccount;
-
-    @Column(name = "remaining_amount", precision = 15, scale = 2)
     private BigDecimal remainingAmount;
-
-    @Column(name = "repayment_start_date")
     private LocalDate repaymentStartDate;
+    private LedgerCategory category;
 
     @Column(name = "name")
     private String name;
 
     public InstallmentPlan() {}
-    public InstallmentPlan(BigDecimal totalAmount,
+    public InstallmentPlan(String name,
+                           BigDecimal totalAmount,
                            int totalPeriods,
                            BigDecimal feeRate,
                            int paidPeriods,
                            FeeStrategy feeStrategy,
-                           Account linkedAccount) {
+                           Account linkedAccount,
+                           LocalDate repaymentStartDate,
+                           LedgerCategory category) {
+        this.repaymentStartDate = repaymentStartDate;
+        this.name = name;
         this.totalAmount = totalAmount;
         this.totalPeriods = totalPeriods;
         this.feeRate = feeRate;
         this.paidPeriods = paidPeriods;
         this.feeStrategy = feeStrategy;
         this.linkedAccount = linkedAccount;
+        this.category = category;
         this.remainingAmount = getRemainingAmountWithRepaidPeriods();
     }
 
@@ -147,29 +132,24 @@ public class InstallmentPlan {
         BigDecimal fee = totalAmount.multiply(feeRate.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP); //total fee for the installment
         return totalAmount.add(fee).setScale(2, RoundingMode.HALF_UP); //total amount + total fee
     }
+    public void setRepaymentStartDate(LocalDate repaymentStartDate) {
+        this.repaymentStartDate = repaymentStartDate;
+    }
+    public void setCategory(LedgerCategory category) {
+        this.category = category;
+    }
+    public LedgerCategory getCategory() {
+        return category;
+    }
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public void repayOnePeriod() {
         BigDecimal monthlyPayment = getMonthlyPayment(paidPeriods + 1);
         remainingAmount = remainingAmount.subtract(monthlyPayment).setScale(2, RoundingMode.HALF_UP);
         paidPeriods++;
     }
-    public void repayPartial(BigDecimal amount) {
-        //how many monthly payments does this cover?
-        BigDecimal paidAmount = BigDecimal.ZERO;
-        int periods = 0;
-        for(int i = paidPeriods + 1; i <= totalPeriods; i++) {
-            BigDecimal monthlyRepayment = getMonthlyPayment(i);
-            if(paidAmount.add(monthlyRepayment).compareTo(amount) <= 0) {
-                paidAmount = paidAmount.add(monthlyRepayment);
-                periods++;
-            } else {
-                break;
-            }
-        }
-        paidPeriods += periods;
-        remainingAmount=remainingAmount.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-    }
-
     public BigDecimal getRemainingAmountWithRepaidPeriods() {//dipende da paidPeriods
         BigDecimal total = BigDecimal.ZERO;
         for (int i = paidPeriods + 1; i <= totalPeriods; i++) {
