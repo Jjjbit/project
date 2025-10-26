@@ -54,7 +54,7 @@ public class InstallmentPlanControllerTest {
         ledgerCategoryDAO = new LedgerCategoryDAO(connection);
 
         userController = new UserController(userDAO);
-        accountController = new AccountController(accountDAO, userDAO, transactionDAO);
+        accountController = new AccountController(accountDAO, transactionDAO);
         installmentPlanController = new InstallmentPlanController(installmentPlanDAO, transactionDAO, accountDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO);
 
