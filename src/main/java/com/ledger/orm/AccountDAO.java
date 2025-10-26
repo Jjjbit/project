@@ -606,9 +606,6 @@ public class AccountDAO {
                     break;
                 case "CreditAccount":
                     deleteSql = "DELETE FROM credit_account WHERE id = ?";
-                    //delete installment plans associated with this credit account
-                    InstallmentPlanDAO installmentPlanDAO = new InstallmentPlanDAO(connection);
-                    installmentPlanDAO.deleteByAccountId(account.getId());
                     break;
                 case "LoanAccount":
                     deleteSql = "DELETE FROM loan_account WHERE id = ?";
