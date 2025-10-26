@@ -1,13 +1,8 @@
 package com.ledger.orm;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.stream.Collectors;
 
 public class ConnectionManager {
     private static Connection connection;
@@ -23,22 +18,8 @@ public class ConnectionManager {
     public static Connection getConnection() throws SQLException {
         if (connection == null || connection.isClosed()) {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
-            runSchemaScript(connection);
         }
         return connection;
-    }
-
-
-    private static void runSchemaScript(Connection conn) {
-        try {
-            Path path = Paths.get("src/test/resources/schema.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute(sql);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load schema.sql", e);
-        }
     }
 
 }

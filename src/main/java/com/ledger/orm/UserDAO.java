@@ -1,17 +1,19 @@
 package com.ledger.orm;
 
+import com.ledger.domain.Account;
+import com.ledger.domain.Budget;
+import com.ledger.domain.Ledger;
 import com.ledger.domain.User;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class UserDAO {
     private Connection connection;
 
-    public UserDAO() throws SQLException {
-        this.connection = ConnectionManager.getConnection();
+    public UserDAO(Connection connection){
+        this.connection = connection;
     }
 
     @SuppressWarnings("SqlResolve")
@@ -60,15 +62,12 @@ public class UserDAO {
             stmt.setLong(1, id);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                User user = new User();
-                user.setId(rs.getLong("id"));
-                user.setUsername(rs.getString("username"));
-                user.setPassword(rs.getString("password"));
-                return user;
+                return buildFullUserFromResultSet(rs);
             }
             return null;
         }
     }
+
 
     @SuppressWarnings("SqlResolve")
     public User getUserByUsername(String username) throws SQLException {
@@ -77,14 +76,40 @@ public class UserDAO {
             stmt.setString(1, username);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                User user = new User();
-                user.setId(rs.getLong("id"));
-                user.setUsername(rs.getString("username"));
-                user.setPassword(rs.getString("password"));
-                return user;
+                return buildFullUserFromResultSet(rs);
             }
             return null;
         }
+    }
+    private User buildFullUserFromResultSet(ResultSet rs) throws SQLException {
+        User user = new User();
+        user.setId(rs.getLong("id"));
+        user.setUsername(rs.getString("username"));
+        user.setPassword(rs.getString("password"));
+
+        LedgerDAO ledgerDAO = new LedgerDAO(connection);
+        AccountDAO accountDAO = new AccountDAO(connection);
+        BudgetDAO budgetDAO = new BudgetDAO(connection);
+
+        List<Ledger> ledgers = ledgerDAO.getLedgersByUserId(user.getId());
+        List<Account> accounts = accountDAO.getAccountByOwnerId(user.getId());
+        List<Budget> budgets = budgetDAO.getBudgetsByUserId(user.getId());
+
+        user.setLedgers(ledgers != null ? ledgers : new ArrayList<>());
+        user.setAccounts(accounts != null ? accounts : new ArrayList<>());
+        user.setBudgets(budgets != null ? budgets : new ArrayList<>());
+
+        for (Ledger l : user.getLedgers()) {
+            l.setOwner(user);
+        }
+        for (Account a : user.getAccounts()) {
+            a.setOwner(user);
+        }
+        for (Budget b : user.getBudgets()) {
+            b.setOwner(user);
+        }
+
+        return user;
     }
 
     @SuppressWarnings("SqlResolve")
@@ -111,47 +136,6 @@ public class UserDAO {
             int affectedRows = stmt.executeUpdate();
             return affectedRows > 0;
         }
-    }
-
-    @SuppressWarnings("SqlResolve")
-    public boolean usernameExists(String username) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM users WHERE username = ?";
-
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, username);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
-                }
-            }
-        }
-        return false;
-    }
-
-    public List<User> get(Map<String, Object> criteria) throws SQLException {
-        List<User> users = new ArrayList<>();
-        StringBuilder sql = new StringBuilder("SELECT * FROM users WHERE 1=1");
-
-        for (String key : criteria.keySet()) {
-            sql.append(" AND ").append(key).append(" = ?");
-        }
-
-        try (PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
-            int index = 1;
-            for (Object value : criteria.values()) {
-                stmt.setObject(index++, value);
-            }
-
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                users.add(new User(
-                        rs.getString("username"),
-                        rs.getString("password")
-                ));
-            }
-        }
-        return users;
     }
 
 
