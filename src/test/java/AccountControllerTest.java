@@ -1,7 +1,4 @@
-import com.ledger.business.AccountController;
-import com.ledger.business.LedgerController;
-import com.ledger.business.TransactionController;
-import com.ledger.business.UserController;
+import com.ledger.business.*;
 import com.ledger.domain.*;
 import com.ledger.orm.*;
 import org.junit.jupiter.api.AfterEach;
@@ -30,12 +27,14 @@ public class AccountControllerTest {
     private AccountController accountController;
     private TransactionController transactionController;
     private LedgerController ledgerController;
+    private InstallmentPlanController installmentPlanController;
     private AccountDAO accountDAO;
     private UserDAO userDAO;
     private LedgerDAO ledgerDAO;
     private TransactionDAO transactionDAO;
     private CategoryDAO categoryDAO;
     private LedgerCategoryDAO ledgerCategoryDAO;
+    private InstallmentPlanDAO installmentPlanDAO;
 
 
     @BeforeEach
@@ -50,11 +49,13 @@ public class AccountControllerTest {
         transactionDAO = new TransactionDAO(connection);
         categoryDAO = new CategoryDAO(connection);
         ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+        installmentPlanDAO = new InstallmentPlanDAO(connection);
 
         userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, userDAO, transactionDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO);
+        installmentPlanController = new InstallmentPlanController(installmentPlanDAO, transactionDAO, accountDAO);
 
         userController.register("testuser", "password123"); // create test user and insert into db
         testUser=userController.login("testuser", "password123"); // login to set current user
@@ -533,6 +534,50 @@ public class AccountControllerTest {
         assertNotNull(transactionDAO.getById(tx1.getId()));
         assertNotNull(transactionDAO.getById(tx2.getId()));
         assertEquals(2, testLedger.getTransactions().size());
+
+        assertEquals(0, testUser.getAccounts().size());
+        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
+        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
+        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.ZERO));
+    }
+
+    @Test
+    public void testDeleteCreditAccount_WithInstallmentPlan() throws SQLException{
+        LedgerCategory category=testLedger.getCategories().stream()
+                .filter(cat->cat.getName().equals("Shopping"))
+                .findFirst()
+                .orElseThrow();
+        CreditAccount account = accountController.createCreditAccount(
+                "Test Credit Account",
+                null,
+                BigDecimal.valueOf(1500.00), //balance
+                true,
+                true,
+                testUser,
+                AccountType.CREDIT_CARD,
+                BigDecimal.valueOf(3000.00), //credit limit
+                BigDecimal.valueOf(500.00), //current debt
+                null,
+                null);
+
+        InstallmentPlan plan=installmentPlanController.createInstallmentPlan(
+                account,
+                "Test Installment Plan",
+                BigDecimal.valueOf(1200.00),
+                12,
+                0,
+                BigDecimal.valueOf(2.00), //2% fee rate
+                InstallmentPlan.FeeStrategy.EVENLY_SPLIT,
+                LocalDate.now(),
+                category
+        );
+
+        boolean result= accountController.deleteAccount(account, true);
+        assertTrue(result);
+        //deleted account and installment plan from db
+        Account deletedAccount = accountDAO.getAccountById(account.getId());
+        assertNull(deletedAccount);
+        assertNull(installmentPlanDAO.getById(plan.getId()));
 
         assertEquals(0, testUser.getAccounts().size());
         assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
