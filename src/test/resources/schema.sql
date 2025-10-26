@@ -1,0 +1,204 @@
+-- users table
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+--ledger table
+CREATE TABLE IF NOT EXISTS ledgers (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ledger_categories table
+CREATE TABLE IF NOT EXISTS ledger_categories (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ledger_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    parent_id BIGINT,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('EXPENSE', 'INCOME')),
+    FOREIGN KEY (ledger_id) REFERENCES ledgers(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES ledger_categories(id)
+    );
+
+--account table
+CREATE TABLE IF NOT EXISTS accounts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dtype VARCHAR(31) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    balance DECIMAL(15,2) DEFAULT 0.00,
+    account_type VARCHAR(20) NOT NULL CHECK (account_type IN ('CASH',
+                                                              'DEBIT_CARD',
+                                                              'PASSBOOK',
+                                                              'PAYPAL',
+                                                              'PENSION',
+                                                              'OTHER_FUNDS',
+
+                                                              'CREDIT_CARD',
+                                                              'LOAN',
+                                                              'OTHER_CREDIT',
+                                                              'MOBILE_RECHARGE',
+                                                              'FUEL_CARD',
+                                                              'APPLE_ID',
+                                                              'OTHER_RECHARGE',
+
+                                                              'INVESTMENT',
+                                                              'STOCKS',
+                                                              'FUND',
+                                                              'GOLD',
+                                                              'INSURANCE',
+                                                              'FUTURES',
+                                                              'CRYPTO',
+                                                              'FIXED_DEPOSIT',
+                                                              'OTHER_INVEST',
+
+                                                              'BORROWING',
+                                                              'LENDING')),
+
+    account_category VARCHAR(50) NOT NULL CHECK (account_category IN ('FUNDS',
+                                                                      'CREDIT',
+                                                                      'RECHARGE',
+                                                                      'INVEST',
+                                                                      'VIRTUAL_ACCOUNT')),
+    user_id BIGINT NOT NULL,
+    notes VARCHAR(500),
+    is_hidden BOOLEAN DEFAULT FALSE,
+    included_in_net_asset BOOLEAN DEFAULT TRUE,
+    selectable BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+--basic account table for inheritance
+CREATE TABLE IF NOT EXISTS basic_account (id BIGINT PRIMARY KEY,
+                                           FOREIGN KEY (id) REFERENCES accounts(id) ON DELETE CASCADE
+                                         );
+
+
+--Credit account table for inheritance
+CREATE TABLE IF NOT EXISTS credit_account (id BIGINT PRIMARY KEY,
+                                           credit_limit DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+                                           current_debt DECIMAL(15,2) DEFAULT 0.00,
+                                           bill_date INT,
+                                           due_date INT,
+                                           FOREIGN KEY (id) REFERENCES accounts(id) ON DELETE CASCADE);
+--Loan account table for inheritance
+CREATE TABLE IF NOT EXISTS loan_account (
+                                            id BIGINT PRIMARY KEY,
+                                            total_periods INT NOT NULL DEFAULT 0,
+                                            repaid_periods INT DEFAULT 0,
+                                            annual_interest_rate DECIMAL(5,2),
+                                            loan_amount DECIMAL(15,2) NOT NULL,
+                                            receiving_account_id BIGINT,
+                                            repayment_date DATE,
+                                            repayment_type VARCHAR(50) NOT NULL DEFAULT 'EQUAL_INTEREST' CHECK (repayment_type IN ('EQUAL_INTEREST', 'EQUAL_PRINCIPAL',  'EQUAL_PRINCIPAL_AND_INTEREST', 'INTEREST_BEFORE_PRINCIPAL')),
+                                            loan_remaining_amount DECIMAL(15,2),
+                                            is_ended BOOLEAN DEFAULT FALSE,
+                                            FOREIGN KEY (id) REFERENCES accounts(id) ON DELETE CASCADE,
+                                            FOREIGN KEY (receiving_account_id) REFERENCES accounts(id)
+);
+
+--borrowing account table for inheritance
+CREATE TABLE IF NOT EXISTS borrowing_account (
+                                             id BIGINT PRIMARY KEY,
+                                             is_ended BOOLEAN,
+                                             borrowing_date DATE,
+                                             borrowing_amount DECIMAL(15,2) NOT NULL,
+                                             borrowing_remaining_amount DECIMAL(15,2) NOT NULL,
+                                             FOREIGN KEY (id) REFERENCES accounts(id) ON DELETE CASCADE
+);
+
+--lending account table for inheritance
+CREATE TABLE IF NOT EXISTS lending_account (
+                                               id BIGINT PRIMARY KEY,
+                                               is_ended BOOLEAN DEFAULT FALSE,
+                                               lending_date DATE,
+                                               FOREIGN KEY (id) REFERENCES accounts(id) ON DELETE CASCADE
+);
+--installment table
+CREATE TABLE IF NOT EXISTS installment_plan (
+                                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                                linked_account_id BIGINT NOT NULL,
+                                                total_amount DECIMAL(15,2) NOT NULL,
+                                                plan_remaining_amount DECIMAL(15,2) NOT NULL,
+                                                total_periods INT NOT NULL,
+                                                paid_periods INT DEFAULT 0,
+                                                fee_rate DECIMAL(5,4) DEFAULT 0.0000,
+                                                fee_strategy VARCHAR(50) NOT NULL DEFAULT 'EVENLY_SPLIT' CHECK (fee_strategy IN ('EVENLY_SPLIT', 'UPFRONT', 'FINAL')) ,
+                                                repayment_start_date DATE NOT NULL,
+                                                name VARCHAR(500) NOT NULL,
+                                                category_id BIGINT NOT NULL,
+                                                FOREIGN KEY (linked_account_id) REFERENCES credit_account(id) ON DELETE CASCADE,
+                                                FOREIGN KEY (category_id) REFERENCES ledger_categories(id) ON DELETE CASCADE
+);
+
+
+--transaction table
+CREATE TABLE IF NOT EXISTS transactions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dtype VARCHAR(31) NOT NULL,
+    ledger_id BIGINT,
+    from_account_id BIGINT,
+    to_account_id BIGINT,
+    category_id BIGINT,
+    amount DECIMAL(15,2) NOT NULL,
+    note TEXT,
+    transaction_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ledger_id) REFERENCES ledgers(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_account_id) REFERENCES accounts(id),
+    FOREIGN KEY (to_account_id) REFERENCES accounts(id),
+    FOREIGN KEY (category_id) REFERENCES ledger_categories(id)
+    );
+
+-- budget table
+CREATE TABLE IF NOT EXISTS budgets (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    category_id BIGINT,
+    amount DECIMAL(15,2) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    period VARCHAR(20)  CHECK (period IN ('MONTHLY', 'YEARLY')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES ledger_categories(id) ON DELETE CASCADE
+);
+
+-- global_categories table
+CREATE TABLE IF NOT EXISTS global_categories (id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                              name VARCHAR(100) NOT NULL,
+                                              parent_id BIGINT,
+                                              type VARCHAR(20) NOT NULL CHECK (type IN ('EXPENSE', 'INCOME')),
+                                              FOREIGN KEY (parent_id) REFERENCES global_categories(id)
+
+
+);
+
+-- inzializzazione del database di test con categorie globali
+INSERT INTO global_categories (name, parent_id, type) VALUES
+                                                          ('Food', NULL, 'EXPENSE'),
+                                                          ('Transport', NULL, 'EXPENSE'),
+                                                          ('Entertainment', NULL, 'EXPENSE'),
+                                                          ('Healthy', NULL, 'EXPENSE'),
+                                                          ('Education', NULL, 'EXPENSE'),
+                                                          ('Shopping', NULL, 'EXPENSE'),
+                                                          ('Gifts', NULL, 'EXPENSE'),
+                                                          ('Electronics', NULL, 'EXPENSE'),
+                                                          ('Housing', NULL, 'EXPENSE'),
+                                                          ('Salary', NULL, 'INCOME'),
+                                                          ('Freelance', NULL, 'INCOME'),
+                                                          ('Bonus', NULL, 'INCOME');
+
+
+
+INSERT INTO global_categories (name, parent_id, type) VALUES
+                                                          ('Breakfast', 1, 'EXPENSE'),
+                                                          ('Lunch', 1, 'EXPENSE'),
+                                                          ('Dinner', 1, 'EXPENSE'),
+                                                          ('Taxi', 2, 'EXPENSE'),
+                                                          ('Bus', 2, 'EXPENSE');
+
+
