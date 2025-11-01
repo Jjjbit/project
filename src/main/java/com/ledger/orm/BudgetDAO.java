@@ -15,7 +15,7 @@ public class BudgetDAO {
 
     @SuppressWarnings("SqlResolve")
     public Budget getById(Long budgetId) throws SQLException {
-        String sql = "SELECT id, amount, period, category_id, start_date, end_date, user_id " +
+        String sql = "SELECT id, amount, period, category_id, start_date, end_date, ledger_id " +
                 "FROM budgets WHERE id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -40,7 +40,7 @@ public class BudgetDAO {
     @SuppressWarnings("SqlResolve")
     public List<Budget> getBudgetByCategoryId(Long categoryId) throws SQLException {
         List<Budget> budgets = new ArrayList<>();
-        String sql = "SELECT id, amount, period, category_id, start_date, end_date, user_id " +
+        String sql = "SELECT id, amount, period, category_id, start_date, end_date, ledger_id " +
                 "FROM budgets " +
                 "WHERE category_id = ? AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE";
 
@@ -62,7 +62,7 @@ public class BudgetDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean insert(Budget budget) throws SQLException {
-        String sql = "INSERT INTO budgets (amount, period, category_id, user_id, start_date, end_date) " +
+        String sql = "INSERT INTO budgets (amount, period, category_id, start_date, end_date, ledger_id) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
             stmt.setBigDecimal(1, budget.getAmount());
@@ -72,9 +72,9 @@ public class BudgetDAO {
             } else {
                 stmt.setNull(3, Types.BIGINT);
             }
-            stmt.setLong(4, budget.getOwner().getId());
-            stmt.setDate(5, Date.valueOf(budget.getStartDate()));
-            stmt.setDate(6, Date.valueOf(budget.getEndDate()));
+            stmt.setDate(4, Date.valueOf(budget.getStartDate()));
+            stmt.setDate(5, Date.valueOf(budget.getEndDate()));
+            stmt.setLong(6, budget.getLedger().getId());
 
             int affected = stmt.executeUpdate();
             if (affected > 0) {
@@ -107,33 +107,10 @@ public class BudgetDAO {
         }
     }
 
-    @SuppressWarnings("SqlResolve") //get budgets for a user
-    public List<Budget> getBudgetsByUserId(Long userId) throws SQLException {
-        List<Budget> budgets = new ArrayList<>();
-        String sql = "SELECT id, amount, period, category_id, start_date, end_date, user_id " +
-                "FROM budgets " +
-                "WHERE user_id = ?";
-
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, userId);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                Budget budget = new Budget();
-                budget.setId(rs.getLong("id"));
-                budget.setAmount(rs.getBigDecimal("amount"));
-                budget.setPeriod(Budget.Period.valueOf(rs.getString("period")));
-                budget.setStartDate(rs.getDate("start_date").toLocalDate());
-                budget.setEndDate(rs.getDate("end_date").toLocalDate());
-                budgets.add(budget);
-            }
-        }
-        return budgets;
-    }
-
     @SuppressWarnings("SqlResolve") //get active categorized budgets
     public List<Budget> getActiveBudgetsByCategoryId(Long categoryId, Budget.Period p) throws SQLException {
         List<Budget> budgets = new ArrayList<>();
-        String sql = "SELECT id, amount, period, category_id, start_date, end_date, user_id " +
+        String sql = "SELECT id, amount, period, category_id, start_date, end_date " +
                 "FROM budgets " +
                 "WHERE category_id = ? AND period =? AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE";
 
@@ -154,14 +131,37 @@ public class BudgetDAO {
         return budgets;
     }
 
-    @SuppressWarnings("SqlResolve") //get active budgets for a user
-    public List<Budget> getActiveBudgetsByUserId(Long userId, Budget.Period p) throws SQLException {
+    @SuppressWarnings("SqlResolve") //get all active budgets for a ledger
+    public List<Budget> getActiveBudgetsByLedgerId(Long ledgerId, Budget.Period p) throws SQLException {
         List<Budget> budgets = new ArrayList<>();
         String sql = "SELECT id, amount, period, category_id, start_date, end_date " +
-                "FROM budgets WHERE user_id = ? AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE " +
-                "AND category_id IS NULL AND period = ?";
+                "FROM budgets WHERE ledger_id = ? AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE " +
+                "AND period = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, userId);
+            stmt.setLong(1, ledgerId);
+            stmt.setString(2, p.name());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Budget budget = new Budget();
+                    budget.setId(rs.getLong("id"));
+                    budget.setAmount(rs.getBigDecimal("amount"));
+                    budget.setPeriod(Budget.Period.valueOf(rs.getString("period")));
+                    budget.setStartDate(rs.getDate("start_date").toLocalDate());
+                    budget.setEndDate(rs.getDate("end_date").toLocalDate());
+                    budgets.add(budget);
+                }
+            }
+        }
+        return budgets;
+    }
+    @SuppressWarnings("SqlResolve") //get active ledger-level budgets (without category)
+    public List<Budget> getActiveLedgerLevelBudgets(Long ledgerId, Budget.Period p) throws SQLException {
+        List<Budget> budgets = new ArrayList<>();
+        String sql = "SELECT id, amount, period, category_id, start_date, end_date " +
+                "FROM budgets WHERE ledger_id = ? AND category_id IS NULL AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE " +
+                "AND period = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setLong(1, ledgerId);
             stmt.setString(2, p.name());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
