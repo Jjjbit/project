@@ -32,10 +32,10 @@ public class Main {
             // create Business layer
             UserController userController = new UserController(userDAO);
             AccountController accountController = new AccountController(accountDAO, transactionDAO);
-            LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO);
+            LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
             TransactionController transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
             InstallmentPlanController installmentPlanController = new InstallmentPlanController(installmentPlanDAO, transactionDAO, accountDAO);
-            LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, ledgerDAO, transactionDAO);
+            LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, ledgerDAO, transactionDAO, budgetDAO);
             BudgetController budgetController = new BudgetController(budgetDAO, transactionDAO, ledgerCategoryDAO);
             ReportController reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO, installmentPlanDAO, ledgerCategoryDAO);
 
