@@ -2,8 +2,6 @@ package com.ledger.business;
 
 import com.ledger.domain.*;
 import com.ledger.orm.BudgetDAO;
-import com.ledger.orm.LedgerCategoryDAO;
-import com.ledger.orm.TransactionDAO;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -14,13 +12,9 @@ import java.util.List;
 
 public class BudgetController {
     private final BudgetDAO budgetDAO;
-    private final TransactionDAO transactionDAO;
-    private final LedgerCategoryDAO ledgerCategoryDAO;
 
 
-    public BudgetController(BudgetDAO budgetDAO, TransactionDAO transactionDAO, LedgerCategoryDAO ledgerCategoryDAO) {
-        this.ledgerCategoryDAO = ledgerCategoryDAO;
-        this.transactionDAO = transactionDAO;
+    public BudgetController(BudgetDAO budgetDAO) {
         this.budgetDAO = budgetDAO;
     }
 

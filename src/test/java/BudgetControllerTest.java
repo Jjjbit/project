@@ -51,7 +51,7 @@ public class BudgetControllerTest {
         ledgerCategoryDAO = new LedgerCategoryDAO(connection);
 
         userController = new UserController(userDAO);
-        budgetController = new BudgetController(budgetDAO, transactionDAO, ledgerCategoryDAO);
+        budgetController = new BudgetController(budgetDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
         accountController = new AccountController(accountDAO, transactionDAO);
