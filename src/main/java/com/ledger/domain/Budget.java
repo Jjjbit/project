@@ -13,16 +13,16 @@ public class Budget {
     private BigDecimal amount=BigDecimal.ZERO; // Budget amount
     private Period period; // e.g., "monthly", "yearly"
     private LedgerCategory category; // Category or subcategory
-    private User owner; // User ID or name
     private LocalDate startDate;
     private LocalDate endDate;
+    private Ledger ledger;
 
     public Budget(){}
-    public Budget(BigDecimal amount, Period period, LedgerCategory category, User owner) {
+    public Budget(BigDecimal amount, Period period, LedgerCategory category, Ledger ledger) {
+        this.ledger = ledger;
         this.amount = amount;
         this.period = period;
         this.category = category;
-        this.owner = owner;
         this.startDate = calculateStartDateForPeriod(LocalDate.now(), this.period);
         this.endDate = calculateEndDateForPeriod(this.startDate, this.period);
     }
@@ -40,8 +40,17 @@ public class Budget {
     }
 
 
+    public Ledger getLedger() {
+        return ledger;
+    }
+    public void setLedger(Ledger ledger) {
+        this.ledger = ledger;
+    }
     public void setCategory(LedgerCategory category) {
         this.category = category;
+    }
+    public LedgerCategory getCategory() {
+        return category;
     }
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
@@ -55,17 +64,8 @@ public class Budget {
     public BigDecimal getAmount() {
         return amount;
     }
-    public LedgerCategory getCategory() {
-        return category;
-    }
     public Period getPeriod() {
         return period;
-    }
-    public User getOwner() {
-        return owner;
-    }
-    public void setOwner(User owner) {
-        this.owner = owner;
     }
     public void setStartDate(LocalDate startDate) {
         this.startDate = startDate;

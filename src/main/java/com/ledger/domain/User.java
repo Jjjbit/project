@@ -12,7 +12,6 @@ public class User {
     private String password;
     private List<Ledger> ledgers= new ArrayList<>();
     private List<Account> accounts= new ArrayList<>();
-    private List<Budget> budgets= new ArrayList<>();
 
     public User (){}
     public User(String username, String password){
@@ -38,16 +37,10 @@ public class User {
     public List<Account> getAccounts() {
         return accounts;
     }
-    public List<Budget> getBudgets() {
-        return budgets;
-    }
     public String getPassword(){return password;}
     public String getUsername(){return username;}
     public void setAccounts(List<Account> accounts) {
         this.accounts = accounts;
-    }
-    public void setBudgets(List<Budget> budgets) {
-        this.budgets = budgets;
     }
     public void setLedgers(List<Ledger> ledgers) {
         this.ledgers = ledgers;
