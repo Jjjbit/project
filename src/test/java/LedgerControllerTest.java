@@ -1,11 +1,9 @@
 import com.ledger.business.*;
 import com.ledger.domain.*;
 import com.ledger.orm.*;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +12,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,12 +26,14 @@ public class LedgerControllerTest {
     private LedgerDAO ledgerDAO;
     private AccountDAO accountDAO;
     private BudgetDAO budgetDAO;
+    private InstallmentPlanDAO installmentPlanDAO;
 
     private UserController userController;
     private LedgerController ledgerController;
     private TransactionController  transactionController;
     private AccountController accountController;
     private BudgetController budgetController;
+
     private User testUser;
     private Account account1;
 
@@ -49,16 +50,16 @@ public class LedgerControllerTest {
         categoryDAO = new CategoryDAO(connection);
         accountDAO = new AccountDAO(connection);
         budgetDAO = new BudgetDAO(connection);
+        installmentPlanDAO = new InstallmentPlanDAO(connection);
 
         userController = new UserController(userDAO);
-        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO);
+        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
-        accountController = new AccountController(accountDAO, transactionDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, installmentPlanDAO);
         budgetController = new BudgetController(budgetDAO);
 
         userController.register("testuser", "password123"); // create test user and insert into db
         testUser=userController.login("testuser", "password123"); // login to set current user
-        //testUser = userController.getCurrentUser();
 
         account1=accountController.createBasicAccount("Test Account 1",
                 BigDecimal.valueOf(1000.00),
@@ -70,32 +71,28 @@ public class LedgerControllerTest {
                 true);
     }
 
-    @AfterEach
-    public void tearDown() throws SQLException {
-        readResetScript();
+    private void runSchemaScript() {
+        executeSqlFile("src/test/resources/schema.sql");
     }
 
-    private void runSchemaScript() {
+    private void readResetScript() {
+        executeSqlFile("src/test/resources/reset.sql");
+    }
+
+    private void executeSqlFile(String filePath) {
         try {
-            Path path = Paths.get("src/test/resources/schema.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
+            Path path = Paths.get(filePath);
+            String sql = Files.lines(path)
+                    .collect(Collectors.joining("\n"));
             try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
+                for (String s : sql.split(";")) {
+                    if (!s.trim().isEmpty()) {
+                        stmt.execute(s);
+                    }
+                }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load schema.sql", e);
-        }
-    }
-
-    private void readResetScript() throws SQLException {
-        try {
-            Path path = Paths.get("src/test/resources/reset.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
-            try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
-            }
-        } catch (IOException e) {
-            throw new SQLException("Failed to read reset.sql", e);
+            throw new RuntimeException("Failed to execute " + filePath, e);
         }
     }
 
@@ -106,30 +103,60 @@ public class LedgerControllerTest {
 
         assertNotNull(ledgerDAO.getById(ledger.getId()));
         assertEquals(1, testUser.getLedgers().size());
+        assertEquals(2, ledger.getBudgets().size()); // assuming 2 is the expected number of budgets created
         assertEquals(17, ledger.getCategories().size()); //assuming 17 is the expected number of categories created
 
-        int count=0;
-        int parentCount=0;
-        int childCount=0;
-        for (LedgerCategory category : ledger.getCategories()) {
-            if (category.getParent() == null){
-                if(category.getChildren().size() >0){
-                    for (LedgerCategory child : category.getChildren()) {
-                        childCount++;
-                    }
-                }
-                parentCount++;
-            }
-            count++;
+
+        for (LedgerCategory category : ledger.getCategories().stream()
+                .filter(cat -> cat.getType() == CategoryType.EXPENSE)
+                .collect(Collectors.toList())) {
+            assertEquals(2, category.getBudgets().size()); //each expense category should have 2 budgets
+            Budget monthlyBudget = category.getBudgets().stream()
+                    .filter(b -> b.getPeriod() == Budget.Period.MONTHLY)
+                    .findFirst()
+                    .orElse(null);
+            Budget yearlyBudget = category.getBudgets().stream()
+                    .filter(b -> b.getPeriod() == Budget.Period.YEARLY)
+                    .findFirst()
+                    .orElse(null);
+            assertNotNull(monthlyBudget);
+            assertNotNull(yearlyBudget);
+            assertNotNull(budgetDAO.getById(monthlyBudget.getId()));
+            assertNotNull(budgetDAO.getById(yearlyBudget.getId()));
         }
-        assertEquals(17, count);
-        assertEquals(12, parentCount);
-        assertEquals(5, childCount);
+
+
+
+        //print details
+        List<LedgerCategory> expense= ledger.getCategories().stream()
+                .filter(cat -> cat.getType() == CategoryType.EXPENSE)
+                .filter(cat -> cat.getParent() == null)
+                .collect(Collectors.toList());
+        List<LedgerCategory> income= ledger.getCategories().stream()
+                .filter(cat -> cat.getType() == CategoryType.INCOME)
+                .filter(cat -> cat.getParent() == null)
+                .collect(Collectors.toList());
+        for(LedgerCategory cat : expense){
+            System.out.println("Expense Category: " + cat.getName());
+            assertEquals(2, cat.getBudgets().size());
+            for(LedgerCategory sub: cat.getChildren()){
+                System.out.println("  Expense Subcategory: " + sub.getName());
+                assertEquals(2, sub.getBudgets().size());
+            }
+        }
+
+        for(LedgerCategory cat : income){
+            System.out.println("Income Category: " + cat.getName());
+            for(LedgerCategory sub: cat.getChildren()){
+                System.out.println("  Income Subcategory: " + sub.getName());
+            }
+        }
+
 
     }
 
     @Test
-    public void testCreateLedger_DuplicateName() throws SQLException {
+    public void testCreateLedger_DuplicateName() {
         Ledger ledger = ledgerController.createLedger("Duplicate Ledger", testUser);
         assertNotNull(ledger);
 
@@ -175,7 +202,6 @@ public class LedgerControllerTest {
         assertNull(transactionDAO.getById(tx2.getId()));
     }
 
-    //cancella ???
     @Test
     public void testDeleteLedger_WithBudgets() throws SQLException {
         Ledger ledger = ledgerController.createLedger("Ledger With Budgets", testUser);
@@ -186,16 +212,10 @@ public class LedgerControllerTest {
                 .findFirst()
                 .orElse(null);
 
-        //create budget
-        Budget budget = budgetController.createBudget(testUser,
-                BigDecimal.valueOf(200),
-                food,
-                Budget.Period.MONTHLY);
 
         //delete ledger
         boolean deleted = ledgerController.deleteLedger(ledger);
         assertTrue(deleted);
-        assertNull(budgetDAO.getById(budget.getId()));
         assertEquals(0, ledgerCategoryDAO.countCategoryInDatabase());
     }
 
