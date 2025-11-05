@@ -1,7 +1,7 @@
 package com.ledger.domain;
 
 public enum AccountType {
-    //FOUND
+    //FUNDS
     CASH,
     DEBIT_CARD,
     PASSBOOK,
@@ -32,6 +32,7 @@ public enum AccountType {
     FIXED_DEPOSIT,
     OTHER_INVEST,
 
+    //VIRTUAL ACCOUNT
     BORROWING,
     LENDING
 }
