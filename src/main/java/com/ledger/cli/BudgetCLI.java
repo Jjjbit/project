@@ -9,8 +9,8 @@ import com.ledger.domain.Ledger;
 import com.ledger.domain.LedgerCategory;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Scanner;
+import java.time.LocalDate;
+import java.util.*;
 
 public class BudgetCLI {
     private final BudgetController budgetController;
@@ -23,40 +23,6 @@ public class BudgetCLI {
         this.userController = userController;
         this.reportController = reportController;
         this.budgetController = budgetController;
-    }
-
-    public void addBudget() {
-        System.out.println("\n ===Adding a new budget ===");
-        //select ledger
-        System.out.println("Select ledger:");
-        Ledger selectedLedger = selectLedger();
-
-        System.out.print("Enter budget period (MONTHLY, YEARLY): ");
-        String periodInput = scanner.nextLine().trim().toUpperCase();
-        Budget.Period period = Budget.Period.valueOf(periodInput);
-
-        System.out.print("Enter budget amount: ");
-        BigDecimal amountInput =scanner.nextBigDecimal();
-
-        System.out.println("Do you want to set a category for this budget? (yes/no): ");
-        String categoryChoice = scanner.nextLine().trim().toLowerCase();
-        if(categoryChoice.equals("yes") || categoryChoice.equals("y")) {
-            System.out.println("\n Select a category for the budget:");
-            LedgerCategory category = selectCategory(selectedLedger);
-            Budget budget = budgetController.createBudget(amountInput, category, period, selectedLedger);
-            if (budget == null) {
-                System.out.println("Failed to create budget.");
-                return;
-            }
-            System.out.println("Budget created successfully.");
-        }else{
-            Budget budget = budgetController.createBudget(amountInput, null, period, selectedLedger);
-            if (budget == null) {
-                System.out.println("Failed to create budget.");
-                return;
-            }
-            System.out.println("Budget created successfully.");
-        }
     }
 
     public void mergeBudgets() {
@@ -72,70 +38,56 @@ public class BudgetCLI {
         String periodInput = scanner.nextLine().trim().toUpperCase();
         Budget.Period period = Budget.Period.valueOf(periodInput);
 
-        //select target budget
-        System.out.println("Select the target budget to merge into:");
-        List<Budget> userBudgets = reportController.getActiveBudgetsByLedger(selectedLedger, period);
-        for(int i=0;i<userBudgets.size();i++){
-            Budget budget=userBudgets.get(i);
-            System.out.println((i+1) + ". " + "Amount: " + budget.getAmount() +
-                    ", Period: " + budget.getPeriod() +
-                    (budget.getCategory()!=null ? ", Category: " + budget.getCategory() : ", No Category") +
-                    (budgetController.isOverBudget(budget, selectedLedger) ? ", [OVER BUDGET]" : ", within budget"));
+        //show budgets of the period
+        Map<Integer, Budget> budgetMap = new LinkedHashMap<>();
+        int[] counter = {1};
+
+        System.out.println("\n=== Available Budgets by Category ===");
+        List<LedgerCategory> topCategories = selectedLedger.getCategories().stream()
+                .filter(c -> c.getType() == CategoryType.EXPENSE)
+                .filter(c -> c.getParent() == null)
+                .toList();
+
+        printCategoryBudgetsRecursive(topCategories, "", period, counter, budgetMap);
+
+        Budget uncategorizedBudget = selectedLedger.getBudgets().stream()
+                .filter(b -> b.getCategory() == null)
+                .filter(b -> b.getPeriod() == period)
+                .findFirst()
+                .orElse(null);
+        if(uncategorizedBudget==null){
+            System.out.println("No ledger budget found for the selected period.");
+            return;
+        }
+        if(!uncategorizedBudget.isActive(LocalDate.now())){
+            uncategorizedBudget.refreshIfExpired();
+            budgetController.editBudget(uncategorizedBudget, BigDecimal.ZERO);
         }
 
-        System.out.print("Select a budget by number: ");
-        int budgetIndex = scanner.nextInt() - 1;
-        if(budgetIndex < 0 || budgetIndex >= userBudgets.size()) {
+
+        System.out.println("\n=== Uncategorized Budgets ===");
+        System.out.printf("%d. Amount: %s, Period: %s%s\n",
+                counter[0],
+                uncategorizedBudget.getAmount(),
+                uncategorizedBudget.getPeriod(),
+                budgetController.isOverBudget(uncategorizedBudget) ? " [OVER BUDGET]" : "within budget");
+        budgetMap.put(counter[0]++, uncategorizedBudget);
+
+       //select target budget
+        System.out.print("\nSelect a target budget number to merge into: ");
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // consume newline
+        Budget targetBudget = budgetMap.get(choice);
+        if (targetBudget == null) {
             System.out.println("Invalid budget selection.");
             return;
         }
-        Budget targetBudget = userBudgets.get(budgetIndex);
 
         boolean success = budgetController.mergeBudgets(targetBudget);
         if (!success) {
             System.out.println("Failed to merge budgets.");
         }
         System.out.println("Budgets merged successfully.");
-
-    }
-
-    public void deleteBudget() {
-        System.out.println("\n === Deleting a budget ===");
-
-        //select ledger
-        System.out.println("Select ledger:");
-        Ledger selectedLedger = selectLedger();
-
-        //select period
-        System.out.print("Enter budget period to delete (MONTHLY, YEARLY): ");
-        String periodInput = scanner.nextLine().trim().toUpperCase();
-        Budget.Period period = Budget.Period.valueOf(periodInput);
-
-        //select budget to delete
-        System.out.println("Select the budget to delete:");
-        List<Budget> userBudgets = reportController.getActiveBudgetsByLedger(selectedLedger, period);
-        for(int i=0;i<userBudgets.size();i++){
-            Budget budget=userBudgets.get(i);
-            System.out.println((i+1) + ". " + "Amount: " + budget.getAmount() +
-                    ", Period: " + budget.getPeriod() +
-                    (budget.getCategory()!=null ? ", Category: " + budget.getCategory() : ", No Category") +
-                    (budgetController.isOverBudget(budget, selectedLedger) ? ", [OVER BUDGET]" : ", within budget"));
-        }
-        System.out.print("Select a budget by number: ");
-        //String input = scanner.nextLine().trim();
-        int budgetIndex = scanner.nextInt() - 1;
-        if(budgetIndex < 0 || budgetIndex >= userBudgets.size()) {
-            System.out.println("Invalid budget selection.");
-            return;
-        }
-        Budget budgetToDelete = userBudgets.get(budgetIndex);
-
-        boolean success = budgetController.deleteBudget(budgetToDelete);
-        if (!success) {
-            System.out.println("Failed to delete budget.");
-        }
-        System.out.println("Budget deleted successfully.");
-
 
     }
 
@@ -151,18 +103,47 @@ public class BudgetCLI {
         String periodInput = scanner.nextLine().trim().toUpperCase();
         Budget.Period period = Budget.Period.valueOf(periodInput);
 
-        //select and show budgets
-        List<Budget> ledgerBudgets = reportController.getActiveBudgetsByLedger(selectedLedger, period);
-        if(ledgerBudgets.isEmpty()){
-            System.out.println("No active budgets found for the selected period.");
-        }
-        for(Budget budget:ledgerBudgets){
-            System.out.println("Amount: " + budget.getAmount() +
-                    ", Period: " + budget.getPeriod() +
-                    (budget.getCategory()!=null ? ", Category: " + budget.getCategory() : ", No Category") +
-                    (budgetController.isOverBudget( budget, selectedLedger) ? ", [OVER BUDGET]" : ", within budget"));
+        //show budgets
+        Budget ledgerBudget = reportController.getActiveBudgetByLedger(selectedLedger, period);
+        if(ledgerBudget==null){
+            System.out.println("No ledger budget found for the selected period.");
+            return;
         }
 
+        System.out.println("\n=== Ledger's Budget ===");
+        System.out.println("Amount: " + ledgerBudget.getAmount() +
+                ", Period: " + ledgerBudget.getPeriod() +
+                (ledgerBudget.getCategory()!=null ? ", Category: " + ledgerBudget.getCategory() : ", No Category") +
+                (budgetController.isOverBudget(ledgerBudget) ? ", [OVER BUDGET]" : ", within budget"));
+
+        List<LedgerCategory> topCategories = selectedLedger.getCategories().stream()
+                .filter(c -> c.getType() == CategoryType.EXPENSE)
+                .filter(c -> c.getParent() == null)
+                .toList();
+
+        System.out.println("\n=== Categories' Budgets ===");
+        for(LedgerCategory category : topCategories){
+            Budget categoryBudget = reportController.getActiveBudgetByCategory(category, period);
+            if(categoryBudget!=null && categoryBudget.isActive(LocalDate.now())){
+                System.out.println("Amount: " + categoryBudget.getAmount() +
+                        ", Period: " + categoryBudget.getPeriod() +
+                        ", Category: " + category.getName() +
+                        (budgetController.isOverBudget(categoryBudget) ? ", [OVER BUDGET]" : ", within budget"));
+            }
+            if(category.getChildren().isEmpty()){
+                continue;
+            }
+            for(LedgerCategory subcategory : category.getChildren()){
+                Budget subcategoryBudget = reportController.getActiveBudgetByCategory(subcategory, period);
+                if(subcategoryBudget!=null && subcategoryBudget.isActive(LocalDate.now())){
+                    System.out.println(" " + "Amount: " + subcategoryBudget.getAmount() +
+                            ", Period: " + subcategoryBudget.getPeriod() +
+                            ", Category: " + subcategory.getName() +
+                            (budgetController.isOverBudget(subcategoryBudget) ? ", [OVER BUDGET]" : ", within budget"));
+                }
+            }
+
+        }
     }
 
     public void editBudget() {
@@ -177,28 +158,51 @@ public class BudgetCLI {
         String periodInput = scanner.nextLine().trim().toUpperCase();
         Budget.Period period = Budget.Period.valueOf(periodInput);
 
-        //select budget to edit
-        System.out.println("Select the budget to edit:");
-        List<Budget> userBudgets = reportController.getActiveBudgetsByLedger(selectedLedger, period);
-        for(int i=0;i<userBudgets.size();i++){
-            Budget budget=userBudgets.get(i);
-            System.out.println((i+1) + ". " + "Amount: " + budget.getAmount() +
-                    ", Period: " + budget.getPeriod());
+        //show budgets
+        Map<Integer, Budget> budgetMap = new LinkedHashMap<>();
+        int[] counter = {1};
+        System.out.println("\n=== Available Budgets by Category ===");
+        List<LedgerCategory> topCategories = selectedLedger.getCategories().stream()
+                .filter(c -> c.getType() == CategoryType.EXPENSE)
+                .filter(c -> c.getParent() == null)
+                .toList();
+        printAllCategoryBudgetsRecursive(topCategories, "", period, counter, budgetMap);
+
+        System.out.println("\n=== Uncategorized Budgets ===");
+        Budget ledgerBudget = selectedLedger.getBudgets().stream()
+                .filter(b -> b.getCategory() == null)
+                .filter(b -> b.getPeriod() == period)
+                .findFirst()
+                .orElse(null);
+        if(ledgerBudget==null){
+            System.out.println("No ledger budget found for the selected period.");
+            return;
         }
+        if(!ledgerBudget.isActive(LocalDate.now())){
+            ledgerBudget.refreshIfExpired();
+            budgetController.editBudget(ledgerBudget, BigDecimal.ZERO);
+        }
+        System.out.printf("%d. Period: %s%s\n",
+                counter[0],
+                ledgerBudget.getPeriod(),
+                budgetController.isOverBudget(ledgerBudget) ? " [OVER BUDGET]" : "within budget");
+        budgetMap.put(counter[0]++, ledgerBudget);
+
+        //select budget
         System.out.print("Select a budget by number: ");
-        //String input = scanner.nextLine().trim();
-        int budgetIndex =scanner.nextInt() - 1;
-        if(budgetIndex < 0 || budgetIndex >= userBudgets.size()) {
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // consume newline
+        Budget budgetToEdit = budgetMap.get(choice);
+        if (budgetToEdit == null) {
             System.out.println("Invalid budget selection.");
             return;
         }
 
-        Budget budgetToEdit = userBudgets.get(budgetIndex);
-
         //enter new amount
         System.out.print("Enter new budget amount: ");
-        //String amountInput = scanner.nextLine().trim();
         BigDecimal newAmount = scanner.nextBigDecimal();
+        scanner.nextLine(); // consume newline
+
         boolean success = budgetController.editBudget(budgetToEdit, newAmount);
         if (!success) {
             System.out.println("Failed to edit budget.");
@@ -224,22 +228,108 @@ public class BudgetCLI {
         return ledgers.get(ledgerIndex);
     }
 
-    private LedgerCategory selectCategory(Ledger ledger) {
-        List<LedgerCategory> allCategories=reportController.getLedgerCategoryTreeByLedger(ledger).stream()
-                .filter(c->c.getType().equals(CategoryType.EXPENSE))
-                .toList();
+    //serve per edit
+    private void printAllCategoryBudgetsRecursive(
+            List<LedgerCategory> categories,
+            String indent,
+            Budget.Period period,
+            int[] counter,
+            Map<Integer, Budget> budgetMap) {
 
-        for(int i=0;i<allCategories.size();i++){ //show also subcategories
-            System.out.println((i+1) + ". " + allCategories.get(i).getName());
+        for (LedgerCategory category : categories) {
+            System.out.println(indent + category.getName());
+
+            // print budgets for this category
+            Budget budget = category.getBudgets().stream()
+                    .filter(b -> b.getPeriod() == period)
+                    .findFirst()
+                    .orElse(null);
+            if (budget == null) {
+                continue;
+            }
+            if( !budget.isActive(LocalDate.now())){
+                budget.refreshIfExpired();
+                budgetController.editBudget(budget, BigDecimal.ZERO); //update budget's amount in DB
+            }
+
+            //print category budget with number
+            String status = budgetController.isOverBudget(budget) ? " [OVER BUDGET]" : " (within budget)";
+            String line = indent + counter[0] + ". Amount: " + budget.getAmount()
+                    + ", Period: " + budget.getPeriod() + status;
+            System.out.println(line);
+
+            //budgetMap.put(counter[0]++, budget);
+            budgetMap.put(counter[0], budget);
+            counter[0]++;
+
+            // print subcategories recursively
+            if (!category.getChildren().isEmpty()) {
+                printAllCategoryBudgetsRecursive(
+                        category.getChildren(),
+                        indent + "   ",
+                        period,
+                        counter,
+                        budgetMap);
+            }
         }
-        System.out.print("Select a category by number: ");
-        int categoryIndex = scanner.nextInt()-1;
-        if(categoryIndex < 0 || categoryIndex >= allCategories.size()) {
-            System.out.println("Invalid category selection.");
-            return selectCategory(ledger);
-        }
-        return allCategories.get(categoryIndex);
     }
+
+    //può selezionare solo budget di categorie di primo livello. serve per merge
+    private void printCategoryBudgetsRecursive(
+            List<LedgerCategory> categories,
+            String indent,
+            Budget.Period period,
+            int[] counter,
+            Map<Integer, Budget> budgetMap) {
+
+        for (LedgerCategory category : categories) {
+            System.out.println(indent + category.getName());
+
+            // print budgets for this category
+            Budget budget= category.getBudgets().stream()
+                    .filter(b -> b.getPeriod() == period)
+                    .findFirst()
+                    .orElse(null);
+            if(budget==null){
+                continue;
+            }
+            if( !budget.isActive(LocalDate.now())){
+                budget.refreshIfExpired();
+                budgetController.editBudget(budget, BigDecimal.ZERO); //update budget's amount in DB
+            }
+
+            boolean selectable = category.getParent() == null;
+            if (selectable) {
+                // print top-level category budget with number
+                String status = budgetController.isOverBudget(budget) ? " [OVER BUDGET]" : " (within budget)";
+                String line = indent + counter[0] + ". Amount: " + budget.getAmount()
+                        + ", Period: " + budget.getPeriod() + status;
+                System.out.println(line);
+
+                //budgetMap.put(counter[0]++, budget); //only top-level category budgets are selectable
+                budgetMap.put(counter[0], budget);
+                counter[0]++;
+            } else {
+                //print subcategory budget without number
+                String status = budgetController.isOverBudget(budget) ? " [OVER BUDGET]" : " (within budget)";
+                String line = indent  + " - Amount: " + budget.getAmount()
+                        + ", Period: " + budget.getPeriod() + status;
+                System.out.println(line);
+            }
+
+            // print subcategories recursively
+            if (!category.getChildren().isEmpty()) {
+                printCategoryBudgetsRecursive(
+                        category.getChildren(),
+                        indent + "   ",
+                        period,
+                        counter,
+                        budgetMap);
+            }
+        }
+    }
+
+
 
 
 }
