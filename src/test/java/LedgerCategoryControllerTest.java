@@ -1,12 +1,9 @@
 import com.ledger.business.*;
 import com.ledger.domain.*;
 import com.ledger.orm.*;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,6 +39,7 @@ public class LedgerCategoryControllerTest {
     private CategoryDAO categoryDAO;
     private TransactionDAO transactionDAO;
     private AccountDAO accountDAO;
+    private InstallmentPlanDAO installmentPlanDAO;
 
     @BeforeEach
     public void setUp() throws SQLException {
@@ -56,13 +54,14 @@ public class LedgerCategoryControllerTest {
         categoryDAO = new CategoryDAO(connection);
         transactionDAO = new TransactionDAO(connection);
         accountDAO = new AccountDAO(connection);
+        installmentPlanDAO = new InstallmentPlanDAO(connection);
 
         userController = new UserController(userDAO);
-        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO);
-        ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, ledgerDAO, budgetDAO, transactionDAO);
+        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
+        ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, ledgerDAO, transactionDAO, budgetDAO);
         budgetController = new BudgetController(budgetDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
-        accountController = new AccountController(accountDAO, transactionDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, installmentPlanDAO);
 
         userController.register("testuser", "password123");
         testUser = userController.login("testuser", "password123");
@@ -78,32 +77,28 @@ public class LedgerCategoryControllerTest {
                 true);
     }
 
-    @AfterEach
-    public void tearDown() throws SQLException {
-        readResetScript();
+    private void runSchemaScript() {
+        executeSqlFile("src/test/resources/schema.sql");
     }
 
-    private void runSchemaScript() {
+    private void readResetScript() {
+        executeSqlFile("src/test/resources/reset.sql");
+    }
+
+    private void executeSqlFile(String filePath) {
         try {
-            Path path = Paths.get("src/test/resources/schema.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
+            Path path = Paths.get(filePath);
+            String sql = Files.lines(path)
+                    .collect(Collectors.joining("\n"));
             try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
+                for (String s : sql.split(";")) {
+                    if (!s.trim().isEmpty()) {
+                        stmt.execute(s);
+                    }
+                }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load schema.sql", e);
-        }
-    }
-
-    private void readResetScript() throws SQLException {
-        try {
-            Path path = Paths.get("src/test/resources/reset.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
-            try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
-            }
-        } catch (IOException e) {
-            throw new SQLException("Failed to read reset.sql", e);
+            throw new RuntimeException("Failed to execute " + filePath, e);
         }
     }
 
@@ -113,6 +108,7 @@ public class LedgerCategoryControllerTest {
         LedgerCategory category=ledgerCategoryController.createCategory("Test", testLedger, CategoryType.EXPENSE);
         assertNotNull(category);
         assertNotNull(ledgerCategoryDAO.getById(category.getId()));
+        assertEquals(2, category.getBudgets().size());
     }
 
     @Test
@@ -126,6 +122,7 @@ public class LedgerCategoryControllerTest {
         assertEquals(parentCategory.getId(), subCategory.getParent().getId());
         assertEquals(4, parentCategory.getChildren().size());
         assertNotNull(ledgerCategoryDAO.getById(subCategory.getId())); //exists in DB
+        assertEquals(2, subCategory.getBudgets().size());
     }
 
     @Test
@@ -134,10 +131,10 @@ public class LedgerCategoryControllerTest {
                 .filter(cat->cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
-        Budget budget=budgetController.createBudget(testUser,
-                BigDecimal.valueOf(200),
-                breakfast,
-                Budget.Period.MONTHLY);
+        Budget budget=breakfast.getBudgets().stream()
+                .filter(bud->bud.getPeriod() == Budget.Period.MONTHLY)
+                .findFirst()
+                .orElse(null);
 
         boolean result=ledgerCategoryController.deleteCategory(breakfast, true, null);
         assertTrue(result); //should succeed
@@ -158,7 +155,7 @@ public class LedgerCategoryControllerTest {
         assertNull(ledgerCategoryDAO.getById(salary.getId())); //category deleted from DB
         assertNull(transactionDAO.getById(tx1.getId())); //transaction deleted from DB
         assertEquals(16, testLedger.getCategories().size()); //one category less in ledger
-        List<LedgerCategory> categories=ledgerCategoryDAO.getByLedgerId(testLedger.getId());
+        List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
         assertEquals(16, categories.size()); //one category less in DB
     }
 
@@ -181,11 +178,10 @@ public class LedgerCategoryControllerTest {
         assertNull(ledgerCategoryDAO.getById(salary.getId())); //salary deleted from DB
         assertNotNull(transactionDAO.getById(tx1.getId())); //transaction should exist in DB
         assertEquals(16, testLedger.getCategories().size()); //one category less in ledger
-        List<LedgerCategory> categories=ledgerCategoryDAO.getByLedgerId(testLedger.getId());
+        List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
         assertEquals(16, categories.size()); //one category less in DB
         assertEquals(bonus.getId(), tx1.getCategory().getId());
         assertEquals(1, bonus.getTransactions().size());
-        //List<Transaction> bonusTxs=transactionDAO.get(null, null, bonus.getId(), null, null);
         List<Transaction> bonusTxs=transactionDAO.get(Map.of("category_id", bonus.getId()), null, null);
         assertEquals(1, bonusTxs.size()); //transaction migrated to bonus in DB
 
