@@ -33,7 +33,6 @@ public class Ledger {
     public List<LedgerCategory> getCategories(){return categories;}
     public void setCategories(List<LedgerCategory> categories){this.categories=categories;}
     public List<Budget> getBudgets(){return budgets;}
-    public void setBudgets(List<Budget> budgets){this.budgets=budgets;}
     public Long getId() {
         return id;
     }
