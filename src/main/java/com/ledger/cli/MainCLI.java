@@ -1,7 +1,6 @@
 package com.ledger.cli;
 
 
-import java.sql.SQLException;
 import java.util.Scanner;
 
 public class MainCLI {
@@ -36,7 +35,7 @@ public class MainCLI {
         this.lendingCLI = lendingCLI;
     }
 
-    public void run() throws SQLException {
+    public void run() {
         System.out.println("=== Welcome to Personal Accounting System ===");
 
         // user not logged in, show welcome menu
@@ -77,7 +76,7 @@ public class MainCLI {
         }
     }
 
-    private void showMainMenu() throws SQLException {
+    private void showMainMenu() {
         System.out.println("\n=== Main Menu ===");
         System.out.println("1. Account Management");
         System.out.println("2. Ledger Management");
@@ -135,8 +134,7 @@ public class MainCLI {
         }
     }
 
-
-    private void showAccountMenu() throws SQLException {
+    private void showAccountMenu()  {
         System.out.println("\n=== Account Management ===");
         System.out.println("1. Create Account");
         System.out.println("2. View Accounts"); //show all accounts
@@ -191,7 +189,7 @@ public class MainCLI {
         }
     }
 
-    private void showInstallmentMenu() throws SQLException {
+    private void showInstallmentMenu() {
         System.out.println("\n=== Installment Plan Management ===");
         System.out.println("1. Create Installment Plan");
         System.out.println("2. View Installment Plans");
@@ -229,7 +227,7 @@ public class MainCLI {
         }
     }
 
-    private void showLedgerMenu() throws SQLException {
+    private void showLedgerMenu()  {
         System.out.println("\n=== Ledger Management ===");
         System.out.println("1. Create Ledger");
         System.out.println("2. View Ledgers"); //show all ledgers
@@ -238,8 +236,7 @@ public class MainCLI {
         System.out.println("5. Copy Ledger");
         System.out.println("6. Delete Ledger");
         System.out.println("7. Show Categories Tree");
-        System.out.println("8. Show Transactions under a Ledger");
-        System.out.println("9. Back to Main Menu");
+        System.out.println("8. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -267,19 +264,16 @@ public class MainCLI {
                 ledgerCLI.showCategoryTree();
                 break;
             case "8":
-                ledgerCLI.showTransaction();
-                break;
-            case "9":
                 // go back to main menu
                 showMainMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-6.");
+                System.out.println("Invalid option! Please choose 1-9.");
                 showLedgerMenu();
         }
     }
 
-    private void showCategoryMenu() throws SQLException {
+    private void showCategoryMenu()  {
         System.out.println("\n=== Category Management ===");
         System.out.println("1. Add Category of first level"); //after adding, show category tree and ask if want to add subcategory
         System.out.println("2. Add category of second level");
@@ -320,12 +314,12 @@ public class MainCLI {
                 showMainMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-7.");
+                System.out.println("Invalid option! Please choose 1-8.");
                 showCategoryMenu();
         }
     }
 
-    private void showTransactionMenu() throws SQLException {
+    private void showTransactionMenu() {
         System.out.println("\n=== Transaction Management ===");
         System.out.println("1. Add Income");
         System.out.println("2. Add Expense");
@@ -353,7 +347,6 @@ public class MainCLI {
             case "5":
                 transactionCLI.editTransaction();
                 break;
-
             case "6":
                 // go back to main menu
                 showMainMenu();
@@ -398,45 +391,37 @@ public class MainCLI {
         }
     }
 
-    private void showBudgetMenu() throws SQLException {
+    private void showBudgetMenu()  {
         System.out.println("\n=== Budget Management ===");
-        System.out.println("1. Create Budget");
-        System.out.println("2. Show all Budgets");
-        System.out.println("3. Edit Budget");
-        System.out.println("4. Delete Budget");
-        System.out.println("5. Merge Budget");
-        System.out.println("6. Back to Main Menu");
+        System.out.println("1. Show all Budgets");
+        System.out.println("2. Edit Budget");
+        System.out.println("3. Merge Budget");
+        System.out.println("4. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
 
         switch (choice) {
             case "1":
-                budgetCLI.addBudget();
-                break;
-            case "2":
                 budgetCLI.showAllBudgets();
                 break;
-            case "3":
+            case "2":
                 budgetCLI.editBudget();
                 break;
-            case "4":
-                budgetCLI.deleteBudget();
-                break;
-            case "5":
+            case "3":
                 budgetCLI.mergeBudgets();
                 break;
-            case "6":
+            case "4":
                 // go back to main menu
                 showMainMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-6.");
+                System.out.println("Invalid option! Please choose 1-4.");
                 showBudgetMenu();
         }
     }
 
-    private void showLendingMenu() throws SQLException {
+    private void showLendingMenu() {
         System.out.println("\n=== Lending Management ===");
         System.out.println("1. Create Lending Record");
         System.out.println("2. View ALl Lending Records");
@@ -474,7 +459,7 @@ public class MainCLI {
         }
     }
 
-    private void showBorrowingMenu() throws SQLException {
+    private void showBorrowingMenu()  {
         System.out.println("\n=== Borrowing Management ===");
         System.out.println("1. Create Borrowing Record");
         System.out.println("2. View All Borrowing Records");
