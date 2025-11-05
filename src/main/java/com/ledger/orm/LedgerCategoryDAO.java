@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LedgerCategoryDAO {
-    private Connection connection;
+    private final Connection connection;
 
     public LedgerCategoryDAO(Connection connection) {
         this.connection = connection;
@@ -45,6 +45,7 @@ public class LedgerCategoryDAO {
             } else {
                 stmt.setNull(4, java.sql.Types.BIGINT);
             }
+
             int affectedRows = stmt.executeUpdate();
             if (affectedRows > 0) {
                 try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
@@ -125,7 +126,7 @@ public class LedgerCategoryDAO {
         return categories;
     }
     @SuppressWarnings("SqlResolve")
-    private List<LedgerCategory> getCategoriesByParentId(Long parentId) throws SQLException {
+    public List<LedgerCategory> getCategoriesByParentId(Long parentId) throws SQLException {
         List<LedgerCategory> categories = new ArrayList<>();
 
         String sql = "SELECT id, name, parent_id, type FROM ledger_categories WHERE parent_id = ? ORDER BY id";
@@ -145,6 +146,7 @@ public class LedgerCategoryDAO {
         return categories;
     }
 
+
     private List<LedgerCategory> buildCategoryTree(List<LedgerCategory> categories) throws SQLException {
         List<LedgerCategory> rootCategories = new ArrayList<>();
 
@@ -159,16 +161,6 @@ public class LedgerCategoryDAO {
         }
 
         return rootCategories;
-    }
-
-    @SuppressWarnings("SqlResolve")
-    public boolean deleteByLedgerId(Long ledgerId) throws SQLException {
-        String sql = "DELETE FROM ledger_categories WHERE ledger_id = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, ledgerId);
-            return stmt.executeUpdate() > 0;
-        }
-
     }
 
     @SuppressWarnings("SqlResolve")
