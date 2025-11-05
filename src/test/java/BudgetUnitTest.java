@@ -1,19 +1,23 @@
 import com.ledger.domain.Budget;
+import com.ledger.domain.Ledger;
 import com.ledger.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BudgetUnitTest {
     private User testUser;
+    private Ledger testLedger;
 
     @BeforeEach
     public void setUp() {
         testUser = new User("testuser", "password123");
+        testLedger = new Ledger("Test Ledger", testUser);
     }
     @Test
     public void testGetStartDateForPeriod_Monthly() {
@@ -71,10 +75,7 @@ public class BudgetUnitTest {
 
     @Test
     public void testIsActive_Monthly_Active() {
-        Budget budget = new Budget(BigDecimal.valueOf(1000),
-                Budget.Period.MONTHLY,
-                null,
-                testUser);
+        Budget budget = new Budget(BigDecimal.valueOf(1000), Budget.Period.MONTHLY, null, testLedger);
         budget.setStartDate(LocalDate.of(2025, 10, 1));
         budget.setEndDate(LocalDate.of(2025, 10, 31));
         LocalDate dateToCheck = LocalDate.of(2025, 10, 15);
@@ -89,7 +90,7 @@ public class BudgetUnitTest {
         Budget budget = new Budget(BigDecimal.valueOf(1000),
                 Budget.Period.MONTHLY,
                 null,
-                testUser);
+                testLedger);
         budget.setStartDate(LocalDate.of(2025, 1, 1));
         budget.setEndDate(LocalDate.of(2025, 1, 31));
 
@@ -101,11 +102,11 @@ public class BudgetUnitTest {
     }
 
     @Test
-    public void testIsActive_Monthly_LastDayActive() {
+    public void testIsActive_Monthly_BoundaryCases() {
         Budget budget = new Budget(BigDecimal.valueOf(1000),
                 Budget.Period.MONTHLY,
                 null,
-                testUser);
+                testLedger);
         budget.setStartDate(LocalDate.of(2025, 10, 1));
         budget.setEndDate(LocalDate.of(2025, 10, 31));
 
@@ -114,6 +115,8 @@ public class BudgetUnitTest {
         boolean isActive = budget.isActive(dateToCheck);
 
         assertTrue(isActive);
+        isActive= budget.isActive(LocalDate.of(2025,10,1));
+        assertTrue(isActive);
     }
 
     @Test
@@ -121,7 +124,7 @@ public class BudgetUnitTest {
         Budget budget = new Budget(BigDecimal.valueOf(1000),
                 Budget.Period.YEARLY,
                 null,
-                testUser);
+                testLedger);
         budget.setStartDate(LocalDate.of(2025, 1, 1));
         budget.setEndDate(LocalDate.of(2025, 12, 31));
 
@@ -138,7 +141,7 @@ public class BudgetUnitTest {
         Budget budget = new Budget(BigDecimal.valueOf(1000),
                 Budget.Period.MONTHLY,
                 null,
-                testUser);
+                testLedger);
         budget.setStartDate(LocalDate.of(2024, 1, 1));
         budget.setEndDate(LocalDate.of(2024, 12, 31));
 
@@ -150,18 +153,52 @@ public class BudgetUnitTest {
     }
 
     @Test
-    public void testIsActive_Yearly_LastDayActive() {
+    public void testIsActive_Yearly_BoundaryCases() {
         Budget budget = new Budget(BigDecimal.valueOf(1000),
                 Budget.Period.YEARLY,
                 null,
-                testUser);
+                testLedger);
         budget.setStartDate(LocalDate.of(2025, 1, 1));
         budget.setEndDate(LocalDate.of(2025, 12, 31));
 
         LocalDate dateToCheck = LocalDate.of(2025, 12, 31);
 
         boolean isActive = budget.isActive(dateToCheck);
-
         assertTrue(isActive);
+        isActive= budget.isActive(LocalDate.of(2025,1,1));
+        assertTrue(isActive);
+    }
+
+    //refresh
+    @Test
+    public void testRefreshBudget_Monthly() {
+        Budget budget = new Budget(BigDecimal.valueOf(500),
+                Budget.Period.MONTHLY,
+                null,
+                testLedger);
+        budget.setStartDate(LocalDate.of(2025, 9, 1));
+        budget.setEndDate(LocalDate.of(2025, 9, 30));
+
+        budget.refreshIfExpired();
+
+        assertEquals(BigDecimal.ZERO, budget.getAmount());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), budget.getStartDate());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), budget.getEndDate());
+    }
+
+    @Test
+    public void testRefreshBudget_Yearly() {
+        Budget budget = new Budget(BigDecimal.valueOf(2000),
+                Budget.Period.YEARLY,
+                null,
+                testLedger);
+        budget.setStartDate(LocalDate.of(2024, 1, 1));
+        budget.setEndDate(LocalDate.of(2024, 12, 31));
+
+        budget.refreshIfExpired();
+
+        assertEquals(BigDecimal.ZERO, budget.getAmount());
+        assertEquals(LocalDate.of(LocalDate.now().getYear(),1,1), budget.getStartDate());
+        assertEquals(LocalDate.of(LocalDate.now().getYear(),12,31), budget.getEndDate());
     }
 }
