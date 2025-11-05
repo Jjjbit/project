@@ -3,7 +3,7 @@ package com.ledger.domain;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Category { // General category not tied to a specific ledger
+public class Category { // General category not tied to a specific ledger. global category
     private Long id;
     private String name;
     private Category parent;
