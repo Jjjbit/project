@@ -12,7 +12,7 @@ public class LedgerCategory {
     protected Ledger ledger;
     private List<LedgerCategory> children = new ArrayList<>();
     private List<Transaction> transactions = new ArrayList<>();
-    private List<Budget> budgets = new ArrayList<>();
+    private List<Budget> budgets = new ArrayList<>(); //monthly budget and yearly budget
 
     public LedgerCategory() {}
     public LedgerCategory(String name, CategoryType type, Ledger ledger) {
@@ -32,7 +32,6 @@ public class LedgerCategory {
     public CategoryType getType() { return type; }
     public void setLedger(Ledger ledger) { this.ledger = ledger; }
     public void setType(CategoryType type) { this.type = type; }
-    public void setBudgets(List<Budget> budgets) { this.budgets = budgets; }
     public LedgerCategory getParent() { return parent; }
     public void setParent(LedgerCategory parent) { this.parent = parent; }
     public List<Budget> getBudgets() { return budgets; }
