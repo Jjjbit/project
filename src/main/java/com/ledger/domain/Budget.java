@@ -13,8 +13,8 @@ public class Budget {
     private BigDecimal amount=BigDecimal.ZERO; // Budget amount
     private Period period; // e.g., "monthly", "yearly"
     private LedgerCategory category; // Category or subcategory
-    private LocalDate startDate;
-    private LocalDate endDate;
+    private transient LocalDate startDate;
+    private transient LocalDate endDate;
     private Ledger ledger;
 
     public Budget(){}
@@ -89,6 +89,15 @@ public class Budget {
             case MONTHLY -> date.isBefore(startDate.plusMonths(1));
             case YEARLY -> date.isBefore(startDate.plusYears(1));
         };
+    }
+
+    public void refreshIfExpired() { //updates start and end date if budget period has passed
+        LocalDate today = LocalDate.now();
+        if (today.isAfter(endDate)) {
+            amount = BigDecimal.ZERO; //reset amount
+            startDate = calculateStartDateForPeriod(today, period);
+            endDate = calculateEndDateForPeriod(startDate, period);
+        }
     }
 
 }
