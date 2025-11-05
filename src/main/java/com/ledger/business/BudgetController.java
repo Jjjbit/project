@@ -18,140 +18,113 @@ public class BudgetController {
         this.budgetDAO = budgetDAO;
     }
 
-    public Budget createBudget(BigDecimal amount, LedgerCategory category,
-                               Budget.Period period, Ledger ledger) {
-        try {
-
-            if (amount.compareTo(BigDecimal.ZERO) < 0) {
-                return null; // Invalid amount
-            }
-            if (ledger == null) {
-                return null;
-            }
-            if (category != null) {
-                if (category.getType().equals(CategoryType.INCOME)) {
-                    return null; // Cannot create budget for income category
-                }
-
-                if (!budgetDAO.getActiveBudgetsByCategoryId(category.getId(), period).isEmpty()) {
-                    return null; // Budget for this category and period already exists
-                }
-                if (!ledger.getCategories().contains(category)) {
-                    return null; // Category does not belong to the ledger
-                }
-            } else {
-                if (!budgetDAO.getActiveLedgerLevelBudgets(ledger.getId(), period).isEmpty()) {
-                    return null; // Budget for this ledger and period already exists
-                }
-            }
-
-            Budget budget = new Budget(amount, period, category, ledger);
-            if (category != null) {
-                category.getBudgets().add(budget);
-            }
-            ledger.getBudgets().add(budget);
-
-
-            budgetDAO.insert(budget);
-            return budget;
-        } catch (SQLException e) {
-            System.err.println("SQL Exception during createBudget: " + e.getMessage());
-            return null;
-        }
-    }
-
     public boolean editBudget(Budget budget, BigDecimal newAmount) {
-        try{
-        if (budget == null) {
-            return false;
-        }
-        if(newAmount.compareTo(BigDecimal.ZERO)<0){
-            return  false;
-        }
-        if(budgetDAO.getById(budget.getId())==null){
-            return false;
-        }
-        budget.setAmount(newAmount);
-        return budgetDAO.update(budget);
-        }catch (SQLException e){
+        try {
+            if (budget == null) {
+                return false;
+            }
+            if (newAmount.compareTo(BigDecimal.ZERO) < 0) {
+                return false;
+            }
+            if (budgetDAO.getById(budget.getId()) == null) {
+                return false;
+            }
+            budget.setAmount(newAmount);
+            return budgetDAO.update(budget);
+        } catch (SQLException e) {
             System.err.println("SQL Exception during editBudget: " + e.getMessage());
             return false;
         }
     }
 
     public boolean mergeBudgets(Budget targetBudget) {
-        try{
+        try {
 
-        if (!targetBudget.isActive(LocalDate.now())) {
-            return false;
-        }
-        if(targetBudget.getCategory() != null) {
-            if (targetBudget.getCategory().getParent() != null) {
-                return false; //targetBudget's category must be a top-level category or null
+            if (!targetBudget.isActive(LocalDate.now())) {
+                targetBudget.refreshIfExpired(); //refresh budget if expired
+                //targetBudget.setAmount(BigDecimal.ZERO); //reset amount
+                //LocalDate newStartDate = targetBudget.calculateStartDateForPeriod(LocalDate.now(), targetBudget.getPeriod());
+                //targetBudget.setStartDate(newStartDate);
+                //LocalDate newEndDate = targetBudget.calculateEndDateForPeriod(newStartDate, targetBudget.getPeriod());
+                //targetBudget.setEndDate(newEndDate);
             }
-        }
 
-        Ledger ledger = targetBudget.getLedger();
-        if (targetBudget.getCategory() == null) { //merge category budget into ledger budget
-            List<Budget> sourceBudgets = ledger.getBudgets().stream() //get all active budgets of ledger for the same period
-                    .filter(b -> b.getCategory() != null) //only budgets with category
-                    .filter(b -> b.getCategory().getParent() == null) //top-level categories only
-                    .filter(b -> b.isActive(LocalDate.now())) //active budgets only
-                    .toList();
-            BigDecimal mergedAmount = sourceBudgets.stream()
-                    .map(Budget::getAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            targetBudget.setAmount(targetBudget.getAmount().add(mergedAmount));
-
-
-        } else { //merge subcategory budget into category budget
-            if (targetBudget.getCategory().getParent() != null) {
-                return false; //targetBudget category must be a top-level category
+            if (targetBudget.getCategory() != null) {
+                if (targetBudget.getCategory().getParent() != null) {
+                    return false; //targetBudget's category must be a top-level category or null
+                }
             }
-            List<Budget> sourceBudgets = targetBudget.getCategory().getChildren().stream() //tutte le subcategorie di targetBudget
-                    .flatMap(c -> c.getBudgets().stream()) //tutti i budget di tutte le subcategorie di targetBudget
-                    .filter(b -> b.getPeriod() == targetBudget.getPeriod()) //stesso periodo
-                    .filter(b -> b.isActive(LocalDate.now())) //solo budget attivi
-                    .toList();//tutti i budget di tutte le subcategorie di targetBudget non attivi in periodo di targetBudget
-            BigDecimal mergedAmount = sourceBudgets.stream()
-                    .map(Budget::getAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            targetBudget.setAmount(targetBudget.getAmount().add(mergedAmount).setScale(2, RoundingMode.HALF_UP));
-        }
 
-        return budgetDAO.update(targetBudget);
-        }catch (SQLException e){
+            Ledger ledger = targetBudget.getLedger();
+            if (targetBudget.getCategory() == null) { //merge category-level budget into ledger-level budget
+                List<LedgerCategory> expenseCategories = ledger.getCategories().stream()
+                        .filter(c -> c.getType().equals(CategoryType.EXPENSE)) //only expense categories
+                        .filter(c -> c.getParent() == null) //only top-level categories
+                        .toList();
+                List<Budget> sourceBudgets = new ArrayList<>();
+                for (LedgerCategory cat : expenseCategories) {
+                    Budget catBudget = cat.getBudgets().stream()
+                            .filter(b -> b.getPeriod() == targetBudget.getPeriod()) //find budget for the same period
+                            .findFirst()
+                            .orElse(null);
+                    if (catBudget != null) {
+                        if (!catBudget.isActive(LocalDate.now())) { //if budget is expired, refresh it
+                            catBudget.refreshIfExpired();
+                        }
+                        sourceBudgets.add(catBudget); //add to source budgets to merge
+                    }
+                }
+
+                BigDecimal mergedAmount = sourceBudgets.stream()
+                        .map(Budget::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                targetBudget.setAmount(targetBudget.getAmount().add(mergedAmount));
+
+
+            } else { //merge subcategory budget into category budget
+                if (targetBudget.getCategory().getParent() != null) {
+                    return false; //targetBudget category must be a top-level category
+                }
+                List<LedgerCategory> subcategories = targetBudget.getCategory().getChildren();
+                List<Budget> sourceBudgets = new ArrayList<>();
+                for (LedgerCategory subcat : subcategories) {
+                    Budget subcatBudget = subcat.getBudgets().stream()
+                            .filter(b -> b.getPeriod() == targetBudget.getPeriod())
+                            .findFirst()
+                            .orElse(null);
+                    if (subcatBudget != null) {
+                        if (!subcatBudget.isActive(LocalDate.now())) {
+                            subcatBudget.refreshIfExpired();
+                        }
+                        sourceBudgets.add(subcatBudget);
+                    }
+                }
+                BigDecimal mergedAmount = sourceBudgets.stream()
+                        .map(Budget::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                targetBudget.setAmount(targetBudget.getAmount().add(mergedAmount).setScale(2, RoundingMode.HALF_UP));
+            }
+
+            return budgetDAO.update(targetBudget);
+        } catch (SQLException e) {
             System.err.println("SQL Exception during mergeBudgets: " + e.getMessage());
             return false;
         }
     }
 
-    public boolean deleteBudget(Budget budget) {
-        try{
-        if(budget==null){
-            return false;
-        }
-        if(budgetDAO.getById(budget.getId())==null){
-            return false;
-        }
-
-        Ledger ledger=budget.getLedger();
-        ledger.getBudgets().remove(budget);
-
-
-        return budgetDAO.delete(budget);
-        }catch (SQLException e){
-            System.err.println("SQL Exception during deleteBudget: " + e.getMessage());
-            return false;
-        }
-    }
-
     //report
-    public boolean isOverBudget(Budget budget, Ledger ledger) {
+    public boolean isOverBudget(Budget budget) {
         if (!budget.isActive(LocalDate.now())) {
-            return false;
+            try {
+                budget.refreshIfExpired(); //refresh budget if expired
+                budgetDAO.update(budget);
+            }catch (SQLException e){
+                System.err.println("SQL Exception during isOverBudget refresh: " + e.getMessage());
+                return false;
+            }
         }
 
+        Ledger ledger = budget.getLedger();
         if (budget.getCategory() == null) { //ledger budget
             List<Transaction> transactions = ledger.getTransactions().stream()
                     .filter(t -> t.getType() == TransactionType.EXPENSE)
@@ -163,29 +136,34 @@ public class BudgetController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             return totalExpenses.compareTo(budget.getAmount()) > 0;
         } else { //budget is a category budget
-            List<Transaction> transactions = new ArrayList<>(ledger.getTransactions().stream()
-                    .filter(t -> t.getType() == TransactionType.EXPENSE)
-                    .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
-                    .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
-                    .filter(t -> t.getCategory() != null)
-                    .filter(t -> t.getCategory().getId().equals(budget.getCategory().getId()))
-                    .toList());
-            List<LedgerCategory> childCategories = budget.getCategory().getChildren();
-            for (LedgerCategory childCategory : childCategories) {
-                transactions.addAll(ledger.getTransactions().stream()
+            if (!budget.getCategory().getLedger().equals(ledger)) {
+                    return false;
+                }
+                List<Transaction> transactions = new ArrayList<>(ledger.getTransactions().stream()
                         .filter(t -> t.getType() == TransactionType.EXPENSE)
                         .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
                         .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
                         .filter(t -> t.getCategory() != null)
-                        .filter(t -> t.getCategory().getId().equals(childCategory.getId()))
+                        .filter(t -> t.getCategory().getId().equals(budget.getCategory().getId()))
                         .toList());
+                List<LedgerCategory> childCategories = budget.getCategory().getChildren();
+                for (LedgerCategory childCategory : childCategories) {
+                    transactions.addAll(ledger.getTransactions().stream()
+                            .filter(t -> t.getType() == TransactionType.EXPENSE)
+                            .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
+                            .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
+                            .filter(t -> t.getCategory() != null)
+                            .filter(t -> t.getCategory().getId().equals(childCategory.getId()))
+                            .toList());
+                }
+
+                BigDecimal totalCategoryBudget = transactions.stream()
+                        .map(Transaction::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                return totalCategoryBudget.compareTo(budget.getAmount()) > 0; //>0: over budget
             }
-
-            BigDecimal totalCategoryBudget = transactions.stream()
-                    .map(Transaction::getAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            return totalCategoryBudget.compareTo(budget.getAmount()) > 0; //>0: over budget
         }
-    }
-
 }
+
+
+
