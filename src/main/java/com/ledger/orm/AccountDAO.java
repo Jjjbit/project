@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AccountDAO {
-    private Connection connection;
+    private final Connection connection;
 
     public AccountDAO(Connection connection) {
         this.connection = connection;
@@ -154,22 +154,23 @@ public class AccountDAO {
             }
 
             //insert into loan_account table
-            String loanSql = "INSERT INTO loan_account (id, total_periods, repaid_periods, annual_interest_rate, loan_amount, receiving_account_id, repayment_date, repayment_type, loan_remaining_amount, is_ended) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String loanSql = "INSERT INTO loan_account (id, total_periods, repaid_periods, annual_interest_rate, loan_amount, repayment_date, repayment_type, loan_remaining_amount, is_ended)" +
+                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             try (PreparedStatement stmt = connection.prepareStatement(loanSql)) {
                 stmt.setLong(1, accountId);
                 stmt.setInt(2, account.getTotalPeriods());
                 stmt.setInt(3, account.getRepaidPeriods());
                 stmt.setBigDecimal(4, account.getAnnualInterestRate());
                 stmt.setBigDecimal(5, account.getLoanAmount());
-                if (account.getReceivingAccount() != null && account.getReceivingAccount().getId() != null) {
+                /*if (account.getReceivingAccount() != null && account.getReceivingAccount().getId() != null) {
                     stmt.setLong(6, account.getReceivingAccount().getId());
                 } else {
                     stmt.setNull(6, Types.BIGINT);
-                }
-                stmt.setDate(7, Date.valueOf(account.getRepaymentDay()));
-                stmt.setString(8, account.getRepaymentType().name());
-                stmt.setBigDecimal(9, account.getRemainingAmount());
-                stmt.setBoolean(10, account.getIsEnded());
+                }*/
+                stmt.setDate(6, Date.valueOf(account.getRepaymentDay()));
+                stmt.setString(7, account.getRepaymentType().name());
+                stmt.setBigDecimal(8, account.getRemainingAmount());
+                stmt.setBoolean(9, account.getIsEnded());
 
                 int affectedRows = stmt.executeUpdate();
                 if (affectedRows == 0) {
@@ -312,7 +313,7 @@ public class AccountDAO {
         String baseSql = "SELECT a.*, " +
                 "ca.credit_limit, ca.current_debt, ca.bill_date, ca.due_date, " +
                 "la.total_periods, la.repaid_periods, la.annual_interest_rate, la.loan_amount, " +
-                "la.receiving_account_id, la.repayment_date, la.repayment_type, la.loan_remaining_amount, la.is_ended, " +
+                "la.repayment_date, la.repayment_type, la.loan_remaining_amount, la.is_ended, " +
                 "ba.is_ended as borrowing_ended, ba.borrowing_date, ba.borrowing_amount,  ba.borrowing_remaining_amount, " +
                 "len.is_ended as lending_ended, len.lending_date " +
                 "FROM accounts a " +
@@ -342,7 +343,7 @@ public class AccountDAO {
         String sql = "SELECT a.*, " +
                 "ca.credit_limit, ca.current_debt, ca.bill_date, ca.due_date, " +
                 "la.total_periods, la.repaid_periods, la.annual_interest_rate, la.loan_amount, " +
-                "la.receiving_account_id, la.repayment_date, la.repayment_type, la.laon_remaining_amount, la.is_ended, " +
+                "la.repayment_date, la.repayment_type, la.laon_remaining_amount, la.is_ended, " +
                 "ba.is_ended as borrowing_ended, ba.borrowing_date, ba.borrowing_amount, ba.borrowing_remaining_amount, " +
                 "len.is_ended as lending_ended, len.lending_date " +
                 "FROM accounts a " +
@@ -436,7 +437,7 @@ public class AccountDAO {
         String sql = "SELECT a.*, " +
                 "ca.credit_limit, ca.current_debt, ca.bill_date, ca.due_date, " +
                 "la.total_periods, la.repaid_periods, la.annual_interest_rate, la.loan_amount, " +
-                "la.receiving_account_id, la.repayment_date, la.repayment_type, la.loan_remaining_amount, la.is_ended " +
+                "la.repayment_date, la.repayment_type, la.loan_remaining_amount, la.is_ended " +
                 "FROM accounts a " +
                 "LEFT JOIN credit_account ca ON a.id = ca.id " +
                 "LEFT JOIN loan_account la ON a.id = la.id " +
@@ -448,7 +449,6 @@ public class AccountDAO {
 
             while (rs.next()) {
                 Account account = mapResultSetToAccount(rs);
-                //non set owner here
                 accounts.add(account);
             }
         }
@@ -492,14 +492,13 @@ public class AccountDAO {
                     stmt.setNull(4, Types.INTEGER);
                 }
                 stmt.setLong(5, credit.getId());
-                //stmt.executeUpdate();
                 int rowsAffected = stmt.executeUpdate();
                 return rowsAffected > 0;
             }
 
         } else if (account instanceof LoanAccount loan) {
             String sqlLoan = "UPDATE loan_account SET total_periods=?, repaid_periods=?, annual_interest_rate=?, " +
-                    "loan_amount=?, receiving_account_id=?, repayment_date=?, repayment_type=?, loan_remaining_amount=?, is_ended=? " +
+                    "loan_amount=?, repayment_date=?, repayment_type=?, loan_remaining_amount=?, is_ended=? " +
                     "WHERE id=?";
             try (PreparedStatement stmt = connection.prepareStatement(sqlLoan)) {
                 stmt.setInt(1, loan.getTotalPeriods());
@@ -507,25 +506,25 @@ public class AccountDAO {
                 stmt.setBigDecimal(3, loan.getAnnualInterestRate());
                 stmt.setBigDecimal(4, loan.getLoanAmount());
 
-                if (loan.getReceivingAccount() != null) {
+                /*if (loan.getReceivingAccount() != null) {
                     stmt.setLong(5, loan.getReceivingAccount().getId());
                 }else {
                     stmt.setNull(5, Types.BIGINT);
-                }
+                }*/
                 if (loan.getRepaymentDay() != null) {
-                    stmt.setDate(6, Date.valueOf(loan.getRepaymentDay()));
+                    stmt.setDate(5, Date.valueOf(loan.getRepaymentDay()));
                 } else {
-                    stmt.setNull(6, Types.DATE);
+                    stmt.setNull(5, Types.DATE);
                 }
                 if (loan.getRepaymentType() != null) {
-                    stmt.setString(7, loan.getRepaymentType().name());
+                    stmt.setString(6, loan.getRepaymentType().name());
                 }else {
-                    stmt.setNull(7, java.sql.Types.VARCHAR);
+                    stmt.setNull(6, java.sql.Types.VARCHAR);
                 }
-                stmt.setBigDecimal(8, loan.getRemainingAmount());
-                stmt.setBoolean(9, loan.getIsEnded());
-                stmt.setLong(10, loan.getId());
-                //stmt.executeUpdate();
+                stmt.setBigDecimal(7, loan.getRemainingAmount());
+                stmt.setBoolean(8, loan.getIsEnded());
+                stmt.setLong(9, loan.getId());
+
                 int rowsAffected = stmt.executeUpdate();
                 return rowsAffected > 0;
             }
