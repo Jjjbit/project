@@ -6,7 +6,6 @@ import com.ledger.orm.BudgetDAO;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,17 +36,25 @@ public class BudgetController {
         }
     }
 
+    public boolean refreshBudget(Budget budget) {
+        try {
+            if (budget == null) {
+                return false;
+            }
+            if (budgetDAO.getById(budget.getId()) == null) {
+                return false;
+            }
+            budget.refreshIfExpired();
+            return budgetDAO.update(budget);
+        } catch (SQLException e) {
+            System.err.println("SQL Exception during refreshBudget: " + e.getMessage());
+            return false;
+        }
+    }
+
     public boolean mergeBudgets(Budget targetBudget) {
         try {
-
-            if (!targetBudget.isActive(LocalDate.now())) {
-                targetBudget.refreshIfExpired(); //refresh budget if expired
-                //targetBudget.setAmount(BigDecimal.ZERO); //reset amount
-                //LocalDate newStartDate = targetBudget.calculateStartDateForPeriod(LocalDate.now(), targetBudget.getPeriod());
-                //targetBudget.setStartDate(newStartDate);
-                //LocalDate newEndDate = targetBudget.calculateEndDateForPeriod(newStartDate, targetBudget.getPeriod());
-                //targetBudget.setEndDate(newEndDate);
-            }
+            refreshBudget(targetBudget);
 
             if (targetBudget.getCategory() != null) {
                 if (targetBudget.getCategory().getParent() != null) {
@@ -68,9 +75,7 @@ public class BudgetController {
                             .findFirst()
                             .orElse(null);
                     if (catBudget != null) {
-                        if (!catBudget.isActive(LocalDate.now())) { //if budget is expired, refresh it
-                            catBudget.refreshIfExpired();
-                        }
+                        catBudget.refreshIfExpired(); //refresh if expired
                         sourceBudgets.add(catBudget); //add to source budgets to merge
                     }
                 }
@@ -93,9 +98,7 @@ public class BudgetController {
                             .findFirst()
                             .orElse(null);
                     if (subcatBudget != null) {
-                        if (!subcatBudget.isActive(LocalDate.now())) {
-                            subcatBudget.refreshIfExpired();
-                        }
+                        subcatBudget.refreshIfExpired();
                         sourceBudgets.add(subcatBudget);
                     }
                 }
@@ -114,15 +117,7 @@ public class BudgetController {
 
     //report
     public boolean isOverBudget(Budget budget) {
-        if (!budget.isActive(LocalDate.now())) {
-            try {
-                budget.refreshIfExpired(); //refresh budget if expired
-                budgetDAO.update(budget);
-            }catch (SQLException e){
-                System.err.println("SQL Exception during isOverBudget refresh: " + e.getMessage());
-                return false;
-            }
-        }
+        refreshBudget(budget);
 
         Ledger ledger = budget.getLedger();
         if (budget.getCategory() == null) { //ledger budget
