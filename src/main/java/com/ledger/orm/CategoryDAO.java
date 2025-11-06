@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CategoryDAO {
-    private Connection connection;
+    private final Connection connection;
 
     public CategoryDAO(Connection connection) {
         this.connection = connection;
@@ -77,15 +77,6 @@ public class CategoryDAO {
         }
 
         return rootCategories;
-    }
-
-    private Category mapResultSetToGlobalCategory(ResultSet rs) throws SQLException {
-        Category category = new Category();
-        category.setId(rs.getLong("id"));
-        category.setName(rs.getString("name"));
-        category.setType(CategoryType.valueOf(rs.getString("type")));
-
-        return category;
     }
 
 }
