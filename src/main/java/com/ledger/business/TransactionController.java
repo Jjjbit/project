@@ -2,150 +2,426 @@ package com.ledger.business;
 
 import com.ledger.domain.*;
 import com.ledger.orm.AccountDAO;
-import com.ledger.orm.CategoryComponentDAO;
 import com.ledger.orm.LedgerDAO;
 import com.ledger.orm.TransactionDAO;
-import jakarta.transaction.Transactional;
 
-import java.time.YearMonth;
-import java.util.List;
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.time.LocalDate;
 
 public class TransactionController {
-    private TransactionDAO transactionDAO;
-    private AccountDAO accountDAO;
-    private LedgerDAO ledgerDAO;
-    private CategoryComponentDAO categoryComponentDAO;
+    private final TransactionDAO transactionDAO;
+    private final AccountDAO accountDAO;
+    private final LedgerDAO ledgerDAO;
 
-    public TransactionController(TransactionDAO transactionDAO, AccountDAO accountDAO, LedgerDAO ledgerDAO, CategoryComponentDAO categoryComponentDAO) {
+    public TransactionController(TransactionDAO transactionDAO,
+                                 AccountDAO accountDAO,
+                                 LedgerDAO ledgerDAO) {
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
         this.ledgerDAO = ledgerDAO;
-        this.categoryComponentDAO = categoryComponentDAO;
     }
 
-    @Transactional
-    public void createTransaction(Transaction transaction) {
-        if (transaction == null) {
-            throw new IllegalArgumentException("Transaction cannot be null");
-        }
-        if (transaction.getAccount() == null || transaction.getAccount().getId() == null) {
-            throw new IllegalArgumentException("Transaction account cannot be null");
-        }
-        if (transaction.getLedger() == null || transaction.getLedger().getId() == null) {
-            throw new IllegalArgumentException("Transaction ledger cannot be null");
-        }
-        if(transaction.getLedger().getOwner()!= transaction.getAccount().getOwner()){
-            throw new IllegalArgumentException("Transaction account owner must match the ledger owner");
+    public Income createIncome(Ledger ledger, Account toAccount, LedgerCategory category, String description,
+                               LocalDate date, BigDecimal amount) {
+        if(ledger == null){
+            return null;
         }
 
-        transaction.execute();
-
-        User owner = transaction.getLedger().getOwner();
-        if (owner == null) {
-            throw new IllegalArgumentException("Transaction ledger owner cannot be null");
+        if(category == null){
+            return null;
         }
 
-        owner.updateTotalAssets();
-        owner.updateTotalLiabilities();
-        owner.updateNetAsset();
+        if(category.getType() != CategoryType.INCOME){
+            return null;
+        }
 
-        transactionDAO.save(transaction);
+        if( toAccount == null){
+            return null;
+        }
+
+        if(!toAccount.getSelectable()){
+            return null;
+        }
+        if(amount == null){
+            return null;
+        }
+
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        if(!category.getLedger().equals(ledger)){
+            return null;
+        }
+
+        Income incomeTransaction = new Income(
+                date != null ? date : LocalDate.now(),
+                amount,
+                description,
+                toAccount,
+                ledger,
+                category
+        );
+        try {
+            transactionDAO.insert(incomeTransaction);
+            category.getTransactions().add(incomeTransaction);
+            toAccount.credit(amount);
+            toAccount.getIncomingTransactions().add(incomeTransaction);
+            accountDAO.update(toAccount); //update balance in database
+
+            ledger.getTransactions().add(incomeTransaction);
+
+            return incomeTransaction;
+        } catch (SQLException e){
+            System.err.println("Error creating income transaction: " + e.getMessage());
+            return null;
+        }
     }
 
-    /*@Transactional
-    public void changeLedger(Long transactionId, Long newLedgerId){
-        Ledger newLedger = ledgerDAO.findById(newLedgerId);
-        if (newLedger == null) {
-            throw new IllegalArgumentException("New ledger not found");
-        }
-        Transaction transaction = transactionDAO.findById(transactionId);
-        if (transaction == null) {
-            throw new IllegalArgumentException("Transaction not found");
-        }
-        transaction.changeLedger(newLedger);
-        transactionDAO.update(transaction);
-    }*/
+    public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String description,
+                                 LocalDate date, BigDecimal amount) {
 
-    @Transactional
-    public void addTransactionToLedger(Long ledgerId, Long transactionId) { //for transaction that is not in a ledger
-        Ledger ledger = ledgerDAO.findById(ledgerId);
+        if(category == null){
+            return null;
+        }
 
-        if (ledger == null) {
-            throw new IllegalArgumentException("Ledger not found");
+        if(category.getType() != CategoryType.EXPENSE){
+            return null;
         }
-        Transaction transaction = transactionDAO.findById(transactionId);
-        if (transaction == null) {
-            throw new IllegalArgumentException("Transaction not found");
+        if(!category.getLedger().equals(ledger)){
+            return null;
         }
-        ledger.addTransaction(transactionDAO.findById(transactionId));
-        //ledgerDAO.update(ledger);
+
+        if(amount == null){
+            return null;
+        }
+
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+
+        Expense expenseTransaction = new Expense(
+                date != null ? date : LocalDate.now(),
+                amount,
+                description,
+                fromAccount,
+                ledger,
+                category
+        );
+        try {
+            transactionDAO.insert(expenseTransaction);
+            category.getTransactions().add(expenseTransaction);
+            fromAccount.debit(amount);
+            fromAccount.getOutgoingTransactions().add(expenseTransaction);
+            accountDAO.update(fromAccount); //update balance in database
+
+            ledger.getTransactions().add(expenseTransaction);
+
+
+            return expenseTransaction;
+        }catch (SQLException e){
+            System.err.println("Error creating expense transaction: " + e.getMessage());
+            return null;
+        }
     }
 
-    @Transactional
-    public void removeTransactionFromLedger(Long ledgerId, Long transactionId) {
-        Ledger ledger = ledgerDAO.findById(ledgerId);
-        if (ledger == null) {
-            throw new IllegalArgumentException("Ledger not found");
-        }
-        Transaction transaction = transactionDAO.findById(transactionId);
-        if (transaction == null) {
-            throw new IllegalArgumentException("Transaction not found");
-        }
-        if (!ledger.getTransactions().contains(transaction)) {
-            throw new IllegalArgumentException("Transaction not found in the specified ledger");
-        }
-        ledger.removeTransaction(transactionDAO.findById(transactionId));
-        //ledgerDAO.update(ledger);
-    }
+    public Transfer createTransfer(Ledger ledger, Account fromAccount, Account toAccount, String description,
+                                   LocalDate date, BigDecimal amount) {
 
-    @Transactional
-    public void deleteTransaction(Long transactionId) {
-        Transaction transaction = transactionDAO.findById(transactionId);
-        if (transaction == null) {
-            throw new IllegalArgumentException("Transaction not found");
+        if(fromAccount != null && toAccount != null && fromAccount.getId().equals(toAccount.getId())){
+            return null;
         }
-        transactionDAO.delete(transactionId);
-    }
 
-    //TODO
-    @Transactional
-    public void modifyTransaction(Long transactionId, Transaction updateTransaction) {
-        Transaction transaction = transactionDAO.findById(transactionId);
-        if (transaction != null) {
-            transaction.setAmount(updateTransaction.getAmount());
-            transaction.setDate(updateTransaction.getDate());
-            transaction.setNote(updateTransaction.getNote());
-            transaction.setAccount(updateTransaction.getAccount());
-            transaction.setCategory(updateTransaction.getCategory());
-            transaction.setType(updateTransaction.getType());
-            transaction.setLedger(updateTransaction.getLedger());
+        if(amount == null){
+            return null;
         }
-        transactionDAO.update(transaction);
-    }
 
-    public List<Transaction> getTransactionsForMonthByLedgerId(Long ledgerId, YearMonth month) {
-        Ledger ledger = ledgerDAO.findById(ledgerId);
-        if (ledger == null) {
-            throw new IllegalArgumentException("Ledger not found");
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
         }
-        return ledger.getTransactionsForMonth(month);
-    }
-
-    public List<Transaction> getTransactionsForMonthByAccountId(Long accountId, YearMonth month) {
-        Account account = accountDAO.findById(accountId);
-        if (account == null) {
-            throw new IllegalArgumentException("Account not found");
-        }
-        return account.getTransactionsForMonth(month);
-    }
 
 
-    public List<Transaction> getTransactionsForMonthByCategoryId(Long categoryId, YearMonth month) {
-        CategoryComponent category = categoryComponentDAO.findById(categoryId);
-        if (category == null) {
-            throw new IllegalArgumentException("Category not found");
+        Transfer transferTransaction = new Transfer(
+                date != null ? date : LocalDate.now(),
+                description,
+                fromAccount,
+                toAccount,
+                amount,
+                ledger
+        );
+        try {
+            transactionDAO.insert(transferTransaction);
+
+            if (fromAccount != null) {
+                fromAccount.debit(amount);
+                fromAccount.getOutgoingTransactions().add(transferTransaction);
+                accountDAO.update(fromAccount);
+            }
+            if (toAccount != null) {
+                toAccount.credit(amount);
+                toAccount.getIncomingTransactions().add(transferTransaction);
+                accountDAO.update(toAccount);
+            }
+            if (ledger != null) {
+                ledger.getTransactions().add(transferTransaction);
+            }
+            return transferTransaction;
+        }catch (SQLException e){
+            System.err.println("Error creating transfer transaction: " + e.getMessage());
+            return null;
         }
-        return category.getTransactionsForMonth(month);
     }
+
+    public boolean deleteTransaction(Transaction tx) {
+        if(tx == null){
+            return false;
+        }
+
+        Account fromAccount = tx.getFromAccount();
+        Account toAccount = tx.getToAccount();
+        LedgerCategory category = tx.getCategory();
+        Ledger ledger = tx.getLedger();
+
+        try {
+            if (tx instanceof Income) {
+                if (toAccount != null) {
+                    toAccount.debit(tx.getAmount());
+                    toAccount.getIncomingTransactions().remove(tx);
+                    accountDAO.update(toAccount);
+                }
+            } else if (tx instanceof Expense) {
+                if (fromAccount != null) {
+                    fromAccount.credit(tx.getAmount());
+                    fromAccount.getOutgoingTransactions().remove(tx);
+                    accountDAO.update(fromAccount);
+                }
+            } else if (tx instanceof Transfer) {
+                if (fromAccount != null) {
+                    fromAccount.credit(tx.getAmount());
+                    fromAccount.getOutgoingTransactions().remove(tx);
+                    accountDAO.update(fromAccount);
+                }
+                if (toAccount != null) {
+                    toAccount.debit(tx.getAmount());
+                    toAccount.getIncomingTransactions().remove(tx);
+                    accountDAO.update(toAccount);
+                }
+            }
+
+            if (category != null) {
+                category.getTransactions().remove(tx);
+            }
+            if (ledger != null) {
+                ledger.getTransactions().remove(tx);
+            }
+
+            return transactionDAO.delete(tx);
+        } catch (SQLException e) {
+            System.err.println("Error deleting transaction: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean updateTransaction(Transaction tx, Account fromAccount, Account toAccount,
+                                     LedgerCategory category, String note, LocalDate date, BigDecimal amount,
+                                     Ledger ledger) {
+        if (tx == null) {
+            return false;
+        }
+
+        try {
+            Ledger oldLedger = tx.getLedger();
+            if (ledger != null) { //ledger change
+                if (ledgerDAO.getById(ledger.getId()) == null) {
+                    return false;
+                }
+
+                if (oldLedger != null && !oldLedger.getId().equals(ledger.getId())) {
+                    oldLedger.getTransactions().remove(tx);
+                    ledger.getTransactions().add(tx);
+                    tx.setLedger(ledger);
+                } else if (oldLedger == null) {
+                    ledger.getTransactions().add(tx);
+                    tx.setLedger(ledger);
+                }
+            }
+
+            LedgerCategory oldCategory = tx.getCategory();
+            if (category != null) { //category change
+                if (ledger != null) {
+                    if (!category.getLedger().getId().equals(ledger.getId())) {
+                        return false;
+                    }
+                } else {
+                    if (!category.getLedger().getId().equals(oldLedger.getId())) {
+                        return false;
+                    }
+                }
+
+                if (tx instanceof Income && category.getType() != CategoryType.INCOME) {
+                    return false;
+                }
+                if (tx instanceof Expense && category.getType() != CategoryType.EXPENSE) {
+                    return false;
+                }
+                if (oldCategory != null && !category.getId().equals(oldCategory.getId())) {
+                    oldCategory.getTransactions().remove(tx);
+                    category.getTransactions().add(tx);
+                    tx.setCategory(category);
+                } else if (oldCategory == null) {
+                    category.getTransactions().add(tx);
+                    tx.setCategory(category);
+                }
+            }
+
+
+            if (tx instanceof Expense) {
+                if (toAccount != null) { //change toAccount
+                    return false;
+                }
+
+            }
+            if (tx instanceof Income) {
+                if (fromAccount != null) { //change fromAccount
+                    return false;
+                }
+            }
+            if (tx instanceof Transfer) {
+                if (fromAccount != null && toAccount != null) { //change toAccount and fromAccount
+                    if (fromAccount.equals(toAccount)) {
+                        return false;
+                    }
+                }
+            }
+
+            if (amount != null) { //change amount
+                if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                    return false;
+                }
+            } else {
+                amount = tx.getAmount();
+            }
+            Account prevFromAccount = tx.getFromAccount();
+            Account prevToAccount = tx.getToAccount();
+            if (amount.compareTo(tx.getAmount()) != 0) { //change amount
+                if (fromAccount == null || fromAccount.getId().equals(prevFromAccount.getId())) { //fromAccount not changed or not provided
+                    if (prevFromAccount != null) { //change amount only
+                        prevFromAccount.credit(tx.getAmount()); //rollback previous amount
+                        prevFromAccount.debit(amount);
+                        accountDAO.update(prevFromAccount); //update balance in database
+                    }
+                } else { //change fromAccount and amount
+                    if (accountDAO.getAccountById(fromAccount.getId()) == null) {
+                        return false;
+                    }
+                    if (!fromAccount.getSelectable()) {
+                        return false;
+                    }
+                    if (fromAccount instanceof LoanAccount) {
+                        return false;
+                    }
+
+
+                    prevFromAccount.credit(tx.getAmount());
+                    prevFromAccount.getOutgoingTransactions().remove(tx);
+                    accountDAO.update(prevFromAccount);
+
+                    fromAccount.debit(amount);
+                    fromAccount.getOutgoingTransactions().add(tx);
+                    tx.setFromAccount(fromAccount);
+                    accountDAO.update(fromAccount);
+                }
+
+                if (toAccount == null || toAccount.getId().equals(prevToAccount.getId())) { //toAccount not changed
+                    if (prevToAccount != null) {
+                        prevToAccount.debit(tx.getAmount());
+                        prevToAccount.credit(amount);
+                        accountDAO.update(prevToAccount);
+                    }
+                } else { //toAccount and amount changed
+                    if (accountDAO.getAccountById(toAccount.getId()) == null) {
+                        return false;
+                    }
+                    if (!toAccount.getSelectable()) {
+                        return false;
+                    }
+
+
+                    prevToAccount.debit(tx.getAmount());
+                    prevToAccount.getIncomingTransactions().remove(tx);
+                    accountDAO.update(prevToAccount);
+
+                    toAccount.credit(amount);
+                    toAccount.getIncomingTransactions().add(tx);
+                    tx.setToAccount(toAccount);
+                    accountDAO.update(toAccount);
+                }
+                tx.setAmount(amount);
+            } else { //amount not changed
+                //account changed
+                if ((fromAccount != null && (prevFromAccount == null || !fromAccount.getId().equals(prevFromAccount.getId()))) ||
+                        (toAccount != null && (prevToAccount == null || !toAccount.getId().equals(prevToAccount.getId())))) {
+
+                    //rollback previous transaction
+                    if (prevFromAccount != null) {
+                        prevFromAccount.credit(tx.getAmount());
+                        prevFromAccount.getOutgoingTransactions().remove(tx);
+                        accountDAO.update(prevFromAccount);
+                    }
+                    if (prevToAccount != null) {
+                        prevToAccount.debit(tx.getAmount());
+                        prevToAccount.getIncomingTransactions().remove(tx);
+                        accountDAO.update(prevToAccount);
+                    }
+
+                    //apply new transaction
+                    if (fromAccount != null) {
+                        if (accountDAO.getAccountById(fromAccount.getId()) == null) {
+                            return false;
+                        }
+                        if (!fromAccount.getSelectable()) {
+                            return false;
+                        }
+                        if (fromAccount.getBalance().compareTo(amount) < 0) {
+                            return false;
+                        }
+                        fromAccount.debit(amount);
+                        fromAccount.getOutgoingTransactions().add(tx);
+                        tx.setFromAccount(fromAccount);
+                        accountDAO.update(fromAccount);
+                    } else {
+                        tx.setFromAccount(null);
+                    }
+                    if (toAccount != null) {
+                        if (accountDAO.getAccountById(toAccount.getId()) == null) {
+                            return false;
+                        }
+                        if (!toAccount.getSelectable()) {
+                            return false;
+                        }
+                        if (toAccount instanceof LoanAccount) {
+                            return false;
+                        }
+                        toAccount.credit(amount);
+                        toAccount.getIncomingTransactions().add(tx);
+                        tx.setToAccount(toAccount);
+                        accountDAO.update(toAccount);
+                    } else {
+                        tx.setToAccount(null);
+                    }
+                }
+            }
+
+            tx.setDate(date != null ? date : tx.getDate());
+            tx.setNote(note != null ? note : tx.getNote());
+            return transactionDAO.update(tx);
+
+        } catch (SQLException e) {
+            System.err.println("Error updating transaction: " + e.getMessage());
+            return false;
+        }
+    }
+
+
 
 }
