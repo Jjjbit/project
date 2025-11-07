@@ -1,14 +1,12 @@
 package com.ledger.domain;
 
-import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 
-public class InstallmentPlan {
+public class Installment {
 
-    public enum FeeStrategy {
+    public enum Strategy {
         EVENLY_SPLIT,
         UPFRONT,
         FINAL
@@ -17,34 +15,32 @@ public class InstallmentPlan {
     private Long id; // Unique identifier for the installment plan
     private BigDecimal totalAmount;
     private int totalPeriods;
-    private BigDecimal feeRate;
+    private BigDecimal interest;
     private int paidPeriods = 0;
-    private FeeStrategy feeStrategy = FeeStrategy.EVENLY_SPLIT;
+    private Strategy strategy = Strategy.EVENLY_SPLIT;
     private Account linkedAccount;
     private BigDecimal remainingAmount;
     private LocalDate repaymentStartDate;
     private LedgerCategory category;
-
-    @Column(name = "name")
     private String name;
 
-    public InstallmentPlan() {}
-    public InstallmentPlan(String name,
-                           BigDecimal totalAmount,
-                           int totalPeriods,
-                           BigDecimal feeRate,
-                           int paidPeriods,
-                           FeeStrategy feeStrategy,
-                           Account linkedAccount,
-                           LocalDate repaymentStartDate,
-                           LedgerCategory category) {
+    public Installment() {}
+    public Installment(String name,
+                       BigDecimal totalAmount,
+                       int totalPeriods,
+                       BigDecimal interest,
+                       int paidPeriods,
+                       Strategy strategy,
+                       Account linkedAccount,
+                       LocalDate repaymentStartDate,
+                       LedgerCategory category) {
         this.repaymentStartDate = repaymentStartDate;
         this.name = name;
         this.totalAmount = totalAmount;
         this.totalPeriods = totalPeriods;
-        this.feeRate = feeRate;
+        this.interest = interest;
         this.paidPeriods = paidPeriods;
-        this.feeStrategy = feeStrategy;
+        this.strategy = strategy;
         this.linkedAccount = linkedAccount;
         this.category = category;
         this.remainingAmount = getRemainingAmountWithRepaidPeriods();
@@ -77,11 +73,11 @@ public class InstallmentPlan {
     public void setPaidPeriods(int paidPeriods) {
         this.paidPeriods = paidPeriods;
     }
-    public void setFeeRate(BigDecimal feeRate) {
-        this.feeRate = feeRate;
+    public void setInterest(BigDecimal interest) {
+        this.interest = interest;
     }
-    public void setFeeStrategy(FeeStrategy feeStrategy) {
-        this.feeStrategy = feeStrategy;
+    public void setStrategy(Strategy strategy) {
+        this.strategy = strategy;
     }
     public BigDecimal getTotalAmount() {
         return totalAmount;
@@ -89,11 +85,11 @@ public class InstallmentPlan {
     public int getTotalPeriods() {
         return totalPeriods;
     }
-    public BigDecimal getFeeRate() {
-        return feeRate;
+    public BigDecimal getInterest() {
+        return interest;
     }
-    public FeeStrategy getFeeStrategy() {
-        return feeStrategy;
+    public Strategy getStrategy() {
+        return strategy;
     }
     public LocalDate getRepaymentStartDate() {
         return repaymentStartDate;
@@ -106,9 +102,9 @@ public class InstallmentPlan {
     }
     public BigDecimal getMonthlyPayment(int period) {
         BigDecimal base = totalAmount.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP); //base amount per period
-        BigDecimal fee = totalAmount.multiply(feeRate.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP); //total fee for the installment
+        BigDecimal fee = totalAmount.multiply(interest.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP); //total fee for the installment
 
-        switch(this.feeStrategy){
+        switch(this.strategy){
             case EVENLY_SPLIT:
                 return (totalAmount.add(fee)).divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP); //(totalAmount+fee)/totalPeriods
             case UPFRONT:
@@ -124,12 +120,12 @@ public class InstallmentPlan {
                     return base; //all other payments are just the base amount
                 }
             default:
-                throw new IllegalArgumentException("Unknown fee strategy: " + feeStrategy); // For other fee strategies
+                throw new IllegalArgumentException("Unknown fee strategy: " + strategy); // For other fee strategies
         }
 
     }
     public BigDecimal getTotalPayment(){
-        BigDecimal fee = totalAmount.multiply(feeRate.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP); //total fee for the installment
+        BigDecimal fee = totalAmount.multiply(interest.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP); //total fee for the installment
         return totalAmount.add(fee).setScale(2, RoundingMode.HALF_UP); //total amount + total fee
     }
     public void setRepaymentStartDate(LocalDate repaymentStartDate) {
