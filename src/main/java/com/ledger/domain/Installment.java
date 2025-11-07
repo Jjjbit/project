@@ -102,31 +102,31 @@ public class Installment {
     }
     public BigDecimal getMonthlyPayment(int period) {
         BigDecimal base = totalAmount.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP); //base amount per period
-        BigDecimal fee = totalAmount.multiply(interest.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP); //total fee for the installment
+        BigDecimal totalInterest = totalAmount.multiply(interest.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP); //total fee for the installment
 
         switch(this.strategy){
             case EVENLY_SPLIT:
-                return (totalAmount.add(fee)).divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP); //(totalAmount+fee)/totalPeriods
+                return (totalAmount.add(totalInterest)).divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP); //(totalAmount+fee)/totalPeriods
             case UPFRONT:
                 if(period == 1) {
-                    return base.add(fee).setScale(2, RoundingMode.HALF_UP); //first payment includes all fees
+                    return base.add(totalInterest).setScale(2, RoundingMode.HALF_UP); //first payment includes total interest
                 } else {
                     return base; //subsequent payments are just the base amount
                 }
             case FINAL:
                 if (period == totalPeriods){
-                    return base.add(fee).setScale(2, RoundingMode.HALF_UP); //last payment includes all fees
+                    return base.add(totalInterest).setScale(2, RoundingMode.HALF_UP); //last payment includes total interest
                 } else {
                     return base; //all other payments are just the base amount
                 }
             default:
-                throw new IllegalArgumentException("Unknown fee strategy: " + strategy); // For other fee strategies
+                throw new IllegalArgumentException("Unknown fee strategy: " + strategy); // For other strategies
         }
 
     }
     public BigDecimal getTotalPayment(){
         BigDecimal fee = totalAmount.multiply(interest.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP); //total fee for the installment
-        return totalAmount.add(fee).setScale(2, RoundingMode.HALF_UP); //total amount + total fee
+        return totalAmount.add(fee).setScale(2, RoundingMode.HALF_UP); //total amount + total interest
     }
     public void setRepaymentStartDate(LocalDate repaymentStartDate) {
         this.repaymentStartDate = repaymentStartDate;
