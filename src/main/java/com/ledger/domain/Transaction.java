@@ -8,9 +8,9 @@ public abstract class Transaction {
     protected LocalDate date;
     protected BigDecimal amount;
     protected String note;
-    protected Account fromAccount; //relaizone tra Transaction e Account è associazione. più transazioni->un account
-    protected Account toAccount; //per i trasferimenti tra conti
-    protected Ledger ledger; //relazione tra Transaction e Ledger è aggregazione. più transazioni -> un ledger
+    protected Account fromAccount;
+    protected Account toAccount;
+    protected Ledger ledger;
     protected LedgerCategory category;
     protected TransactionType type;
 
