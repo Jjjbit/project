@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 public class TransactionDAO {
-    private Connection connection;
+    private final Connection connection;
 
     public TransactionDAO(Connection connection) {
         this.connection = connection;
@@ -134,15 +134,6 @@ public class TransactionDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean deleteByLedgerId(Long ledgerId) throws SQLException {
-        String sql = "DELETE FROM transactions WHERE ledger_id = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, ledgerId);
-            return stmt.executeUpdate() > 0;
-        }
-    }
-
-    @SuppressWarnings("SqlResolve")
     public Transaction getById(Long id) throws SQLException {
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
@@ -198,10 +189,9 @@ public class TransactionDAO {
         return transactions;
     }
 
-    @SuppressWarnings("SqlResolve")
-    public List<Transaction> getByLedger(Ledger ledger, LocalDate startDate, LocalDate endDate) throws SQLException {
+   @SuppressWarnings("SqlResolve")
+    public List<Transaction> getByUserId(Long userId) throws SQLException {
         List<Transaction> transactions = new ArrayList<>();
-
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
                 "ta.id as to_account_id, ta.name as to_account_name, " +
@@ -212,14 +202,12 @@ public class TransactionDAO {
                 "LEFT JOIN accounts ta ON t.to_account_id = ta.id " +
                 "LEFT JOIN ledgers l ON t.ledger_id = l.id " +
                 "LEFT JOIN ledger_categories c ON t.category_id = c.id " +
-                "WHERE t.ledger_id = ? " +
-                "AND t.date BETWEEN ? AND ? " +
-                "ORDER BY t.transaction_date DESC, t.id DESC";
+                "WHERE fa.user_id = ? OR ta.user_id = ? " +
+                "ORDER BY t.transaction_date DESC";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, ledger.getId());
-            stmt.setObject(2, startDate);
-            stmt.setObject(3, endDate);
+            stmt.setLong(1, userId);
+            stmt.setLong(2, userId);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -228,7 +216,7 @@ public class TransactionDAO {
             }
         }
         return transactions;
-    }
+   }
 
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getOutgoingByAccountId(Long accountId) throws SQLException {
