@@ -26,7 +26,7 @@ public class LedgerControllerTest {
     private LedgerDAO ledgerDAO;
     private AccountDAO accountDAO;
     private BudgetDAO budgetDAO;
-    private InstallmentPlanDAO installmentPlanDAO;
+    private InstallmentDAO installmentDAO;
 
     private UserController userController;
     private LedgerController ledgerController;
@@ -50,12 +50,12 @@ public class LedgerControllerTest {
         categoryDAO = new CategoryDAO(connection);
         accountDAO = new AccountDAO(connection);
         budgetDAO = new BudgetDAO(connection);
-        installmentPlanDAO = new InstallmentPlanDAO(connection);
+        installmentDAO = new InstallmentDAO(connection);
 
         userController = new UserController(userDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
-        accountController = new AccountController(accountDAO, transactionDAO, installmentPlanDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, installmentDAO);
         budgetController = new BudgetController(budgetDAO);
 
         userController.register("testuser", "password123"); // create test user and insert into db
