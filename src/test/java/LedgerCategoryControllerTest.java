@@ -39,7 +39,7 @@ public class LedgerCategoryControllerTest {
     private CategoryDAO categoryDAO;
     private TransactionDAO transactionDAO;
     private AccountDAO accountDAO;
-    private InstallmentPlanDAO installmentPlanDAO;
+    private InstallmentDAO installmentDAO;
 
     @BeforeEach
     public void setUp() throws SQLException {
@@ -54,14 +54,14 @@ public class LedgerCategoryControllerTest {
         categoryDAO = new CategoryDAO(connection);
         transactionDAO = new TransactionDAO(connection);
         accountDAO = new AccountDAO(connection);
-        installmentPlanDAO = new InstallmentPlanDAO(connection);
+        installmentDAO = new InstallmentDAO(connection);
 
         userController = new UserController(userDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, ledgerDAO, transactionDAO, budgetDAO);
         budgetController = new BudgetController(budgetDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
-        accountController = new AccountController(accountDAO, transactionDAO, installmentPlanDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, installmentDAO);
 
         userController.register("testuser", "password123");
         testUser = userController.login("testuser", "password123");
