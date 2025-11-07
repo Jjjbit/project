@@ -24,27 +24,27 @@ public class Main {
             AccountDAO accountDAO = new AccountDAO(connection);
             LedgerDAO ledgerDAO = new LedgerDAO(connection);
             TransactionDAO transactionDAO = new TransactionDAO(connection);
-            InstallmentPlanDAO installmentPlanDAO = new InstallmentPlanDAO(connection);
+            InstallmentDAO installmentDAO = new InstallmentDAO(connection);
             CategoryDAO categoryDAO = new CategoryDAO(connection);
             LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
             BudgetDAO budgetDAO = new BudgetDAO(connection);
 
             // create Business layer
             UserController userController = new UserController(userDAO);
-            AccountController accountController = new AccountController(accountDAO, transactionDAO);
+            AccountController accountController = new AccountController(accountDAO, transactionDAO, installmentDAO);
             LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
             TransactionController transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
-            InstallmentPlanController installmentPlanController = new InstallmentPlanController(installmentPlanDAO, transactionDAO, accountDAO);
+            InstallmentController installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
             LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, ledgerDAO, transactionDAO, budgetDAO);
-            BudgetController budgetController = new BudgetController(budgetDAO, transactionDAO, ledgerCategoryDAO);
-            ReportController reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO, installmentPlanDAO, ledgerCategoryDAO);
+            BudgetController budgetController = new BudgetController(budgetDAO);
+            ReportController reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO, installmentDAO, ledgerCategoryDAO);
 
             //  create CLI layer
             UserCLI userCLI = new UserCLI(userController);
             AccountCLI accountCLI = new AccountCLI(accountController, userController, reportController);
             LedgerCLI ledgerCLI = new LedgerCLI(userController, reportController, ledgerController);
             TransactionCLI transactionCLI = new TransactionCLI(transactionController, reportController,userController);
-            InstallmentPlanCLI installmentPlanCLI = new InstallmentPlanCLI(installmentPlanController, userController,
+            InstallmentCLI installmentCLI = new InstallmentCLI(installmentController, userController,
                     reportController);
             BudgetCLI budgetCLI = new BudgetCLI(budgetController, reportController, userController);
             BorrowingCLI borrowingCLI = new BorrowingCLI(reportController, accountController, userController);
@@ -53,7 +53,7 @@ public class Main {
 
             // create MainCLI
             MainCLI mainCLI = new MainCLI(userCLI, accountCLI, ledgerCLI, transactionCLI,
-                    installmentPlanCLI, budgetCLI,ledgerCategoryCLI, borrowingCLI, lendingCLI);
+                    installmentCLI, budgetCLI,ledgerCategoryCLI, borrowingCLI, lendingCLI);
 
             //run application
             mainCLI.run();

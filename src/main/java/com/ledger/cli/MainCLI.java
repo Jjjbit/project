@@ -8,7 +8,7 @@ public class MainCLI {
     private final AccountCLI accountCLI;
     private final LedgerCLI ledgerCLI;
     private final TransactionCLI transactionCLI;
-    private final InstallmentPlanCLI installmentPlanCLI;
+    private final InstallmentCLI installmentCLI;
     private final BudgetCLI budgetCLI;
     private final LedgerCategoryCLI ledgerCategoryCLI;
     private final BorrowingCLI borrowingCLI;
@@ -19,7 +19,7 @@ public class MainCLI {
     private boolean running = true;
 
     public MainCLI(UserCLI userCLI, AccountCLI accountCLI, LedgerCLI ledgerCLI,
-                   TransactionCLI transactionCLI, InstallmentPlanCLI installmentPlanCLI,
+                   TransactionCLI transactionCLI, InstallmentCLI installmentCLI,
                    BudgetCLI budgetCLI,
                    LedgerCategoryCLI ledgerCategoryCLI,
                    BorrowingCLI borrowingCLI,
@@ -28,7 +28,7 @@ public class MainCLI {
         this.accountCLI =  accountCLI;
         this.ledgerCLI = ledgerCLI;
         this.transactionCLI = transactionCLI;
-        this.installmentPlanCLI = installmentPlanCLI;
+        this.installmentCLI = installmentCLI;
         this.budgetCLI = budgetCLI;
         this.ledgerCategoryCLI = ledgerCategoryCLI;
         this.borrowingCLI = borrowingCLI;
@@ -141,7 +141,7 @@ public class MainCLI {
         System.out.println("3. Update Account");
         System.out.println("4. Delete Account");
         System.out.println("5. Hide Account");
-        System.out.println("6. Installment Plans Management");
+        System.out.println("6. Installments Management");
         System.out.println("7. Pay Debt of Credit Card");
         System.out.println("8. Pay Loan");
         System.out.println("9. Show Account's Summary");
@@ -203,19 +203,19 @@ public class MainCLI {
 
         switch (choice) {
             case "1":
-                installmentPlanCLI.createInstallmentPlan();
+                installmentCLI.createInstallment();
                 break;
             case "2":
-                installmentPlanCLI.viewInstallmentPlans();
+                installmentCLI.viewInstallments();
                 break;
             case "3":
-                installmentPlanCLI.editInstallmentPlan();
+                installmentCLI.editInstallmentPlan();
                 break;
             case "4":
-                installmentPlanCLI.deleteInstallmentPlan();
+                installmentCLI.deleteInstallment();
                 break;
             case "5":
-                installmentPlanCLI.payInstallment();
+                installmentCLI.payInstallment();
                 break;
             case "6":
                 // go back to account menu
