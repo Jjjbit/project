@@ -1,6 +1,6 @@
 package com.ledger.cli;
 
-import com.ledger.business.InstallmentPlanController;
+import com.ledger.business.InstallmentController;
 import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
 import com.ledger.domain.*;
@@ -11,21 +11,21 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Scanner;
 
-public class InstallmentPlanCLI {
-    private final InstallmentPlanController installmentPlanController;
+public class InstallmentCLI {
+    private final InstallmentController installmentController;
     private final UserController userController;
     private final ReportController reportController;
 
 
     private final Scanner scanner = new Scanner(System.in);
 
-    public InstallmentPlanCLI(InstallmentPlanController installmentPlanController,
-                              UserController userController,
-                              ReportController reportController) {
+    public InstallmentCLI(InstallmentController installmentController,
+                          UserController userController,
+                          ReportController reportController) {
 
         this.reportController = reportController;
         this.userController = userController;
-        this.installmentPlanController = installmentPlanController;
+        this.installmentController = installmentController;
     }
 
     public void createInstallmentPlan() {
@@ -33,6 +33,8 @@ public class InstallmentPlanCLI {
         System.out.println("\n=== Create Installment Plan ===");
 
 
+        //select credit account
+        System.out.println("Select credit account for the installment plan:");
         CreditAccount creditAccount = selectCreditAccount();
         if (creditAccount == null) return;
 
@@ -60,7 +62,7 @@ public class InstallmentPlanCLI {
         BigDecimal feeRate = feeRateInput.isEmpty() ? BigDecimal.ZERO : new BigDecimal(feeRateInput);
 
         // select fee strategy
-        InstallmentPlan.FeeStrategy feeStrategy = selectFeeStrategy();
+        Installment.Strategy strategy = selectFeeStrategy();
 
         // input start repayment date
         LocalDate repaymentStartDate = inputRepaymentDate();
@@ -73,9 +75,9 @@ public class InstallmentPlanCLI {
         LedgerCategory category = inputCategory(ledger);
         if(category==null) return;
 
-        InstallmentPlan plan = installmentPlanController.createInstallmentPlan(
+        Installment plan = installmentController.createInstallment(
                 creditAccount, name, totalAmount, totalPeriods, repaidPeriods, feeRate,
-                feeStrategy, repaymentStartDate, category);
+                strategy, repaymentStartDate, category);
 
         System.out.println(" ✓ Installment plan created successfully!");
         System.out.println("\n Total amount: " + plan.getTotalAmount());
@@ -88,12 +90,13 @@ public class InstallmentPlanCLI {
 
         System.out.println("\n=== View Installment Plans ===");
 
-
+        //select credit account
+        System.out.println("Select credit account to view installment plans:");
         CreditAccount creditAccount = selectCreditAccount();
         if (creditAccount == null) return;
 
         //get all plan with remaining amount >0
-        List<InstallmentPlan> plans = reportController.getActiveInstallmentPlans(creditAccount);
+        List<Installment> plans = reportController.getActiveInstallmentPlans(creditAccount);
 
         if (plans.isEmpty()) {
             System.out.println("No installment plans found.");
@@ -102,7 +105,7 @@ public class InstallmentPlanCLI {
 
         System.out.println("\nInstallment Plans for " + creditAccount.getName() + ":");
         for (int i = 0; i < plans.size(); i++) {
-            InstallmentPlan plan = plans.get(i);
+            Installment plan = plans.get(i);
             System.out.println((i + 1) + ". " + formatInstallmentPlan(plan));
         }
 
@@ -113,11 +116,12 @@ public class InstallmentPlanCLI {
         System.out.println("\n=== Make Installment Payment ===");
 
         //select credit account
+        System.out.println("Select credit account:");
         CreditAccount creditAccount = selectCreditAccount();
         if (creditAccount == null) return;
 
         //get remaining > 0 installment plans
-        List<InstallmentPlan> activePlans =reportController.getActiveInstallmentPlans(creditAccount);
+        List<Installment> activePlans =reportController.getActiveInstallmentPlans(creditAccount);
 
         if (activePlans.isEmpty()) {
             System.out.println("No active installment plans found.");
@@ -127,7 +131,7 @@ public class InstallmentPlanCLI {
         //select installment plan to pay
         System.out.println("\nSelect installment plan to pay:");
         for (int i = 0; i < activePlans.size(); i++) {
-            InstallmentPlan plan = activePlans.get(i);
+            Installment plan = activePlans.get(i);
             System.out.println((i + 1) + ". " + formatInstallmentPlan(plan));
         }
         System.out.print("Enter choice: ");
@@ -138,7 +142,7 @@ public class InstallmentPlanCLI {
             return;
         }
 
-        InstallmentPlan selectedPlan = activePlans.get(choice);
+        Installment selectedPlan = activePlans.get(choice);
 
         // confirm payment
         System.out.println("Payment amount: " + selectedPlan.getMonthlyPayment(selectedPlan.getPaidPeriods() + 1));
@@ -150,7 +154,7 @@ public class InstallmentPlanCLI {
             Ledger ledger = selectLedger();
             if (ledger == null) return;
 
-            boolean success=installmentPlanController.payInstallment(selectedPlan, ledger);
+            boolean success= installmentController.payInstallment(selectedPlan, ledger);
             if(!success){
                 System.out.println("✗ Payment failed!");
                 return;
@@ -169,11 +173,12 @@ public class InstallmentPlanCLI {
 
         System.out.println("\n=== Delete Installment Plan ===");
 
-
+        //select credit account
+        System.out.println("Select credit account:");
         CreditAccount creditAccount = selectCreditAccount();
         if (creditAccount == null) return;
 
-        List<InstallmentPlan> plans = reportController.getActiveInstallmentPlans(creditAccount);
+        List<Installment> plans = reportController.getActiveInstallmentPlans(creditAccount);
 
         if (plans.isEmpty()) {
             System.out.println("No installment plans found.");
@@ -182,7 +187,7 @@ public class InstallmentPlanCLI {
 
         System.out.println("\nSelect installment plan to delete:");
         for (int i = 0; i < plans.size(); i++) {
-            InstallmentPlan plan = plans.get(i);
+            Installment plan = plans.get(i);
             System.out.println((i + 1) + ". " + formatInstallmentPlan(plan));
         }
         System.out.print("Enter choice: ");
@@ -193,14 +198,14 @@ public class InstallmentPlanCLI {
             return;
         }
 
-        InstallmentPlan selectedPlan = plans.get(choice);
+        Installment selectedPlan = plans.get(choice);
 
         // confirm deletion
         System.out.print("Are you sure you want to delete this installment plan? Transactions related to this installment will be retained. (y/n): ");
         String confirm = scanner.nextLine().trim().toLowerCase();
 
         if (confirm.equals("y") || confirm.equals("yes")) {
-            boolean success=installmentPlanController.deleteInstallmentPlan(selectedPlan);
+            boolean success= installmentController.deleteInstallment(selectedPlan);
             if(!success){
                 System.out.println("✗ Deletion failed!");
                 return;
@@ -217,10 +222,12 @@ public class InstallmentPlanCLI {
 
         System.out.println("\n=== Edit Installment Plan ===");
 
+        //select credit account
+        System.out.println("Select credit account:");
         CreditAccount creditAccount = selectCreditAccount();
         if (creditAccount == null) return;
 
-        List<InstallmentPlan> plans = reportController.getActiveInstallmentPlans(creditAccount);
+        List<Installment> plans = reportController.getActiveInstallmentPlans(creditAccount);
 
         if (plans.isEmpty()) {
             System.out.println("No installment plans found.");
@@ -229,18 +236,18 @@ public class InstallmentPlanCLI {
 
         System.out.println("\nSelect installment plan to edit:");
         for (int i = 0; i < plans.size(); i++) {
-            InstallmentPlan plan = plans.get(i);
+            Installment plan = plans.get(i);
             System.out.println((i + 1) + ". " + formatInstallmentPlan(plan));
         }
         System.out.print("Enter choice: ");
-        int choice = Integer.parseInt(scanner.nextLine().trim()) - 1;
+        int choice = scanner.nextInt() - 1;
 
         if (choice < 0 || choice >= plans.size()) {
             System.out.println("Invalid choice!");
             return;
         }
 
-        InstallmentPlan selectedPlan = plans.get(choice);
+        Installment selectedPlan = plans.get(choice);
         // input new details
         //new total amount
         System.out.print("Enter new total amount (current: " + selectedPlan.getTotalAmount() + ")"+ ", press Enter to keep): ");
@@ -258,7 +265,7 @@ public class InstallmentPlanCLI {
         Integer paidPeriods = paidPeriodsInput.isEmpty() ? null : Integer.parseInt(paidPeriodsInput);
 
         // new fee rate
-        System.out.print("Enter new fee rate (current: " + selectedPlan.getFeeRate() + ")"+ ", press Enter to keep): ");
+        System.out.print("Enter new fee rate (current: " + selectedPlan.getInterest() + ")"+ ", press Enter to keep): ");
         String feeRateInput = scanner.nextLine().trim();
         BigDecimal feeRate = feeRateInput.isEmpty() ? null : new BigDecimal(feeRateInput);
 
@@ -279,17 +286,19 @@ public class InstallmentPlanCLI {
             newCategory = inputCategory(ledger);
             if (newCategory == null) return;
         }
-        // select new fee strategy
-        InstallmentPlan.FeeStrategy feeStrategy = selectFeeStrategy();
 
-        boolean success=installmentPlanController.editInstallmentPlan(
+        // select new fee strategy
+        System.out.println("Select new fee strategy (current: " + formatFeeStrategy(selectedPlan.getStrategy()) + "):");
+        Installment.Strategy strategy = selectFeeStrategy();
+
+        boolean success= installmentController.editInstallment(
                 selectedPlan, totalAmount, totalPeriods, paidPeriods,
-                feeRate, feeStrategy, name, newCategory);
+                feeRate, strategy, name, newCategory);
         if(!success) {
-            System.out.println("✗ Edit failed!");
+            System.out.println("Edit failed!");
             return;
         }
-        System.out.println("✓ Installment plan edited successfully!");
+        System.out.println("Installment plan edited successfully!");
 
     }
 
@@ -308,11 +317,10 @@ public class InstallmentPlanCLI {
             return null;
         }
 
-        System.out.println("\nSelect credit account:");
         for (int i = 0; i < creditAccounts.size(); i++) {
             CreditAccount account = creditAccounts.get(i);
             System.out.println((i + 1) + ". " + account.getName() + "balance:" + account.getBalance() +
-                    " (Credit Limit: " + account.getCreditLimit() + ", Current debt: " + account.getCurrentDebt() + ")");
+                    " Credit Limit: " + account.getCreditLimit() + ", Current debt: " + account.getCurrentDebt() );
         }
         System.out.print("Enter choice: ");
 
@@ -325,9 +333,9 @@ public class InstallmentPlanCLI {
         return creditAccounts.get(choice);
     }
 
-    private InstallmentPlan.FeeStrategy selectFeeStrategy() {
+    private Installment.Strategy selectFeeStrategy() {
         System.out.println("\nSelect fee strategy:");
-        InstallmentPlan.FeeStrategy[] strategies = InstallmentPlan.FeeStrategy.values();
+        Installment.Strategy[] strategies = Installment.Strategy.values();
         for (int i = 0; i < strategies.length; i++) {
             System.out.println((i + 1) + ". " + formatFeeStrategy(strategies[i]));
         }
@@ -450,7 +458,7 @@ public class InstallmentPlanCLI {
         }
     }
 
-    private String formatInstallmentPlan(InstallmentPlan plan) {
+    private String formatInstallmentPlan(Installment plan) {
         return String.format(
                 "Total to pay: %s | Paid amount: %s |Periods: %d/%d | Next month: %s | Remaining: %s",
                 plan.getTotalPayment(),
@@ -462,7 +470,7 @@ public class InstallmentPlanCLI {
         );
     }
 
-    private String formatFeeStrategy(InstallmentPlan.FeeStrategy strategy) {
+    private String formatFeeStrategy(Installment.Strategy strategy) {
         switch (strategy) {
             case EVENLY_SPLIT: return "Evenly Split";
             case UPFRONT: return "Upfront";

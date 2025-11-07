@@ -1,14 +1,12 @@
 import com.ledger.business.AccountController;
-import com.ledger.business.InstallmentPlanController;
+import com.ledger.business.InstallmentController;
 import com.ledger.business.LedgerController;
 import com.ledger.business.UserController;
 import com.ledger.domain.*;
 import com.ledger.orm.*;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,7 +19,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class InstallmentPlanControllerTest {
+public class InstallmentControllerTest {
     private Connection connection;
     private User testUser;
     private CreditAccount account;
@@ -31,14 +29,17 @@ public class InstallmentPlanControllerTest {
     private UserDAO userDAO;
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
-    private InstallmentPlanDAO installmentPlanDAO;
+    private InstallmentDAO installmentDAO;
     private LedgerDAO ledgerDAO;
     private CategoryDAO categoryDAO;
     private LedgerCategoryDAO ledgerCategoryDAO;
+    private BudgetDAO budgetDAO;
+
     private UserController userController;
-    private InstallmentPlanController installmentPlanController;
+    private InstallmentController installmentController;
     private AccountController accountController;
     private LedgerController ledgerController;
+
     @BeforeEach
     public void setUp() throws SQLException {
         connection = com.ledger.orm.ConnectionManager.getConnection();
@@ -47,16 +48,17 @@ public class InstallmentPlanControllerTest {
 
         userDAO = new UserDAO(connection);
         accountDAO = new AccountDAO(connection);
-        installmentPlanDAO = new InstallmentPlanDAO(connection);
+        installmentDAO = new InstallmentDAO(connection);
         transactionDAO = new TransactionDAO(connection);
         ledgerDAO = new LedgerDAO(connection);
         categoryDAO = new CategoryDAO(connection);
         ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+        budgetDAO = new BudgetDAO(connection);
 
         userController = new UserController(userDAO);
-        accountController = new AccountController(accountDAO, transactionDAO);
-        installmentPlanController = new InstallmentPlanController(installmentPlanDAO, transactionDAO, accountDAO);
-        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, installmentDAO);
+        installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
+        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
 
         // Create a test user
         userController.register("testuser", "password123");
@@ -86,46 +88,42 @@ public class InstallmentPlanControllerTest {
                 .orElse(null);
     }
 
-    @AfterEach
-    public void tearDown() throws SQLException {
-        readResetScript();
+    private void runSchemaScript() {
+        executeSqlFile("src/test/resources/schema.sql");
     }
 
-    private void runSchemaScript() {
+    private void readResetScript() {
+        executeSqlFile("src/test/resources/reset.sql");
+    }
+
+    private void executeSqlFile(String filePath) {
         try {
-            Path path = Paths.get("src/test/resources/schema.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
+            Path path = Paths.get(filePath);
+            String sql = Files.lines(path)
+                    .collect(Collectors.joining("\n"));
             try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
+                for (String s : sql.split(";")) {
+                    if (!s.trim().isEmpty()) {
+                        stmt.execute(s);
+                    }
+                }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load schema.sql", e);
-        }
-    }
-
-    private void readResetScript() throws SQLException {
-        try {
-            Path path = Paths.get("src/test/resources/reset.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
-            try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
-            }
-        } catch (IOException e) {
-            throw new SQLException("Failed to read reset.sql", e);
+            throw new RuntimeException("Failed to execute " + filePath, e);
         }
     }
 
     //create
     @Test
-    public void testCreateInstallmentPlan_Success() throws SQLException {
-        InstallmentPlan plan = installmentPlanController.createInstallmentPlan(
+    public void testCreateInstallment_Success() throws SQLException {
+        Installment plan = installmentController.createInstallment(
                 account,
                 "Test Installment Plan",
                 BigDecimal.valueOf(120.00),
                 12,
                 0,
                 BigDecimal.valueOf(5.00), // fee rate
-                InstallmentPlan.FeeStrategy.EVENLY_SPLIT,
+                Installment.Strategy.EVENLY_SPLIT,
                 LocalDate.now(),
                 category
         );
@@ -133,47 +131,47 @@ public class InstallmentPlanControllerTest {
         assertEquals(1, account.getInstallmentPlans().size());
         assertEquals(0, account.getCurrentDebt().compareTo(BigDecimal.valueOf(146.00)));
 
-        assertNotNull(installmentPlanDAO.getById(plan.getId()));
+        assertNotNull(installmentDAO.getById(plan.getId()));
         CreditAccount updatedAccount = (CreditAccount) accountDAO.getAccountById(account.getId());
         assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(146.00)));
 
     }
     //delete
     @Test
-    public void testDeleteInstallmentPlan_Success() throws SQLException {
-        InstallmentPlan plan = installmentPlanController.createInstallmentPlan(
+    public void testDeleteInstallment_Success() throws SQLException {
+        Installment plan = installmentController.createInstallment(
                 account,
                 "Test Installment Plan",
                 BigDecimal.valueOf(120.00),
                 12,
                 0,
                 BigDecimal.valueOf(5.00), // fee rate
-                InstallmentPlan.FeeStrategy.EVENLY_SPLIT,
+                Installment.Strategy.EVENLY_SPLIT,
                 LocalDate.now(),
                 category
         );
 
-        boolean deleted = installmentPlanController.deleteInstallmentPlan(plan);
+        boolean deleted = installmentController.deleteInstallment(plan);
         assertTrue(deleted);
         assertEquals(0, account.getInstallmentPlans().size());
         assertEquals(0, account.getCurrentDebt().compareTo(BigDecimal.valueOf(20.00)));
 
-        assertNull(installmentPlanDAO.getById(plan.getId()));
+        assertNull(installmentDAO.getById(plan.getId()));
         CreditAccount updatedAccount = (CreditAccount) accountDAO.getAccountById(account.getId());
         assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(20.00)));
     }
 
     //edit
     @Test
-    public void testEditInstallmentPlan_Success() throws SQLException {
-        InstallmentPlan plan = installmentPlanController.createInstallmentPlan(
+    public void testEditInstallment_Success() throws SQLException {
+        Installment plan = installmentController.createInstallment(
                 account,
                 "Test Installment Plan",
                 BigDecimal.valueOf(120.00),
                 12,
                 0,
                 BigDecimal.valueOf(5.00), // fee rate
-                InstallmentPlan.FeeStrategy.EVENLY_SPLIT,
+                Installment.Strategy.EVENLY_SPLIT,
                 LocalDate.now(),
                 category
         );
@@ -183,30 +181,30 @@ public class InstallmentPlanControllerTest {
                 .orElse(null);
 
 
-        boolean updated = installmentPlanController.editInstallmentPlan(plan,
+        boolean updated = installmentController.editInstallment(plan,
                 BigDecimal.valueOf(150.00),
                 6,
                 1,
                 BigDecimal.valueOf(4.00),
-                InstallmentPlan.FeeStrategy.UPFRONT,
+                Installment.Strategy.UPFRONT,
                 "new Name",
                 null);
         assertTrue(updated);
         assertEquals(0, plan.getTotalAmount().compareTo(BigDecimal.valueOf(150.00)));
         assertEquals(1, plan.getPaidPeriods());
-        assertEquals(0, plan.getFeeRate().compareTo(BigDecimal.valueOf(4.00)));
-        assertEquals(InstallmentPlan.FeeStrategy.UPFRONT, plan.getFeeStrategy());
+        assertEquals(0, plan.getInterest().compareTo(BigDecimal.valueOf(4.00)));
+        assertEquals(Installment.Strategy.UPFRONT, plan.getStrategy());
         assertEquals("new Name", plan.getName());
         assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.valueOf(125.00))); //
         assertEquals(0, account.getCurrentDebt().compareTo(BigDecimal.valueOf(145.00)));
 
-        InstallmentPlan updatedPlan = installmentPlanDAO.getById(plan.getId());
+        Installment updatedPlan = installmentDAO.getById(plan.getId());
         assertEquals("new Name", updatedPlan.getName());
         assertEquals(6, updatedPlan.getTotalPeriods());
         assertEquals(1, updatedPlan.getPaidPeriods());
         assertEquals(0, updatedPlan.getTotalAmount().compareTo(BigDecimal.valueOf(150.00)));
-        assertEquals(0, updatedPlan.getFeeRate().compareTo(BigDecimal.valueOf(4.00)));
-        assertEquals(InstallmentPlan.FeeStrategy.UPFRONT, updatedPlan.getFeeStrategy());
+        assertEquals(0, updatedPlan.getInterest().compareTo(BigDecimal.valueOf(4.00)));
+        assertEquals(Installment.Strategy.UPFRONT, updatedPlan.getStrategy());
         assertEquals(0, updatedPlan.getRemainingAmount().compareTo(BigDecimal.valueOf(125.00)));
 
         CreditAccount updatedAccount = (CreditAccount) accountDAO.getAccountById(account.getId());
