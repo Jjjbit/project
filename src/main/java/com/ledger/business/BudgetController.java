@@ -131,33 +131,31 @@ public class BudgetController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             return totalExpenses.compareTo(budget.getAmount()) > 0;
         } else { //budget is a category budget
-            if (!budget.getCategory().getLedger().equals(ledger)) {
-                    return false;
-                }
-                List<Transaction> transactions = new ArrayList<>(ledger.getTransactions().stream()
+            if (!budget.getCategory().getLedger().equals(ledger)) {return false;
+            }
+            List<Transaction> transactions = new ArrayList<>(ledger.getTransactions().stream()
+                    .filter(t -> t.getType() == TransactionType.EXPENSE)
+                    .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
+                    .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
+                    .filter(t -> t.getCategory() != null)
+                    .filter(t -> t.getCategory().getId().equals(budget.getCategory().getId()))
+                    .toList());
+            List<LedgerCategory> childCategories = budget.getCategory().getChildren();
+            for (LedgerCategory childCategory : childCategories) {
+                transactions.addAll(ledger.getTransactions().stream()
                         .filter(t -> t.getType() == TransactionType.EXPENSE)
                         .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
                         .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
                         .filter(t -> t.getCategory() != null)
-                        .filter(t -> t.getCategory().getId().equals(budget.getCategory().getId()))
+                        .filter(t -> t.getCategory().getId().equals(childCategory.getId()))
                         .toList());
-                List<LedgerCategory> childCategories = budget.getCategory().getChildren();
-                for (LedgerCategory childCategory : childCategories) {
-                    transactions.addAll(ledger.getTransactions().stream()
-                            .filter(t -> t.getType() == TransactionType.EXPENSE)
-                            .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
-                            .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
-                            .filter(t -> t.getCategory() != null)
-                            .filter(t -> t.getCategory().getId().equals(childCategory.getId()))
-                            .toList());
-                }
-
-                BigDecimal totalCategoryBudget = transactions.stream()
-                        .map(Transaction::getAmount)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                return totalCategoryBudget.compareTo(budget.getAmount()) > 0; //>0: over budget
             }
+            BigDecimal totalCategoryBudget = transactions.stream()
+                    .map(Transaction::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            return totalCategoryBudget.compareTo(budget.getAmount()) > 0; //>0: over budget
         }
+    }
 }
 
 
