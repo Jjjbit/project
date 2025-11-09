@@ -83,14 +83,6 @@ public class Budget {
         return endDate;
     }
 
-
-    public boolean isActive(LocalDate date) {
-        return switch (period) {
-            case MONTHLY -> date.isBefore(startDate.plusMonths(1));
-            case YEARLY -> date.isBefore(startDate.plusYears(1));
-        };
-    }
-
     public void refreshIfExpired() { //updates start and end date if budget period has passed
         LocalDate today = LocalDate.now();
         if (today.isAfter(endDate)) {
