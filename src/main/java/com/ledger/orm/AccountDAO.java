@@ -582,69 +582,14 @@ public class AccountDAO {
     @SuppressWarnings("SqlResolve")
     public boolean deleteAccount(Account account) throws SQLException {
         connection.setAutoCommit(false); // Start transaction
-        try {
-            // 1. get dtype
-            String dtype = null;
-            String dtypeSql = "SELECT dtype FROM accounts WHERE id = ?";
-            try (PreparedStatement stmt = connection.prepareStatement(dtypeSql)) {
-                stmt.setLong(1, account.getId());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        dtype=rs.getString("dtype");
-                    }
-                }
-            }
-            // 2. delete from subtype table
-            String deleteSql = null;
-            switch (dtype) {
-                case "BasicAccount":
-                    deleteSql = "DELETE FROM basic_account WHERE id = ?";
-                    break;
-                case "BorrowingAccount":
-                    deleteSql = "DELETE FROM borrowing_account WHERE id = ?";
-                    break;
-                case "CreditAccount":
-                    deleteSql = "DELETE FROM credit_account WHERE id = ?";
-                    break;
-                case "LoanAccount":
-                    deleteSql = "DELETE FROM loan_account WHERE id = ?";
-                    break;
-                case "LendingAccount":
-                    deleteSql = "DELETE FROM lending_account WHERE id = ?";
-                    break;
-                default:
-                    throw new SQLException("Unknown account type: " + dtype);
-            }
 
-            try (PreparedStatement stmt = connection.prepareStatement(deleteSql)) {
-                stmt.setLong(1, account.getId());
-                int rowsAffected = stmt.executeUpdate();
-                if(rowsAffected == 0) {
-                    connection.rollback();
-                    return false;
-                }
-            }
-
-            // 3. delete from accounts table
-            String deleteAccountSql = "DELETE FROM accounts WHERE id = ?";
-            try (PreparedStatement stmt = connection.prepareStatement(deleteAccountSql)) {
-                stmt.setLong(1, account.getId());
-
-                int rowsAffected = stmt.executeUpdate();
-                if (rowsAffected > 0) {
-                    connection.commit();
-                    return true; //delete successful
-                } else {
-                    connection.rollback();
-                    return false;
-                }
-            }
-        } catch (SQLException e) {
-            connection.rollback(); // Rollback transaction on error
-            throw e;
-        } finally {
-            connection.setAutoCommit(true); // Restore auto-commit mode
+        String sql = "DELETE FROM accounts WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setLong(1, account.getId());
+            int affected = stmt.executeUpdate();
+            return affected > 0;
         }
+
     }
 
 }
