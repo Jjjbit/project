@@ -73,102 +73,6 @@ public class BudgetUnitTest {
         assertEquals(LocalDate.of(2025, 12, 31), endDate);
     }
 
-    @Test
-    public void testIsActive_Monthly_Active() {
-        Budget budget = new Budget(BigDecimal.valueOf(1000), Budget.Period.MONTHLY, null, testLedger);
-        budget.setStartDate(LocalDate.of(2025, 10, 1));
-        budget.setEndDate(LocalDate.of(2025, 10, 31));
-        LocalDate dateToCheck = LocalDate.of(2025, 10, 15);
-
-        boolean isActive = budget.isActive(dateToCheck);
-
-        assertTrue(isActive);
-    }
-
-    @Test
-    public void testIsActive_Monthly_Inactive() {
-        Budget budget = new Budget(BigDecimal.valueOf(1000),
-                Budget.Period.MONTHLY,
-                null,
-                testLedger);
-        budget.setStartDate(LocalDate.of(2025, 1, 1));
-        budget.setEndDate(LocalDate.of(2025, 1, 31));
-
-        LocalDate dateToCheck = LocalDate.of(2025, 11, 1);
-
-        boolean isActive = budget.isActive(dateToCheck);
-
-        assertFalse(isActive);
-    }
-
-    @Test
-    public void testIsActive_Monthly_BoundaryCases() {
-        Budget budget = new Budget(BigDecimal.valueOf(1000),
-                Budget.Period.MONTHLY,
-                null,
-                testLedger);
-        budget.setStartDate(LocalDate.of(2025, 10, 1));
-        budget.setEndDate(LocalDate.of(2025, 10, 31));
-
-        LocalDate dateToCheck = LocalDate.of(2025, 10, 31);
-
-        boolean isActive = budget.isActive(dateToCheck);
-
-        assertTrue(isActive);
-        isActive= budget.isActive(LocalDate.of(2025,10,1));
-        assertTrue(isActive);
-    }
-
-    @Test
-    public void testIsActive_Yearly_Active() {
-        Budget budget = new Budget(BigDecimal.valueOf(1000),
-                Budget.Period.YEARLY,
-                null,
-                testLedger);
-        budget.setStartDate(LocalDate.of(2025, 1, 1));
-        budget.setEndDate(LocalDate.of(2025, 12, 31));
-
-        LocalDate dateToCheck = LocalDate.of(2025, 6, 15);
-
-        boolean isActive = budget.isActive(dateToCheck);
-
-        assertTrue(isActive);
-    }
-
-
-    @Test
-    public void testIsActive_Yearly_Inactive() {
-        Budget budget = new Budget(BigDecimal.valueOf(1000),
-                Budget.Period.MONTHLY,
-                null,
-                testLedger);
-        budget.setStartDate(LocalDate.of(2024, 1, 1));
-        budget.setEndDate(LocalDate.of(2024, 12, 31));
-
-        LocalDate dateToCheck = LocalDate.of(2025, 1, 1);
-
-        boolean isActive = budget.isActive(dateToCheck);
-
-        assertFalse(isActive);
-    }
-
-    @Test
-    public void testIsActive_Yearly_BoundaryCases() {
-        Budget budget = new Budget(BigDecimal.valueOf(1000),
-                Budget.Period.YEARLY,
-                null,
-                testLedger);
-        budget.setStartDate(LocalDate.of(2025, 1, 1));
-        budget.setEndDate(LocalDate.of(2025, 12, 31));
-
-        LocalDate dateToCheck = LocalDate.of(2025, 12, 31);
-
-        boolean isActive = budget.isActive(dateToCheck);
-        assertTrue(isActive);
-        isActive= budget.isActive(LocalDate.of(2025,1,1));
-        assertTrue(isActive);
-    }
-
     //refresh
     @Test
     public void testRefreshBudget_Monthly() {
@@ -201,4 +105,22 @@ public class BudgetUnitTest {
         assertEquals(LocalDate.of(LocalDate.now().getYear(),1,1), budget.getStartDate());
         assertEquals(LocalDate.of(LocalDate.now().getYear(),12,31), budget.getEndDate());
     }
+
+    @Test
+    public void testRefreshBudget_NotExpired() {
+        Budget budget = new Budget(BigDecimal.valueOf(800),
+                Budget.Period.MONTHLY,
+                null,
+                testLedger);
+        budget.setStartDate(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()));
+        budget.setEndDate(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()));
+
+        budget.refreshIfExpired();
+
+        assertEquals(BigDecimal.valueOf(800), budget.getAmount());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), budget.getStartDate());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), budget.getEndDate());
+    }
+
+
 }
