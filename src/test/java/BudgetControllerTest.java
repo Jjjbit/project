@@ -30,7 +30,7 @@ public class BudgetControllerTest {
     private CategoryDAO categoryDAO;
     private LedgerCategoryDAO ledgerCategoryDAO;
     private AccountDAO accountDAO;
-    private InstallmentPlanDAO installmentPlanDAO;
+    private InstallmentDAO installmentDAO;
 
     private UserController userController;
     private BudgetController budgetController;
@@ -51,13 +51,13 @@ public class BudgetControllerTest {
         categoryDAO = new CategoryDAO(connection);
         accountDAO = new AccountDAO(connection);
         ledgerCategoryDAO = new LedgerCategoryDAO(connection);
-        installmentPlanDAO = new InstallmentPlanDAO(connection);
+        installmentDAO = new InstallmentDAO(connection);
 
         userController = new UserController(userDAO);
         budgetController = new BudgetController(budgetDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
-        accountController = new AccountController(accountDAO, transactionDAO, installmentPlanDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, installmentDAO);
 
         userController.register("testuser", "password");
         testUser =userController.login("testuser", "password");
@@ -164,7 +164,6 @@ public class BudgetControllerTest {
 
         boolean result = budgetController.mergeBudgets(budget2);
         assertTrue(result);
-        System.out.println("Merged Budget Amount: " + budget2.getAmount());
         assertEquals(0, budget2.getAmount().compareTo(BigDecimal.valueOf(500.00)));
 
         Budget updatedBudget=budgetDAO.getById(budget2.getId());
