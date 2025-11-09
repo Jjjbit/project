@@ -75,7 +75,7 @@ public class InstallmentDAO {
     @SuppressWarnings("SqlResolve")
     public Installment getById(Long id) throws SQLException {
         String sql = "SELECT id, linked_account_id, total_amount, plan_remaining_amount, total_periods, " +
-                "paid_periods, fee_rate, strategy, repayment_start_date, name, category_id " +
+                "paid_periods, interest, strategy, repayment_start_date, name, category_id " +
                 "FROM installment WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, id);
