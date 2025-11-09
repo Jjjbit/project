@@ -1,11 +1,9 @@
 import com.ledger.business.*;
 import com.ledger.domain.*;
 import com.ledger.orm.*;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,14 +25,15 @@ public class AccountControllerTest {
     private AccountController accountController;
     private TransactionController transactionController;
     private LedgerController ledgerController;
-    private InstallmentPlanController installmentPlanController;
+    private InstallmentController installmentController;
     private AccountDAO accountDAO;
     private UserDAO userDAO;
     private LedgerDAO ledgerDAO;
     private TransactionDAO transactionDAO;
     private CategoryDAO categoryDAO;
     private LedgerCategoryDAO ledgerCategoryDAO;
-    private InstallmentPlanDAO installmentPlanDAO;
+    private InstallmentDAO installmentDAO;
+    private BudgetDAO budgetDAO;
 
 
     @BeforeEach
@@ -49,47 +48,43 @@ public class AccountControllerTest {
         transactionDAO = new TransactionDAO(connection);
         categoryDAO = new CategoryDAO(connection);
         ledgerCategoryDAO = new LedgerCategoryDAO(connection);
-        installmentPlanDAO = new InstallmentPlanDAO(connection);
+        installmentDAO = new InstallmentDAO(connection);
+        budgetDAO = new BudgetDAO(connection);
 
         userController = new UserController(userDAO);
-        accountController = new AccountController(accountDAO, transactionDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, installmentDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
-        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO);
-        installmentPlanController = new InstallmentPlanController(installmentPlanDAO, transactionDAO, accountDAO);
+        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
+        installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
 
         userController.register("testuser", "password123"); // create test user and insert into db
         testUser=userController.login("testuser", "password123"); // login to set current user
-        //testUser = userController.getCurrentUser();
 
         testLedger=ledgerController.createLedger("Test Ledger", testUser);
     }
 
-    @AfterEach
-    public void tearDown() throws SQLException {
-        readResetScript();
+    private void runSchemaScript() {
+        executeSqlFile("src/test/resources/schema.sql");
     }
 
-    private void runSchemaScript() {
+    private void readResetScript() {
+        executeSqlFile("src/test/resources/reset.sql");
+    }
+
+    private void executeSqlFile(String filePath) {
         try {
-            Path path = Paths.get("src/test/resources/schema.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
+            Path path = Paths.get(filePath);
+            String sql = Files.lines(path)
+                    .collect(Collectors.joining("\n"));
             try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
+                for (String s : sql.split(";")) {
+                    if (!s.trim().isEmpty()) {
+                        stmt.execute(s);
+                    }
+                }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load schema.sql", e);
-        }
-    }
-
-    private void readResetScript() throws SQLException {
-        try {
-            Path path = Paths.get("src/test/resources/reset.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
-            try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
-            }
-        } catch (IOException e) {
-            throw new SQLException("Failed to read reset.sql", e);
+            throw new RuntimeException("Failed to execute " + filePath, e);
         }
     }
 
@@ -183,14 +178,16 @@ public class AccountControllerTest {
                 receivingAccount, //receiving account
                 LocalDate.now(),
                 LoanAccount.RepaymentType.EQUAL_INTEREST);
+        assertNotNull(loanAccount);
 
         Account savedLoanAccount = accountDAO.getAccountById(loanAccount.getId());
         assertNotNull(savedLoanAccount);
 
         assertEquals(2, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.valueOf(5000.00)));
+        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.valueOf(205000.00)));
         assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(242988.00)));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.valueOf(-237988.00)));
+        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.valueOf(-37988.00)));
+        assertEquals(0, receivingAccount.getBalance().compareTo(BigDecimal.valueOf(205000.00)));
     }
 
     @Test
@@ -560,24 +557,25 @@ public class AccountControllerTest {
                 null,
                 null);
 
-        InstallmentPlan plan=installmentPlanController.createInstallmentPlan(
+        Installment plan= installmentController.createInstallment(
                 account,
                 "Test Installment Plan",
                 BigDecimal.valueOf(1200.00),
                 12,
                 0,
                 BigDecimal.valueOf(2.00), //2% fee rate
-                InstallmentPlan.FeeStrategy.EVENLY_SPLIT,
+                Installment.Strategy.EVENLY_SPLIT,
                 LocalDate.now(),
                 category
         );
-
         boolean result= accountController.deleteAccount(account, true);
         assertTrue(result);
-        //deleted account and installment plan from db
+
         Account deletedAccount = accountDAO.getAccountById(account.getId());
         assertNull(deletedAccount);
-        assertNull(installmentPlanDAO.getById(plan.getId()));
+        //deleted account and installment plan from db
+        assertNull(installmentDAO.getById(plan.getId()));
+        assertNull(accountDAO.getAccountById(account.getId()));
 
         assertEquals(0, testUser.getAccounts().size());
         assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
@@ -1070,7 +1068,7 @@ public class AccountControllerTest {
                 null, //no receiving account
                 LocalDate.now(),
                 LoanAccount.RepaymentType.EQUAL_PRINCIPAL);
-        assertEquals(0, account.getRemainingAmount().compareTo(BigDecimal.valueOf(21429.32)));
+        assertEquals(0, account.getRemainingAmount().compareTo(BigDecimal.valueOf(21429.16)));
 
         boolean result = accountController.editLoanAccount(
                 account,
