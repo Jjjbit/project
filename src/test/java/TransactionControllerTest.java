@@ -4,11 +4,9 @@ import com.ledger.business.TransactionController;
 import com.ledger.business.UserController;
 import com.ledger.domain.*;
 import com.ledger.orm.*;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +16,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.stream.Collectors;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TransactionControllerTest {
@@ -32,6 +31,8 @@ public class TransactionControllerTest {
     private TransactionDAO transactionDAO;
     private LedgerCategoryDAO ledgerCategoryDAO;
     private CategoryDAO categoryDAO;
+    private BudgetDAO budgetDAO;
+    private InstallmentDAO installmentDAO;
 
     private UserController userController;
     private TransactionController transactionController;
@@ -50,11 +51,13 @@ public class TransactionControllerTest {
         transactionDAO = new TransactionDAO(connection);
         ledgerCategoryDAO = new LedgerCategoryDAO(connection);
         categoryDAO = new CategoryDAO(connection);
+        budgetDAO = new BudgetDAO(connection);
+        installmentDAO = new InstallmentDAO(connection);
 
         userController = new UserController(userDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
-        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO);
-        accountController = new AccountController(accountDAO, transactionDAO);
+        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, installmentDAO);
 
         userController.register("testuser", "password123");
         testUser = userController.login("testuser", "password123");
@@ -72,32 +75,28 @@ public class TransactionControllerTest {
 
     }
 
-    @AfterEach
-    public void tearDown() throws SQLException {
-        readResetScript();
+    private void runSchemaScript() {
+        executeSqlFile("src/test/resources/schema.sql");
     }
 
-    private void runSchemaScript() {
+    private void readResetScript() {
+        executeSqlFile("src/test/resources/reset.sql");
+    }
+
+    private void executeSqlFile(String filePath) {
         try {
-            Path path = Paths.get("src/test/resources/schema.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
+            Path path = Paths.get(filePath);
+            String sql = Files.lines(path)
+                    .collect(Collectors.joining("\n"));
             try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
+                for (String s : sql.split(";")) {
+                    if (!s.trim().isEmpty()) {
+                        stmt.execute(s);
+                    }
+                }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load schema.sql", e);
-        }
-    }
-
-    private void readResetScript() throws SQLException {
-        try {
-            Path path = Paths.get("src/test/resources/reset.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
-            try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
-            }
-        } catch (IOException e) {
-            throw new SQLException("Failed to read reset.sql", e);
+            throw new RuntimeException("Failed to execute " + filePath, e);
         }
     }
 
