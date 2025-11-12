@@ -1,6 +1,5 @@
 package com.ledger.orm;
 
-import com.ledger.domain.Account;
 import com.ledger.domain.Installment;
 
 import java.sql.*;
@@ -99,12 +98,12 @@ public class InstallmentDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<Installment> getByAccount(Account account) throws SQLException {
+    public List<Installment> getByAccountId(Long id) throws SQLException {
         String sql = "SELECT id, linked_account_id, total_amount, plan_remaining_amount, total_periods, " +
                 "paid_periods, interest, strategy, repayment_start_date, name, category_id " +
                 "FROM installment WHERE linked_account_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, account.getId());
+            stmt.setLong(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
                 List<Installment> plans = new java.util.ArrayList<>();
                 while (rs.next()) {
@@ -118,6 +117,9 @@ public class InstallmentDAO {
                     plan.setStrategy(Installment.Strategy.valueOf(rs.getString("strategy")));
                     plan.setRepaymentStartDate(rs.getDate("repayment_start_date").toLocalDate());
                     plan.setName(rs.getString("name"));
+
+                    LedgerCategoryDAO categoryDAO = new LedgerCategoryDAO(connection);
+                    plan.setCategory(categoryDAO.getById(rs.getLong("category_id")));
                     plans.add(plan);
                 }
                 return plans;
