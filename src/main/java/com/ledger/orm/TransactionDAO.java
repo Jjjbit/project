@@ -189,8 +189,8 @@ public class TransactionDAO {
         return transactions;
     }
 
-   @SuppressWarnings("SqlResolve")
-    public List<Transaction> getByUserId(Long userId) throws SQLException {
+    @SuppressWarnings("SqlResolve")
+    public List<Transaction> getByCategoryId(Long categoryId) throws SQLException {
         List<Transaction> transactions = new ArrayList<>();
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
@@ -202,39 +202,11 @@ public class TransactionDAO {
                 "LEFT JOIN accounts ta ON t.to_account_id = ta.id " +
                 "LEFT JOIN ledgers l ON t.ledger_id = l.id " +
                 "LEFT JOIN ledger_categories c ON t.category_id = c.id " +
-                "WHERE fa.user_id = ? OR ta.user_id = ? " +
-                "ORDER BY t.transaction_date DESC";
+                "WHERE t.category_id = ? " +
+                "ORDER BY t.transaction_date DESC, t.id DESC";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, userId);
-            stmt.setLong(2, userId);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    transactions.add(mapResultSetToTransaction(rs));
-                }
-            }
-        }
-        return transactions;
-   }
-
-    @SuppressWarnings("SqlResolve")
-    public List<Transaction> getOutgoingByAccountId(Long accountId) throws SQLException {
-        List<Transaction> transactions = new ArrayList<>();
-        String sql = "SELECT t.*, " +
-                "fa.id as from_account_id, fa.name as from_account_name, " +
-                "l.id as ledger_id, l.name as ledger_name, " +
-                "c.id as category_id, c.name as category_name " +
-                "FROM transactions t " +
-                "LEFT JOIN accounts fa ON t.from_account_id = fa.id " +
-                "LEFT JOIN accounts ta ON t.to_account_id = ta.id " +
-                "LEFT JOIN ledgers l ON t.ledger_id = l.id " +
-                "LEFT JOIN ledger_categories c ON t.category_id = c.id " +
-                "WHERE t.from_account_id = ? " +
-                "ORDER BY t.transaction_date DESC";
-
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, accountId);
+            stmt.setLong(1, categoryId);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -244,32 +216,7 @@ public class TransactionDAO {
         }
         return transactions;
     }
-    @SuppressWarnings("SqlResolve")
-    public List<Transaction> getIncomingByAccountId(Long accountId) throws SQLException {
-        List<Transaction> transactions = new ArrayList<>();
-        String sql = "SELECT t.*, " +
-                "ta.id as to_account_id, ta.name as to_account_name, " +
-                "l.id as ledger_id, l.name as ledger_name, " +
-                "c.id as category_id, c.name as category_name " +
-                "FROM transactions t " +
-                "LEFT JOIN accounts fa ON t.from_account_id = fa.id " +
-                "LEFT JOIN accounts ta ON t.to_account_id = ta.id " +
-                "LEFT JOIN ledgers l ON t.ledger_id = l.id " +
-                "LEFT JOIN ledger_categories c ON t.category_id = c.id " +
-                "WHERE t.to_account_id = ? " +
-                "ORDER BY t.transaction_date DESC";
 
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, accountId);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    transactions.add(mapResultSetToTransaction(rs));
-                }
-            }
-        }
-        return transactions;
-    }
 
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getByAccountIdInRangeDate(Account account, LocalDate startDate, LocalDate endDate) throws SQLException {
@@ -368,6 +315,29 @@ public class TransactionDAO {
         transaction.setAmount(rs.getBigDecimal("amount"));
         transaction.setNote(rs.getString("note"));
         transaction.setType(TransactionType.valueOf(rs.getString("dtype")));
+
+        AccountDAO accountDAO = new AccountDAO(connection);
+
+        //set fromAccount
+        if( rs.getLong("from_account_id") != 0) {
+
+            transaction.setFromAccount(accountDAO.getAccountById(rs.getLong("from_account_id")));
+        }
+        //set toAccount
+        if( rs.getLong("to_account_id") != 0) {
+            transaction.setToAccount(accountDAO.getAccountById(rs.getLong("to_account_id")));
+        }
+
+        //set ledger
+        /*if( rs.getLong("ledger_id") != 0) {
+            LedgerDAO ledgerDAO = new LedgerDAO(connection);
+            transaction.setLedger(ledgerDAO.getById(rs.getLong("ledger_id")));
+        }*/
+        //set category
+        if( rs.getLong("category_id") != 0) {
+            LedgerCategoryDAO categoryDAO = new LedgerCategoryDAO(connection);
+            transaction.setCategory(categoryDAO.getById(rs.getLong("category_id")));
+        }
         return transaction;
     }
 
