@@ -39,7 +39,6 @@ public class AccountDAO {
             if (rs.next()) {
                 Long accountId = rs.getLong(1);
                 account.setId(accountId);
-                //return true;
             }
             //insert into basic_account table
             String basicSql = "INSERT INTO basic_account (id) VALUES (?)";
@@ -63,7 +62,7 @@ public class AccountDAO {
                     "VALUES ('CreditAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 
-            Long accountId;
+            long accountId;
             try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, account.getName());
                 stmt.setBigDecimal(2, account.getBalance());
@@ -126,7 +125,7 @@ public class AccountDAO {
             //insert into accounts table
             String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
                     "VALUES ('LoanAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            Long accountId;
+            long accountId;
             try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, account.getName());
                 stmt.setBigDecimal(2, account.getBalance());
@@ -162,11 +161,6 @@ public class AccountDAO {
                 stmt.setInt(3, account.getRepaidPeriods());
                 stmt.setBigDecimal(4, account.getAnnualInterestRate());
                 stmt.setBigDecimal(5, account.getLoanAmount());
-                /*if (account.getReceivingAccount() != null && account.getReceivingAccount().getId() != null) {
-                    stmt.setLong(6, account.getReceivingAccount().getId());
-                } else {
-                    stmt.setNull(6, Types.BIGINT);
-                }*/
                 stmt.setDate(6, Date.valueOf(account.getRepaymentDay()));
                 stmt.setString(7, account.getRepaymentType().name());
                 stmt.setBigDecimal(8, account.getRemainingAmount());
@@ -195,7 +189,7 @@ public class AccountDAO {
             String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
                     "VALUES ('BorrowingAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-            Long accountId;
+            long accountId;
             try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, account.getName());
                 stmt.setBigDecimal(2, account.getBalance());
@@ -256,7 +250,7 @@ public class AccountDAO {
             String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
                     "VALUES ('LendingAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-            Long accountId;
+            long accountId;
             try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, account.getName());
                 stmt.setBigDecimal(2, account.getBalance());
@@ -310,11 +304,13 @@ public class AccountDAO {
 
     @SuppressWarnings("SqlResolve")
     public Account getAccountById(Long id) throws SQLException {
-        String baseSql = "SELECT a.*, " +
+        String baseSql =  "SELECT DISTINCT a.id AS account_id, a.name, a.balance, a.account_type, a.account_category, " +
+                "a.notes, a.is_hidden, a.included_in_net_asset, a.selectable, a.user_id, a.dtype, " +
+
                 "ca.credit_limit, ca.current_debt, ca.bill_date, ca.due_date, " +
                 "la.total_periods, la.repaid_periods, la.annual_interest_rate, la.loan_amount, " +
                 "la.repayment_date, la.repayment_type, la.loan_remaining_amount, la.is_ended, " +
-                "ba.is_ended as borrowing_ended, ba.borrowing_date, ba.borrowing_amount,  ba.borrowing_remaining_amount, " +
+                "ba.is_ended as borrowing_ended, ba.borrowing_date, ba.borrowing_amount, ba.borrowing_remaining_amount, " +
                 "len.is_ended as lending_ended, len.lending_date " +
                 "FROM accounts a " +
                 "LEFT JOIN credit_account ca ON a.id = ca.id " +
@@ -326,43 +322,11 @@ public class AccountDAO {
         try (PreparedStatement stmt = connection.prepareStatement(baseSql)) {
             stmt.setLong(1, id);
             ResultSet rs = stmt.executeQuery();
-
             if (rs.next()) {
                 return mapResultSetToAccount(rs);
             }
         }
         return null;
-    }
-
-    //not set transactions 
-    //set owner
-    @SuppressWarnings("SqlResolve")
-    public List<Account> getAccountByOwner(User owner) throws SQLException {
-        List<Account> accounts = new ArrayList<>();
-
-        String sql = "SELECT a.*, " +
-                "ca.credit_limit, ca.current_debt, ca.bill_date, ca.due_date, " +
-                "la.total_periods, la.repaid_periods, la.annual_interest_rate, la.loan_amount, " +
-                "la.repayment_date, la.repayment_type, la.laon_remaining_amount, la.is_ended, " +
-                "ba.is_ended as borrowing_ended, ba.borrowing_date, ba.borrowing_amount, ba.borrowing_remaining_amount, " +
-                "len.is_ended as lending_ended, len.lending_date " +
-                "FROM accounts a " +
-                "LEFT JOIN credit_account ca ON a.id = ca.id " +
-                "LEFT JOIN loan_account la ON a.id = la.id " +
-                "WHERE a.user_id = ? AND a.is_hidden = FALSE";
-
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, owner.getId());
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                Account account = mapResultSetToAccount(rs);
-                account.setOwner(owner);
-                accounts.add(account);
-            }
-
-        }
-        return accounts;
     }
 
     private Account mapResultSetToAccount(ResultSet rs) throws SQLException {
@@ -416,12 +380,11 @@ public class AccountDAO {
         }
 
         // Common fields
-        account.setId(rs.getLong("id"));
+        account.setId(rs.getLong("account_id"));
         account.setName(rs.getString("name"));
         account.setBalance(rs.getBigDecimal("balance"));
         account.setType(AccountType.valueOf(rs.getString("account_type")));
-        account.setCategory(rs.getString("account_category") != null ?
-                AccountCategory.valueOf(rs.getString("account_category")) : null);
+        account.setCategory(AccountCategory.valueOf(rs.getString("account_category")));
         account.setNotes(rs.getString("notes"));
         account.setHidden(rs.getBoolean("is_hidden"));
         account.setIncludedInNetAsset(rs.getBoolean("included_in_net_asset"));
@@ -429,18 +392,23 @@ public class AccountDAO {
         return account;
     }
 
-    //without set owner
     @SuppressWarnings("SqlResolve")
-    public List<Account> getAccountByOwnerId(Long ownerId) throws SQLException {
+    public List<Account> getAccountsByOwnerId(Long ownerId) throws SQLException {
         List<Account> accounts = new ArrayList<>();
 
-        String sql = "SELECT a.*, " +
+        String sql = " SELECT DISTINCT a.id AS account_id, a.name, a.balance, a.account_type, a.account_category, " +
+                "a.notes, a.is_hidden, a.included_in_net_asset, a.selectable, a.user_id, a.dtype," +
+
                 "ca.credit_limit, ca.current_debt, ca.bill_date, ca.due_date, " +
                 "la.total_periods, la.repaid_periods, la.annual_interest_rate, la.loan_amount, " +
-                "la.repayment_date, la.repayment_type, la.loan_remaining_amount, la.is_ended " +
+                "la.repayment_date, la.repayment_type, la.loan_remaining_amount, la.is_ended, " +
+                "ba.is_ended as borrowing_ended, ba.borrowing_date, ba.borrowing_amount,  ba.borrowing_remaining_amount, " +
+                "len.is_ended as lending_ended, len.lending_date " +
                 "FROM accounts a " +
                 "LEFT JOIN credit_account ca ON a.id = ca.id " +
                 "LEFT JOIN loan_account la ON a.id = la.id " +
+                "LEFT JOIN borrowing_account ba ON a.id = ba.id " +
+                "LEFT JOIN lending_account len ON a.id = len.id " +
                 "WHERE a.user_id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -577,7 +545,6 @@ public class AccountDAO {
         }
         return false;
     }
-
 
     @SuppressWarnings("SqlResolve")
     public boolean deleteAccount(Account account) throws SQLException {
