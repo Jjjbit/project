@@ -438,7 +438,7 @@ public class BudgetControllerTest {
 
     //refresh budget test
     @Test
-    public void testRefreshBudget_ExpiredBudget() {
+    public void testRefreshBudget_ExpiredBudget() throws SQLException {
         Budget budget = testLedger.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
@@ -447,12 +447,18 @@ public class BudgetControllerTest {
         //simulate expired budget by setting start and end date in the past
         budget.setStartDate(LocalDate.of(2025, 1, 1));
         budget.setEndDate(LocalDate.of(2025, 1, 31));
+        budgetDAO.update(budget);
 
         boolean result = budgetController.refreshBudget(budget);
         assertTrue(result);
         assertEquals(0, budget.getAmount().compareTo(BigDecimal.ZERO)); //should be reset to 0 after refresh
         assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), budget.getStartDate()); //should be refreshed to current month
         assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), budget.getEndDate()); //should be refreshed to current month
+
+        Budget updatedBudget= budgetDAO.getById(budget.getId()); //fetch from DB to verify
+        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedBudget.getStartDate());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedBudget.getEndDate());
     }
 
     @Test

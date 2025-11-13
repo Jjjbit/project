@@ -139,6 +139,8 @@ CREATE TABLE IF NOT EXISTS budgets (
     amount DECIMAL(15,2) NOT NULL,
     period VARCHAR(20) NOT NULL CHECK (period IN ('MONTHLY','YEARLY')),
     ledger_id BIGINT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
     FOREIGN KEY (category_id) REFERENCES ledger_categories(id) ON DELETE CASCADE,
     FOREIGN KEY (ledger_id) REFERENCES ledgers(id) ON DELETE CASCADE
 );
