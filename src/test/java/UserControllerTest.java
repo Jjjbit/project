@@ -1,14 +1,10 @@
 import com.ledger.business.UserController;
 import com.ledger.domain.User;
-import com.ledger.orm.AccountDAO;
 import com.ledger.orm.ConnectionManager;
-import com.ledger.orm.LedgerDAO;
 import com.ledger.orm.UserDAO;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,14 +12,13 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class UserControllerTest {
     private Connection connection;
     private UserDAO userDAO;
-    private LedgerDAO ledgerDAO;
-    private AccountDAO accountDAO;
     private UserController userController;
 
     @BeforeEach
@@ -33,81 +28,80 @@ public class UserControllerTest {
         runSchemaScript();
 
         userDAO = new UserDAO(connection);
-        ledgerDAO = new LedgerDAO(connection);
-        accountDAO = new AccountDAO(connection);
         userController = new UserController(userDAO);
     }
 
-    @AfterEach
-    public void tearDown() throws SQLException {
-        readResetScript();
+    private void runSchemaScript() {
+        executeSqlFile("src/test/resources/schema.sql");
     }
 
-    private void runSchemaScript() {
+    private void readResetScript() {
+        executeSqlFile("src/test/resources/reset.sql");
+    }
+
+    private void executeSqlFile(String filePath) {
         try {
-            Path path = Paths.get("src/test/resources/schema.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
+            Path path = Paths.get(filePath);
+            String sql;
+            try (Stream<String> lines = Files.lines(path)) {
+                sql = lines.collect(Collectors.joining("\n"));
+            }
+
             try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
+                for (String s : sql.split(";")) {
+                    if (!s.trim().isEmpty()) {
+                        stmt.execute(s);
+                    }
+                }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load schema.sql", e);
-        }
-    }
-
-    private void readResetScript() throws SQLException {
-        try {
-            Path path = Paths.get("src/test/resources/reset.sql");
-            String sql = Files.lines(path).collect(Collectors.joining("\n"));
-            try (Statement stmt = connection.createStatement()) {
-                stmt.execute(sql);
-            }
-        } catch (IOException e) {
-            throw new SQLException("Failed to read reset.sql", e);
+            throw new RuntimeException("Failed to execute " + filePath, e);
         }
     }
 
     @Test
     public void testRegister_Success() throws SQLException {
-        boolean result = userController.register("testuser", "password");
+        boolean result = userController.register("test user", "password");
         assertTrue(result);
+        assertNotNull(userDAO.getUserByUsername("test user"));
     }
 
     @Test
-    public void testRegister_DuplicateUsername() throws SQLException {
-        boolean firstRegistration= userController.register("duplicateuser", "password1");
+    public void testRegister_DuplicateUsername() {
+        boolean firstRegistration= userController.register("duplicate user", "password1");
         assertTrue(firstRegistration);
 
-        boolean secondRegistration= userController.register("duplicateuser", "password2");
+        boolean secondRegistration= userController.register("duplicate user", "password2");
         assertFalse(secondRegistration);
     }
 
     @Test
-    public void testLogin_Success() throws SQLException {
-        userController.register("loginuser", "loginpass"); //insert user to db
+    public void testLogin_Success() {
+        userController.register("login user", "loginpass"); //insert user to db
 
-        User loggedInUser = userController.login("loginuser", "loginpass"); //find user from db
+        User loggedInUser = userController.login("login user", "loginpass"); //find user from db
         assertNotNull(loggedInUser);
-        assertTrue(loggedInUser.getUsername().equals("loginuser"));
+        assertEquals("login user", loggedInUser.getUsername());
     }
 
     @Test
-    public void testLogin_Failure_WrongPassword() throws SQLException {
-        userController.register("loginuser", "loginpass"); //insert user to db
+    public void testLogin_Failure_WrongPassword() {
+        userController.register("login user", "loginpass"); //insert user to db
 
-        User loggedInUser = userController.login("loginuser", "wrongpass"); //find user from db
-        assertNull(loggedInUser);
-    }
-    @Test
-    public void testLogin_Failure_WrongUsername() throws SQLException {
-        userController.register("loginuser", "loginpass"); //insert user to db
-
-        User loggedInUser = userController.login("wronguser", "loginpass"); //find user from db
+        User loggedInUser = userController.login("login user", "wrongpass"); //find user from db
         assertNull(loggedInUser);
     }
 
     @Test
-    public void testLogin_Failure_NonExistentUser() throws SQLException {
+    public void testLogin_Failure_WrongUsername()  {
+        userController.register("login user", "loginpass"); //insert user to db
+
+        User loggedInUser = userController.login("wrong user", "loginpass"); //find user from db
+        assertNull(loggedInUser);
+    }
+
+    @Test
+    public void testLogin_Failure_NonExistentUser() {
         User loggedInUser = userController.login("nonexistentuser", "somepass"); //find user from db
         assertNull(loggedInUser);
     }
@@ -115,26 +109,38 @@ public class UserControllerTest {
     @Test
     public void testUpdateUsername_Success() throws SQLException {
         userController.register("oldusername", "password");
-        userController.login("oldusername", "password");
+        User user=userController.login("oldusername", "password");
 
-        User user = userDAO.getUserByUsername("oldusername");
-
-        boolean updateResult = userController.updateUsername(user.getId(), "newusername");
+        boolean updateResult = userController.updateUsername(user, "newusername");
         assertTrue(updateResult);
 
         User updatedUser = userDAO.getUserByUsername("newusername");
         assertNotNull(updatedUser);
-        assertEquals("newusername", updatedUser.getUsername());
+        assertNull(userDAO.getUserByUsername("oldusername"));
+        assertEquals("newusername", user.getUsername());
     }
 
 
     @Test
-    public void testUpdateUserInfo_NoChanges() throws SQLException {
+    public void testUpdateUserInfo_NoChanges() {
         userController.register("user1", "oldpassword");
         User user=userController.login("user1","oldpassword");
 
-        boolean updateResult = userController.updateUsername(user.getId(), "user1");
+        boolean updateResult = userController.updateUsername(user, "user1");
         assertTrue(updateResult);
+    }
+
+    @Test
+    public void testUpdatePassword_Success() throws SQLException {
+        userController.register("user2", "oldpassword");
+        User user=userController.login("user2","oldpassword");
+
+        boolean updateResult = userController.updatePassword(user, "newpassword");
+        assertTrue(updateResult);
+
+        User updatedUser = userDAO.getUserByUsername("user2");
+        assertNotNull(updatedUser);
+        assertEquals(updatedUser.getPassword(), user.getPassword());
     }
 
 
