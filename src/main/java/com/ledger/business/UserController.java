@@ -2,99 +2,91 @@ package com.ledger.business;
 
 import com.ledger.domain.PasswordUtils;
 import com.ledger.domain.User;
-import com.ledger.orm.CategoryComponentDAO;
 import com.ledger.orm.UserDAO;
-import jakarta.transaction.Transactional;
 
-import java.math.BigDecimal;
+import java.sql.SQLException;
 
 public class UserController {
-    private UserDAO userDAO;
-    private CategoryComponentDAO categoryComponentDAO;
+    private final UserDAO userDAO;
+    private User currentUser;
 
-    public UserController( UserDAO userDAO, CategoryComponentDAO categoryComponentDAO) {
+    public UserController( UserDAO userDAO) {
         this.userDAO = userDAO;
-        this.categoryComponentDAO = categoryComponentDAO;
     }
 
-    public String login(String username, String password) {
-        User user = userDAO.findByUsername(username);
-        if (user == null) return "User not found";
-        if (!PasswordUtils.verify(password, user.getPasswordHash())) return "Password incorrect";
-        return "Login successful";
-    }
-    public String register(String username, String password) {
-        if(userDAO.findByUsername(username) != null) return "Username already exists";
-        User user = new User(username, PasswordUtils.hash(password));
-        userDAO.save(user);
-        return "Registration successful";
+    public User login(String username, String password) {
+        try{
+        User user = userDAO.getUserByUsername(username);
+        if (user != null && PasswordUtils.verify(password, user.getPassword())) {
+            currentUser = user;
+            return user;
+        }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during login: " + e.getMessage());
+        }
+        return null;
     }
 
-    @Transactional
-    public void updateUserInfo(Long userId, String newUsername, String newPassword) {
-        User user = userDAO.findById(userId);
-        if (user != null) {
-            if (newUsername != null && !newUsername.isEmpty()) {
-                user.setUsername(newUsername);
+    public boolean register(String username, String password) {
+        if (password.isEmpty()) {
+            return false;
+        }
+        if(username.isEmpty()) {
+            return false;
+        }
+        if(password.length() < 6) {
+            return false;
+        }
+
+        try {
+            if (userDAO.getUserByUsername(username) == null) {
+                User user = new User(username, PasswordUtils.hash(password));
+                return userDAO.register(user);
             }
-            if (newPassword != null && !newPassword.isEmpty()) {
-                user.setPassword(PasswordUtils.hash(newPassword));
+        }catch (SQLException e){
+            System.err.println("SQL Exception during registration: " + e.getMessage());
+        }
+        return false;
+    }
+
+     public boolean updateUsername(User user, String newUsername) {
+        if(currentUser == null || !currentUser.getId().equals(user.getId())){
+            return false;
+        }
+        try {
+            if (userDAO.getUserByUsername(newUsername) != null) {
+                if (user.getUsername().equals(newUsername)) {
+                    return true; // No change needed
+                }
+                return false; // Username already taken
             }
-            userDAO.update(user);
+            user.setUsername(newUsername);
+            return userDAO.updateUser(user);
+        }catch (SQLException e){
+            System.err.println("SQL Exception during username update: " + e.getMessage());
+            return false;
         }
-    }
-    public User getUserById(Long userId) {
-        return userDAO.findById(userId);
+     }
+
+    public boolean updatePassword(User user, String newPassword) {
+        try {
+            if (user != null) {
+                String hashedPassword = PasswordUtils.hash(newPassword);
+                user.setPassword(hashedPassword);
+                return userDAO.updateUser(user);
+            }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during password update: " + e.getMessage());
+        }
+        return false;
     }
 
-    /*public List<Account> getAccountsByUserId(Long userId) {
-        return userDAO.findById(userId).getAccounts();
+    public User getCurrentUser(){
+        return currentUser;
     }
 
-    public List<Ledger> getLedgersByUserId(Long userId) {
-        return userDAO.findById(userId).getLedgers();
-    }
-
-    public BigDecimal getTotalBudgetByUserId(Long userId, Budget.BudgetPeriod period) {
-        User user = userDAO.findById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("User not found");
-        }
-        BudgetManager budgetManager = new BudgetManager(user.getBudgets());
-        return budgetManager.getUserTotalBudget(user, period);
-    }
-
-    public BigDecimal getCategoryBudgetsByUserId(Long userId, Long categoryId, Budget.BudgetPeriod period) {
-        User user = userDAO.findById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("User not found");
-        }
-        CategoryComponent category = categoryComponentDAO.findById(categoryId);
-        BudgetManager budgetManager = new BudgetManager(user.getBudgets());
-        return budgetManager.getCategoryBudgets(user, period, category);
-    }*/
-
-    public BigDecimal getTotalNetAssetByUserId(Long userId) {
-        User user = userDAO.findById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("User not found");
-        }
-        return user.getNetAssets();
-    }
-
-    public BigDecimal getTotalAssetsByUserId(Long userId) {
-        User user = userDAO.findById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("User not found");
-        }
-        return user.getTotalAssets();
-    }
-    public BigDecimal getTotalLiabilitiesByUserId(Long userId) {
-        User user = userDAO.findById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("User not found");
-        }
-        return user.getTotalLiabilities();
+    public void logout() {
+        currentUser = null;
     }
 
 }
