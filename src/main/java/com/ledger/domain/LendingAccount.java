@@ -37,47 +37,9 @@ public class LendingAccount extends Account {
     }
     public void receiveRepayment(Transaction tx, BigDecimal amount){
         balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-        outgoingTransactions.add(tx);
+        transactions.add(tx);
+        //outgoingTransactions.add(tx);
         checkAndUpdateStatus();
-    }
-
-    public void receiveRepayment(BigDecimal amount, Account toAccount, Ledger ledger) {
-        String description;
-        if (toAccount != null) {
-            description = name + " to " + toAccount.getName();
-        } else {
-            description = name + " to External account";
-        }
-        Transaction tx = new Transfer(
-                LocalDate.now(),
-                description,
-                this,
-                toAccount,
-                amount,
-                ledger
-        );
-        this.balance = this.balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-        this.getOutgoingTransactions().add(tx);
-        if (toAccount != null) {
-            toAccount.credit(amount);
-            toAccount.getIncomingTransactions().add(tx);
-        }
-        if (ledger != null){
-            ledger.getTransactions().add(tx);
-        }
-        checkAndUpdateStatus();
-    }
-    public void setLendingDate(LocalDate date) {
-        this.date = date;
-    }
-    @Override
-    public void credit(BigDecimal amount) {
-        this.balance = this.balance.add(amount).setScale(2, RoundingMode.HALF_UP);
-    }
-
-    @Override
-    public void debit(BigDecimal amount) {
-        this.balance = this.balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
     }
 
     public void checkAndUpdateStatus() {

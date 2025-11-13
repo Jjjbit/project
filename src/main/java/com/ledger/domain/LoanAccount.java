@@ -119,7 +119,8 @@ public class LoanAccount extends Account {
     public void repayLoan(Transaction tx){ //pay one period
         this.repaidPeriods = this.repaidPeriods + 1;
         this.remainingAmount= remainingAmount.subtract(getMonthlyRepayment(repaidPeriods)).setScale(2, RoundingMode.HALF_UP);
-        incomingTransactions.add(tx);
+        //incomingTransactions.add(tx);
+        transactions.add(tx);
         checkAndUpdateStatus();
     }
 

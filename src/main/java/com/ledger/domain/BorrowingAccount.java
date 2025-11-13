@@ -54,11 +54,13 @@ public class BorrowingAccount extends Account{
     @Override
     public void debit(BigDecimal amount){
         this.remainingAmount = this.remainingAmount.add(amount).setScale(2, RoundingMode.HALF_UP);
+        this.borrowingAmount = this.borrowingAmount.add(amount).setScale(2, RoundingMode.HALF_UP);
     }
 
     public void repay(Transaction tx, BigDecimal amount){
         this.remainingAmount = this.remainingAmount.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-        incomingTransactions.add(tx);
+        transactions.add(tx);
+        //incomingTransactions.add(tx);
         checkAndUpdateStatus();
     }
 
