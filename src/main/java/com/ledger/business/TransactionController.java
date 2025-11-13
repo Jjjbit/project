@@ -66,7 +66,8 @@ public class TransactionController {
             transactionDAO.insert(incomeTransaction);
             category.getTransactions().add(incomeTransaction);
             toAccount.credit(amount);
-            toAccount.getIncomingTransactions().add(incomeTransaction);
+            toAccount.getTransactions().add(incomeTransaction);
+            //toAccount.getIncomingTransactions().add(incomeTransaction);
             accountDAO.update(toAccount); //update balance in database
 
             ledger.getTransactions().add(incomeTransaction);
@@ -112,7 +113,8 @@ public class TransactionController {
             transactionDAO.insert(expenseTransaction);
             category.getTransactions().add(expenseTransaction);
             fromAccount.debit(amount);
-            fromAccount.getOutgoingTransactions().add(expenseTransaction);
+            fromAccount.getTransactions().add(expenseTransaction);
+            //fromAccount.getOutgoingTransactions().add(expenseTransaction);
             accountDAO.update(fromAccount); //update balance in database
 
             ledger.getTransactions().add(expenseTransaction);
@@ -154,12 +156,14 @@ public class TransactionController {
 
             if (fromAccount != null) {
                 fromAccount.debit(amount);
-                fromAccount.getOutgoingTransactions().add(transferTransaction);
+                fromAccount.getTransactions().add(transferTransaction);
+                //fromAccount.getOutgoingTransactions().add(transferTransaction);
                 accountDAO.update(fromAccount);
             }
             if (toAccount != null) {
                 toAccount.credit(amount);
-                toAccount.getIncomingTransactions().add(transferTransaction);
+                toAccount.getTransactions().add(transferTransaction);
+                //toAccount.getIncomingTransactions().add(transferTransaction);
                 accountDAO.update(toAccount);
             }
             if (ledger != null) {
@@ -186,24 +190,28 @@ public class TransactionController {
             if (tx instanceof Income) {
                 if (toAccount != null) {
                     toAccount.debit(tx.getAmount());
-                    toAccount.getIncomingTransactions().remove(tx);
+                    toAccount.getTransactions().remove(tx);
+                    //toAccount.getIncomingTransactions().remove(tx);
                     accountDAO.update(toAccount);
                 }
             } else if (tx instanceof Expense) {
                 if (fromAccount != null) {
                     fromAccount.credit(tx.getAmount());
-                    fromAccount.getOutgoingTransactions().remove(tx);
+                    fromAccount.getTransactions().remove(tx);
+                    //fromAccount.getOutgoingTransactions().remove(tx);
                     accountDAO.update(fromAccount);
                 }
             } else if (tx instanceof Transfer) {
                 if (fromAccount != null) {
                     fromAccount.credit(tx.getAmount());
-                    fromAccount.getOutgoingTransactions().remove(tx);
+                    fromAccount.getTransactions().remove(tx);
+                    //fromAccount.getOutgoingTransactions().remove(tx);
                     accountDAO.update(fromAccount);
                 }
                 if (toAccount != null) {
                     toAccount.debit(tx.getAmount());
-                    toAccount.getIncomingTransactions().remove(tx);
+                    toAccount.getTransactions().remove(tx);
+                    //toAccount.getIncomingTransactions().remove(tx);
                     accountDAO.update(toAccount);
                 }
             }
@@ -323,11 +331,13 @@ public class TransactionController {
 
 
                     prevFromAccount.credit(tx.getAmount());
-                    prevFromAccount.getOutgoingTransactions().remove(tx);
+                    prevFromAccount.getTransactions().remove(tx);
+                    //prevFromAccount.getOutgoingTransactions().remove(tx);
                     accountDAO.update(prevFromAccount);
 
                     fromAccount.debit(amount);
-                    fromAccount.getOutgoingTransactions().add(tx);
+                    fromAccount.getTransactions().add(tx);
+                    //fromAccount.getOutgoingTransactions().add(tx);
                     tx.setFromAccount(fromAccount);
                     accountDAO.update(fromAccount);
                 }
@@ -348,11 +358,13 @@ public class TransactionController {
 
 
                     prevToAccount.debit(tx.getAmount());
-                    prevToAccount.getIncomingTransactions().remove(tx);
+                    prevToAccount.getTransactions().remove(tx);
+                    //prevToAccount.getIncomingTransactions().remove(tx);
                     accountDAO.update(prevToAccount);
 
                     toAccount.credit(amount);
-                    toAccount.getIncomingTransactions().add(tx);
+                    toAccount.getTransactions().add(tx);
+                    //toAccount.getIncomingTransactions().add(tx);
                     tx.setToAccount(toAccount);
                     accountDAO.update(toAccount);
                 }
@@ -365,12 +377,14 @@ public class TransactionController {
                     //rollback previous transaction
                     if (prevFromAccount != null) {
                         prevFromAccount.credit(tx.getAmount());
-                        prevFromAccount.getOutgoingTransactions().remove(tx);
+                        prevFromAccount.getTransactions().remove(tx);
+                        //prevFromAccount.getOutgoingTransactions().remove(tx);
                         accountDAO.update(prevFromAccount);
                     }
                     if (prevToAccount != null) {
                         prevToAccount.debit(tx.getAmount());
-                        prevToAccount.getIncomingTransactions().remove(tx);
+                        prevToAccount.getTransactions().remove(tx);
+                        //prevToAccount.getIncomingTransactions().remove(tx);
                         accountDAO.update(prevToAccount);
                     }
 
@@ -386,7 +400,8 @@ public class TransactionController {
                             return false;
                         }
                         fromAccount.debit(amount);
-                        fromAccount.getOutgoingTransactions().add(tx);
+                        fromAccount.getTransactions().add(tx);
+                        //fromAccount.getOutgoingTransactions().add(tx);
                         tx.setFromAccount(fromAccount);
                         accountDAO.update(fromAccount);
                     } else {
@@ -403,7 +418,8 @@ public class TransactionController {
                             return false;
                         }
                         toAccount.credit(amount);
-                        toAccount.getIncomingTransactions().add(tx);
+                        toAccount.getTransactions().add(tx);
+                        //toAccount.getIncomingTransactions().add(tx);
                         tx.setToAccount(toAccount);
                         accountDAO.update(toAccount);
                     } else {
