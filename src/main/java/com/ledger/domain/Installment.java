@@ -16,13 +16,14 @@ public class Installment {
     private BigDecimal totalAmount;
     private int totalPeriods;
     private BigDecimal interest;
-    private int paidPeriods = 0;
-    private Strategy strategy = Strategy.EVENLY_SPLIT;
+    private int paidPeriods;
+    private Strategy strategy;
     private Account linkedAccount;
     private BigDecimal remainingAmount;
     private LocalDate repaymentStartDate;
     private LedgerCategory category;
     private String name;
+    private boolean includedInCurrentDebts; // Whether this installment is included in current debts of linked account
 
     public Installment() {}
     public Installment(String name,
@@ -33,7 +34,9 @@ public class Installment {
                        Strategy strategy,
                        Account linkedAccount,
                        LocalDate repaymentStartDate,
-                       LedgerCategory category) {
+                       LedgerCategory category,
+                       boolean includedInCurrentDebts) {
+        this.includedInCurrentDebts = includedInCurrentDebts;
         this.repaymentStartDate = repaymentStartDate;
         this.name = name;
         this.totalAmount = totalAmount;
@@ -58,8 +61,11 @@ public class Installment {
     public Long getId() {
         return id;
     }
-    public void setLinkedAccount(Account linkedAccount) {
-        this.linkedAccount = linkedAccount;
+    public void setIncludedInCurrentDebts(boolean includedInCurrentDebts) {
+        this.includedInCurrentDebts = includedInCurrentDebts;
+    }
+    public boolean isIncludedInCurrentDebts() {
+        return includedInCurrentDebts;
     }
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;

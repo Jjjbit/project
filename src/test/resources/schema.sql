@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS installment (
     repayment_start_date DATE NOT NULL,
     name VARCHAR(500) NOT NULL,
     category_id BIGINT NOT NULL,
+    included_in_current_debt BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (linked_account_id) REFERENCES credit_account(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES ledger_categories(id) ON DELETE CASCADE
 );
