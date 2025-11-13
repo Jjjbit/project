@@ -34,6 +34,9 @@ public class LedgerController {
         if(name == null || name.trim().isEmpty()) {
             return null;
         }
+        if(owner == null){
+            return null;
+        }
 
         try {
             if (ledgerDAO.getByNameAndOwner(name, owner) != null) {
@@ -129,27 +132,31 @@ public class LedgerController {
                 if (tx instanceof Income) {
                     if (to != null) {
                         to.debit(tx.getAmount()); //modifica bilancio account
-                        to.getIncomingTransactions().remove(tx); //rimuove tx da account
+                        to.getTransactions().remove(tx); //rimuove tx da account
+                        //to.getIncomingTransactions().remove(tx); //rimuove tx da account
                         tx.setToAccount(null); //rimuove riferimento a account in tx
                         accountDAO.update(to); //update balance in db
                     }
                 } else if (tx instanceof Expense) {
                     if (from != null) {
                         from.credit(tx.getAmount());
-                        from.getOutgoingTransactions().remove(tx);
+                        from.getTransactions().remove(tx);
+                        //from.getOutgoingTransactions().remove(tx);
                         tx.setFromAccount(null);
                         accountDAO.update(from);
                     }
                 } else if (tx instanceof Transfer) {
                     if (from != null) {
                         from.credit(tx.getAmount());
-                        from.getOutgoingTransactions().remove(tx);
+                        from.getTransactions().remove(tx);
+                        //from.getOutgoingTransactions().remove(tx);
                         tx.setFromAccount(null);
                         accountDAO.update(from);
                     }
                     if (to != null) {
                         to.debit(tx.getAmount());
-                        to.getIncomingTransactions().remove(tx);
+                        to.getTransactions().remove(tx);
+                        //to.getIncomingTransactions().remove(tx);
                         tx.setToAccount(null);
                         accountDAO.update(to);
                     }

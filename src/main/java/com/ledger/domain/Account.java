@@ -11,16 +11,15 @@ import java.util.stream.Collectors;
 public abstract class Account {
     protected Long id;
     protected String name;
-    protected BigDecimal balance = BigDecimal.ZERO;
+    protected BigDecimal balance;
     protected AccountType type;
     protected AccountCategory category;
     protected User owner;
     protected String notes;
-    protected Boolean hidden=false;
-    protected List<Transaction> outgoingTransactions = new ArrayList<>();
-    protected List<Transaction> incomingTransactions = new ArrayList<>();
-    protected Boolean includedInNetAsset = true;
-    protected Boolean selectable = true;
+    protected Boolean hidden = false;
+    protected List<Transaction> transactions = new ArrayList<>();
+    protected Boolean includedInNetAsset;
+    protected Boolean selectable;
 
     public Account() {}
     public Account(
@@ -45,7 +44,12 @@ public abstract class Account {
     public void credit(BigDecimal amount) {
         balance = balance.add(amount).setScale(2, RoundingMode.HALF_UP);
     }
-    public abstract void debit(BigDecimal amount);
+    public void debit(BigDecimal amount){
+        if(balance.compareTo(amount) < 0){
+            throw new IllegalArgumentException("Insufficient funds in the account to execute this transaction.");
+        }
+        balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
+    }
     public void hide() {
         this.hidden = true;
     }
@@ -69,9 +73,6 @@ public abstract class Account {
         this.notes = notes;
     }
     public void setBalance(BigDecimal balance) {
-        if (balance.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Balance cannot be negative.");
-        }
         this.balance = balance;
     }
 
@@ -86,6 +87,9 @@ public abstract class Account {
         return owner;
     }
     public List<Transaction> getTransactions() {
+        return transactions;
+    }
+    /*public List<Transaction> getTransactions() {
         List<Transaction> allTransactions = new ArrayList<>();
         allTransactions.addAll(incomingTransactions);
         allTransactions.addAll(outgoingTransactions);
@@ -96,7 +100,7 @@ public abstract class Account {
     }
     public List<Transaction> getOutgoingTransactions() {
         return outgoingTransactions;
-    }
+    }*/
     public BigDecimal getBalance() {
         return this.balance;
     }
@@ -124,15 +128,9 @@ public abstract class Account {
     public void setType(AccountType type) {
         this.type = type;
     }
-    public void setIncomingTransactions(List<Transaction> incomingTransactions) {
-        this.incomingTransactions = incomingTransactions;
-    }
-    public void setOutgoingTransactions(List<Transaction> outgoingTransactions) {
-        this.outgoingTransactions = outgoingTransactions;
-    }
 
 
-    public void addTransaction(Transaction transaction) { //for test
+    /*public void addTransaction(Transaction transaction) { //for test
         if(transaction instanceof Income){
             if ( !this.hidden && this.selectable) {
                 credit(transaction.getAmount());
@@ -160,7 +158,7 @@ public abstract class Account {
                 incomingTransactions.add(transaction);
             }
         }
-    }
+    }*/
 
 
     public List<Transaction> getTransactionsForMonth(YearMonth month) {
