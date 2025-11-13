@@ -2,7 +2,6 @@ package com.ledger.domain;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,7 +10,7 @@ public class CreditAccount extends Account {
     private BigDecimal currentDebt = BigDecimal.ZERO;
     private Integer billDay=null;
     private Integer dueDay=null;
-    private List<InstallmentPlan> installmentPlans;
+    private List<Installment> installments;
 
     public CreditAccount(){}
     public CreditAccount(String name,
@@ -34,7 +33,7 @@ public class CreditAccount extends Account {
         }
         this.billDay = billDate;
         this.dueDay = dueDate;
-        this.installmentPlans = new ArrayList<>();
+        this.installments = new ArrayList<>();
     }
 
     public BigDecimal getCurrentDebt() {
@@ -56,74 +55,18 @@ public class CreditAccount extends Account {
         this.dueDay = dueDate;
     }
 
-    @Override
-    public void debit(BigDecimal amount) {
-        balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-    }
 
     public void repayDebt(Transaction tx){
-        incomingTransactions.add(tx);
+        //incomingTransactions.add(tx);
+        transactions.add(tx);
         currentDebt = currentDebt.subtract(tx.getAmount()).setScale(2, RoundingMode.HALF_UP);
         if (currentDebt.compareTo(BigDecimal.ZERO) < 0) {
             currentDebt = BigDecimal.ZERO;
         }
     }
-    public void repayDebt(BigDecimal amount, Account fromAccount, Ledger ledger) { //for test
-        Transaction tx = new Transfer(
-                LocalDate.now(),
-                "Repay credit account debt",
-                fromAccount,
-                this,
-                amount,
-                ledger
-        );
-        incomingTransactions.add(tx);
-        if(ledger != null) {
-            ledger.getTransactions().add(tx);
-        }
 
-        if(fromAccount != null) {
-            fromAccount.debit(amount);
-            fromAccount.outgoingTransactions.add(tx);
-        }
-        currentDebt = currentDebt.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-        if (currentDebt.compareTo(BigDecimal.ZERO) < 0) {
-            currentDebt = BigDecimal.ZERO;
-        }
-    }
-
-    public List<InstallmentPlan> getInstallmentPlans() {
-        return installmentPlans;
-    }
-    public void addInstallmentPlan(InstallmentPlan installmentPlan) {
-        installmentPlans.add(installmentPlan);
-        currentDebt = currentDebt.add(installmentPlan.getRemainingAmountWithRepaidPeriods()).setScale(2, RoundingMode.HALF_UP);
-    }
-    public void removeInstallmentPlan(InstallmentPlan installmentPlan) {
-        installmentPlans.remove(installmentPlan);
-        currentDebt = currentDebt.subtract(installmentPlan.getRemainingAmountWithRepaidPeriods()).setScale(2, RoundingMode.HALF_UP);
-    }
-
-    public void repayInstallmentPlan(InstallmentPlan installmentPlan, Ledger ledger) { //for test
-        if (installmentPlans.contains(installmentPlan)) {
-            BigDecimal amount = installmentPlan.getMonthlyPayment(installmentPlan.getPaidPeriods() + 1);
-            installmentPlan.repayOnePeriod();
-            Transaction tx = new Transfer(
-                    LocalDate.now(),
-                    "Repay installment plan",
-                    this,
-                    null,
-                    amount,
-                    ledger
-            );
-            outgoingTransactions.add(tx);
-            if(ledger != null) {
-                ledger.getTransactions().add(tx);
-            }
-            currentDebt = currentDebt.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-        } else {
-            throw new IllegalArgumentException("Installment plan not found in this account");
-        }
+    public List<Installment> getInstallmentPlans() {
+        return installments;
     }
 }
 
