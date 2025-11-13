@@ -219,38 +219,6 @@ public class TransactionDAO {
 
 
     @SuppressWarnings("SqlResolve")
-    public List<Transaction> getByAccountIdInRangeDate(Account account, LocalDate startDate, LocalDate endDate) throws SQLException {
-        List<Transaction> transactions = new ArrayList<>();
-        String sql = "SELECT t.*, " +
-                "fa.id as from_account_id, fa.name as from_account_name, " +
-                "ta.id as to_account_id, ta.name as to_account_name, " +
-                "l.id as ledger_id, l.name as ledger_name, " +
-                "c.id as category_id, c.name as category_name " +
-                "FROM transactions t " +
-                "LEFT JOIN accounts fa ON t.from_account_id = fa.id " +
-                "LEFT JOIN accounts ta ON t.to_account_id = ta.id " +
-                "LEFT JOIN ledgers l ON t.ledger_id = l.id " +
-                "LEFT JOIN ledger_categories c ON t.category_id = c.id " +
-                "WHERE (t.from_account_id = ? OR t.to_account_id = ?) " +
-                "AND t.date BETWEEN ? AND ? " +
-                "ORDER BY t.date DESC";
-
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, account.getId());
-            stmt.setLong(2, account.getId());
-            stmt.setObject(3, startDate);
-            stmt.setObject(4, endDate);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    transactions.add(mapResultSetToTransaction(rs));
-                }
-            }
-        }
-        return transactions;
-    }
-
-    @SuppressWarnings("SqlResolve")
     public List<Transaction> getByAccountId(Long accountId) throws SQLException {
         List<Transaction> transactions = new ArrayList<>();
         String sql = "SELECT t.*, " +
@@ -289,7 +257,7 @@ public class TransactionDAO {
         }
     }
 
-    //not set account, ledger, category objects
+    // set account, category objects
     private Transaction mapResultSetToTransaction(ResultSet rs) throws SQLException {
         Transaction transaction;
         String dtype = rs.getString("dtype");
@@ -320,7 +288,6 @@ public class TransactionDAO {
 
         //set fromAccount
         if( rs.getLong("from_account_id") != 0) {
-
             transaction.setFromAccount(accountDAO.getAccountById(rs.getLong("from_account_id")));
         }
         //set toAccount
