@@ -42,7 +42,6 @@ public class InstallmentCLI {
         System.out.println("Enter name for your installment :");
         String name = scanner.nextLine().trim();
 
-
         // input total amount
         System.out.print("Enter total amount: ");
         BigDecimal totalAmount = new BigDecimal(scanner.nextLine().trim());
@@ -50,11 +49,6 @@ public class InstallmentCLI {
         // input total periods
         System.out.print("Enter total periods: ");
         int totalPeriods = Integer.parseInt(scanner.nextLine().trim());
-
-        //input repaid periods
-        System.out.print("Enter repaid periods (optional, press Enter for 0): ");
-        String repaidPeriodsInput = scanner.nextLine().trim();
-        int repaidPeriods = repaidPeriodsInput.isEmpty() ? 0 : Integer.parseInt(repaidPeriodsInput);
 
         // input interest
         System.out.print("Enter interest (optional, press Enter for 0): ");
@@ -67,6 +61,12 @@ public class InstallmentCLI {
         // input start repayment date
         LocalDate repaymentStartDate = inputRepaymentDate();
 
+        //input if include in current debt
+        System.out.print("Include in current debt? (y/n, default y): ");
+        String includeInput = scanner.nextLine().trim().toLowerCase();
+        boolean includeInCurrentDebt = includeInput.isEmpty() || includeInput.equals("y") || includeInput.equals("yes");
+
+
         //select ledger
         Ledger ledger= selectLedger();
         if(ledger==null) return;
@@ -76,13 +76,15 @@ public class InstallmentCLI {
         if(category==null) return;
 
         Installment plan = installmentController.createInstallment(
-                creditAccount, name, totalAmount, totalPeriods, repaidPeriods, feeRate,
-                strategy, repaymentStartDate, category);
+                creditAccount, name, totalAmount, totalPeriods, feeRate,
+                strategy, repaymentStartDate, category, includeInCurrentDebt);
 
         System.out.println(" ✓ Installment created successfully!");
         System.out.println("\n Total amount: " + plan.getTotalAmount());
         System.out.println("\n Total with fee: " + plan.getTotalPayment());
         System.out.println("\n Remaining amount: " + plan.getRemainingAmount());
+        int repaidPeriods = plan.getPaidPeriods();
+        System.out.println("\n Repaid periods: " + repaidPeriods + "/" + plan.getTotalPeriods());
         System.out.println("\n Next month: " + plan.getMonthlyPayment(repaidPeriods + 1));
     }
 
@@ -150,11 +152,7 @@ public class InstallmentCLI {
         String confirm = scanner.nextLine().trim().toLowerCase();
 
         if (confirm.equals("y") || confirm.equals("yes")) {
-            // select ledger for payment
-            Ledger ledger = selectLedger();
-            if (ledger == null) return;
-
-            boolean success= installmentController.payInstallment(selectedPlan, ledger);
+            boolean success= installmentController.payInstallment(selectedPlan);
             if(!success){
                 System.out.println("✗ Payment failed!");
                 return;
@@ -218,7 +216,7 @@ public class InstallmentCLI {
 
     }
 
-    public void editInstallmentPlan() {
+    /*public void editInstallmentPlan() {
 
         System.out.println("\n=== Edit Installment===");
 
@@ -259,48 +257,30 @@ public class InstallmentCLI {
         String totalPeriodsInput = scanner.nextLine().trim();
         Integer totalPeriods = totalPeriodsInput.isEmpty() ? null : Integer.parseInt(totalPeriodsInput);
 
-        // new paid periods
-        System.out.print("Enter new paid periods (current: " + selectedPlan.getPaidPeriods() + ")"+ ", press Enter to keep): ");
-        String paidPeriodsInput = scanner.nextLine().trim();
-        Integer paidPeriods = paidPeriodsInput.isEmpty() ? null : Integer.parseInt(paidPeriodsInput);
-
         // new interest
         System.out.print("Enter new interest (current: " + selectedPlan.getInterest() + ")"+ ", press Enter to keep): ");
         String feeRateInput = scanner.nextLine().trim();
-        BigDecimal feeRate = feeRateInput.isEmpty() ? null : new BigDecimal(feeRateInput);
+        BigDecimal interest = feeRateInput.isEmpty() ? null : new BigDecimal(feeRateInput);
 
         // new name
         System.out.print("Enter new name (current: " + selectedPlan.getName() + ")"+ ", press Enter to keep): ");
         String nameInput = scanner.nextLine().trim();
         String name = nameInput.isEmpty() ? null : nameInput;
 
-        // change category?
-        System.out.print("Change category? (y/n): ");
-        String changeCatInput = scanner.nextLine().trim().toLowerCase();
-        LedgerCategory newCategory = null;
-        if (changeCatInput.equals("y") || changeCatInput.equals("yes")) {
-            System.out.println("Select ledger for category:");
-            Ledger ledger = selectLedger();
-            if (ledger == null) return;
-            System.out.println("Select new category:");
-            newCategory = inputCategory(ledger);
-            if (newCategory == null) return;
-        }
 
         // select new strategy
         System.out.println("Select new strategy (current: " + formatStrategy(selectedPlan.getStrategy()) + "):");
         Installment.Strategy strategy = selectStrategy();
 
         boolean success= installmentController.editInstallment(
-                selectedPlan, totalAmount, totalPeriods, paidPeriods,
-                feeRate, strategy, name, newCategory);
+                selectedPlan, totalAmount, totalPeriods, interest, strategy,name);
         if(!success) {
             System.out.println("Edit failed!");
             return;
         }
         System.out.println("Installment edited successfully!");
 
-    }
+    }*/
 
 
     //private helper methods
