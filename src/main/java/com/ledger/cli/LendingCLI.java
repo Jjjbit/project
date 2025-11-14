@@ -3,10 +3,7 @@ package com.ledger.cli;
 import com.ledger.business.AccountController;
 import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
-import com.ledger.domain.Account;
-import com.ledger.domain.Ledger;
-import com.ledger.domain.LendingAccount;
-import com.ledger.domain.LoanAccount;
+import com.ledger.domain.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,6 +24,10 @@ public class LendingCLI {
     }
     public void addLending() {
         System.out.println("\n ===Adding a new lending ===");
+
+        //enter ledger
+        System.out.println("Select a ledger for this lending:");
+        Ledger selectedLedger = selectLedger(userController.getCurrentUser());
 
         System.out.print("Enter lending account name: ");
         String name = inputName();
@@ -75,7 +76,7 @@ public class LendingCLI {
         }
         // Further implementation to create lending using the collected inputs
         LendingAccount lendingAccount = accountController.createLendingAccount(userController.getCurrentUser(),
-                name, amountInput, note, includedInNetWorth, selectable, fromAccount, lendingDate);
+                name, amountInput, note, includedInNetWorth, selectable, fromAccount, lendingDate, selectedLedger);
         if (lendingAccount == null) {
             System.out.println("Failed to create lending account.");
             return;
@@ -386,6 +387,27 @@ public class LendingCLI {
         }
 
         return LocalDate.parse(dateInput);
+    }
 
+    private Ledger selectLedger(User user) {
+        List<Ledger> ledgers = reportController.getLedgerByUser(user);
+
+        if(ledgers.isEmpty()) {
+            System.out.println("No ledgers found for the user.");
+            return null;
+        }
+
+        for (int i = 0; i < ledgers.size(); i++) {
+            Ledger ledger = ledgers.get(i);
+            System.out.println("Ledger " + (i + 1) + ". "+ "Name: " + ledger.getName());
+        }
+        System.out.print("Enter the number of the ledger: ");
+        String input = scanner.nextLine().trim();
+        int choice = Integer.parseInt(input);
+        if(choice < 1 || choice > ledgers.size()) {
+            System.out.println("Invalid choice.");
+            return selectLedger(user);
+        }
+        return ledgers.get(choice - 1);
     }
 }
