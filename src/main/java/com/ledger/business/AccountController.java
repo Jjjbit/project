@@ -2,7 +2,6 @@ package com.ledger.business;
 
 import com.ledger.domain.*;
 import com.ledger.orm.AccountDAO;
-import com.ledger.orm.InstallmentDAO;
 import com.ledger.orm.TransactionDAO;
 
 import java.math.BigDecimal;
@@ -13,11 +12,8 @@ import java.util.List;
 public class AccountController {
     private final AccountDAO accountDAO;
     private final TransactionDAO transactionDAO;
-    private final InstallmentDAO installmentDAO;
 
-    public AccountController(AccountDAO accountDAO, TransactionDAO transactionDAO,
-                             InstallmentDAO installmentDAO) {
-        this.installmentDAO = installmentDAO;
+    public AccountController(AccountDAO accountDAO, TransactionDAO transactionDAO) {
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
     }
@@ -101,8 +97,11 @@ public class AccountController {
     public LoanAccount createLoanAccount(String name, String notes, boolean includedInNetAsset, User user,
                                          int totalPeriods, int repaidPeriods, BigDecimal annualInterestRate,
                                          BigDecimal loanAmount, Account receivingAccount, LocalDate repaymentDate,
-                                         LoanAccount.RepaymentType repaymentType) {
+                                         LoanAccount.RepaymentType repaymentType, Ledger ledger) {
         try {
+            if(ledger == null){
+                return null;
+            }
             if (repaymentDate == null) {
                 return null;
             }
@@ -119,7 +118,7 @@ public class AccountController {
                     account,
                     receivingAccount,
                     loanAmount,
-                    null);
+                    ledger);
             transactionDAO.insert(tx); //insert transaction to db
             //account.getOutgoingTransactions().add(tx);
             account.getTransactions().add(tx);
@@ -130,6 +129,9 @@ public class AccountController {
                 receivingAccount.getTransactions().add(tx);
                 accountDAO.update(receivingAccount); //update balance in db
             }
+
+            ledger.getTransactions().add(tx);
+
             return account;
         }catch (SQLException e){
             System.err.println("SQL Exception during createLoanAccount: " + e.getMessage());
@@ -140,43 +142,47 @@ public class AccountController {
     public BorrowingAccount createBorrowingAccount(User user, String name, BigDecimal amount,
                                                    String note, boolean includeInAssets,
                                                    boolean selectable, Account toAccount,
-                                                   LocalDate date) {
+                                                   LocalDate date, Ledger ledger) {
         try{
-        LocalDate transactionDate = date != null ? date : LocalDate.now();
-        BorrowingAccount borrowingAccount = new BorrowingAccount(
-                name,
-                amount,
-                note,
-                includeInAssets,
-                selectable,
-                user,
-                transactionDate);
-        accountDAO.createBorrowingAccount(borrowingAccount); //insert borrowing account to db
-        user.getAccounts().add(borrowingAccount);
+            if(ledger == null){
+                return null;
+            }
 
-        String description = toAccount != null
-                ? borrowingAccount.getName() + " to " + toAccount.getName()
-                : borrowingAccount.getName() + " to External Account";
+            LocalDate transactionDate = date != null ? date : LocalDate.now();
+            BorrowingAccount borrowingAccount = new BorrowingAccount(
+                    name,
+                    amount,
+                    note,
+                    includeInAssets,
+                    selectable,
+                    user,
+                    transactionDate);
+            accountDAO.createBorrowingAccount(borrowingAccount); //insert borrowing account to db
+            user.getAccounts().add(borrowingAccount);
 
-        Transaction tx = new Transfer(transactionDate,
-                description,
-                borrowingAccount,
-                toAccount,
-                amount,
-                null);
-        transactionDAO.insert(tx); //insert transaction to db
-        //borrowingAccount.getOutgoingTransactions().add(tx);
-        borrowingAccount.getTransactions().add(tx);
+            String description = toAccount != null
+                    ? borrowingAccount.getName() + " to " + toAccount.getName()
+                    : borrowingAccount.getName() + " to External Account";
 
-        if (toAccount != null) {
-            toAccount.credit(amount);
-            //toAccount.getIncomingTransactions().add(tx);
-            toAccount.getTransactions().add(tx);
-            accountDAO.update(toAccount); //update balance in db
-        }
+            Transaction tx = new Transfer(transactionDate,
+                    description,
+                    borrowingAccount,
+                    toAccount,
+                    amount,
+                    ledger);
+            transactionDAO.insert(tx); //insert transaction to db
+            borrowingAccount.getTransactions().add(tx);
 
+            ledger.getTransactions().add(tx);
 
-        return borrowingAccount;
+            if (toAccount != null) {
+                toAccount.credit(amount);
+                //toAccount.getIncomingTransactions().add(tx);
+                toAccount.getTransactions().add(tx);
+                accountDAO.update(toAccount); //update balance in db
+            }
+
+            return borrowingAccount;
         }catch (SQLException e){
             System.err.println("SQL Exception during createBorrowingAccount: " + e.getMessage());
             return null;
@@ -184,10 +190,13 @@ public class AccountController {
     }
 
     public LendingAccount createLendingAccount(User user, String name, BigDecimal amount,
-                                             String note, boolean includeInAssets,
-                                             boolean selectable, Account fromAccount,
-                                             LocalDate date) {
+                                               String note, boolean includeInAssets, boolean selectable,
+                                               Account fromAccount, LocalDate date, Ledger ledger) {
         try {
+            if(ledger == null){
+                return null;
+            }
+
             LocalDate transactionDate = date != null ? date : LocalDate.now();
             LendingAccount lendingAccount = new LendingAccount(
                     name,
@@ -209,10 +218,12 @@ public class AccountController {
                     fromAccount,
                     lendingAccount,
                     amount,
-                    null);
+                    ledger);
             transactionDAO.insert(tx); //insert transaction to db
             //lendingAccount.getIncomingTransactions().add(tx);
             lendingAccount.getTransactions().add(tx);
+
+            ledger.getTransactions().add(tx);
 
             if (fromAccount != null) {
                 fromAccount.debit(amount);
@@ -220,6 +231,7 @@ public class AccountController {
                 //fromAccount.getOutgoingTransactions().add(tx);
                 accountDAO.update(fromAccount); //update balance in db
             }
+
             return lendingAccount;
         }catch (SQLException e){
             System.err.println("SQL Exception during createLendingAccount: " + e.getMessage());
@@ -245,8 +257,14 @@ public class AccountController {
                 }
             } else {
                 for (Transaction tx : transactions) {
-                    if (tx.getFromAccount() != null) tx.setFromAccount(null);
-                    if (tx.getToAccount() != null) tx.setToAccount(null);
+                    Account fromAcc = tx.getFromAccount();
+                    Account toAcc = tx.getToAccount();
+                    if(fromAcc != null && fromAcc.getId().equals(account.getId())) {
+                        tx.setFromAccount(null);
+                    }
+                    if(toAcc != null && toAcc.getId().equals(account.getId())) {
+                        tx.setToAccount(null);
+                    }
                     transactionDAO.update(tx);
                 }
             }

@@ -7,6 +7,7 @@ import com.ledger.domain.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
@@ -59,7 +60,7 @@ public class AccountCLI {
             }
         }
 
-        System.out.println("✓ Account created successfully: " + account.getName());
+        System.out.println(" Account created successfully: " + account.getName());
 
     }
 
@@ -75,9 +76,10 @@ public class AccountCLI {
         System.out.println("\n=== All Accounts ===");
         for (Account account : accounts) {
             System.out.println("- " + account.getName() );
+            System.out.println("Type: " + account.getType());
             if(account instanceof LoanAccount){
                 System.out.println("Remaining Loan Amount: " + ((LoanAccount) account).getRemainingAmount());
-                System.out.println("Total Loan Amount: " + ((LoanAccount) account).calculateTotalRepayment());
+                System.out.println("Loan Amount: " + ((LoanAccount) account).getLoanAmount());
                 System.out.println("Repaid Periods: " + ((LoanAccount) account).getRepaidPeriods() + "/" + ((LoanAccount) account).getTotalPeriods());
             }else if(account instanceof CreditAccount){
                 System.out.println("Balance: " + account.getBalance());
@@ -486,12 +488,12 @@ public class AccountCLI {
         if(account instanceof LoanAccount) {
             BigDecimal totalLoanAmount = ((LoanAccount) account).getLoanAmount();
             BigDecimal totalRepaymentAmount = ((LoanAccount) account).calculateTotalRepayment();
-            BigDecimal totalFees = totalRepaymentAmount.subtract(totalLoanAmount);
+            BigDecimal totalInterest = totalRepaymentAmount.subtract(totalLoanAmount);
             BigDecimal totalLoanRemaining = ((LoanAccount) account).getRemainingAmount();
             boolean isEnded = ((LoanAccount) account).getIsEnded();
             System.out.println("\nTotal Loan Amount: " + totalLoanAmount);
             System.out.println("Total Repayment Amount: " + totalRepaymentAmount);
-            System.out.println("Total Fees: " + totalFees);
+            System.out.println("Total Interest: " + totalInterest);
             System.out.println("Remaining Loan Amount: " + totalLoanRemaining);
             System.out.println("Loan Status: " + (isEnded ? "Ended" : "Active"));
         }
@@ -525,7 +527,11 @@ public class AccountCLI {
     //private helper methods for input and selection
     private AccountCategory selectAccountCategory() {
         System.out.println("\nSelect account category:");
-        AccountCategory[] categories = AccountCategory.values();
+
+        AccountCategory[] categories = Arrays.stream(AccountCategory.values())
+                .filter(c -> c != AccountCategory.VIRTUAL_ACCOUNT)
+                .toArray(AccountCategory[]::new);
+
         for (int i = 0; i < categories.length; i++) {
             System.out.println((i + 1) + ". " + formatCategoryName(categories[i]));
         }
@@ -743,14 +749,16 @@ public class AccountCLI {
 
     private LoanAccount createLoanAccount(String name, boolean includedInNetWorth, String note) {
 
-        System.out.print("Enter loan amount: ");
-        BigDecimal loanAmount;
-        try {
-            loanAmount = new BigDecimal(scanner.nextLine().trim());
-        } catch (Exception e) {
-            System.out.println("Invalid loan amount! Please enter a valid number.");
-            return createLoanAccount(name, includedInNetWorth, note);
+        //enter ledger
+        System.out.println("Enter ledger for this loan account:");
+        Ledger selectedLedger = selectLedger(userController.getCurrentUser());
+        if(selectedLedger == null) {
+            System.out.println("Ledger selection cancelled.");
+            return null;
         }
+
+        System.out.print("Enter loan amount: ");
+        BigDecimal loanAmount = new BigDecimal(scanner.nextLine().trim());
 
         System.out.print("Enter annual interest rate (%, optional, press Enter for 0): ");
         String interestInput = scanner.nextLine().trim();
@@ -769,11 +777,8 @@ public class AccountCLI {
         String repaidInput = scanner.nextLine().trim();
         int repaidPeriods = repaidInput.isEmpty() ? 0 : Integer.parseInt(repaidInput);
 
+        System.out.println("Select the account to receive the loan amount:");
         Account receivingAccount = selectAccount();
-        if (receivingAccount == null) {
-            System.out.println("Receiving account selection cancelled.");
-            return null;
-        }
 
         LocalDate repaymentDay = inputRepaymentDate();
 
@@ -783,19 +788,8 @@ public class AccountCLI {
             return null;
         }
 
-        return accountController.createLoanAccount(
-                name,
-                note,
-                includedInNetWorth,
-                userController.getCurrentUser(),
-                totalPeriods,
-                repaidPeriods,
-                interestRate,
-                loanAmount,
-                receivingAccount,
-                repaymentDay,
-                repaymentType
-        );
+        return accountController.createLoanAccount(name, note, includedInNetWorth, userController.getCurrentUser(),
+                totalPeriods, repaidPeriods, interestRate, loanAmount, receivingAccount, repaymentDay, repaymentType, selectedLedger);
     }
 
     private Account createBasicAccount(String name, BigDecimal balance, AccountType type,
@@ -862,5 +856,26 @@ public class AccountCLI {
             default:
                 return type.name().replace("_", " ");
         }
+    }
+    private Ledger selectLedger(User user) {
+        List<Ledger> ledgers = reportController.getLedgerByUser(user);
+
+        if(ledgers.isEmpty()) {
+            System.out.println("No ledgers found for the user.");
+            return null;
+        }
+
+        for (int i = 0; i < ledgers.size(); i++) {
+            Ledger ledger = ledgers.get(i);
+            System.out.println("Ledger " + (i + 1) + ". "+ "Name: " + ledger.getName());
+        }
+        System.out.print("Enter the number of the ledger: ");
+        String input = scanner.nextLine().trim();
+        int choice = Integer.parseInt(input);
+        if(choice < 1 || choice > ledgers.size()) {
+            System.out.println("Invalid choice.");
+            return selectLedger(user);
+        }
+        return ledgers.get(choice - 1);
     }
 }
