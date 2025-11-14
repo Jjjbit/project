@@ -159,7 +159,6 @@ public class TransactionDAO {
         return null;
     }
 
-    //set ledger
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getByLedgerId(Long ledgerId) throws SQLException {
         List<Transaction> transactions = new ArrayList<>();
@@ -296,10 +295,10 @@ public class TransactionDAO {
         }
 
         //set ledger
-        /*if( rs.getLong("ledger_id") != 0) {
+        if( rs.getLong("ledger_id") != 0) {
             LedgerDAO ledgerDAO = new LedgerDAO(connection);
             transaction.setLedger(ledgerDAO.getById(rs.getLong("ledger_id")));
-        }*/
+        }
         //set category
         if( rs.getLong("category_id") != 0) {
             LedgerCategoryDAO categoryDAO = new LedgerCategoryDAO(connection);
