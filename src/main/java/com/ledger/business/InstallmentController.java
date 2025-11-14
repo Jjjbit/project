@@ -65,6 +65,8 @@ public class InstallmentController {
                     repaidPeriods = totalPeriods;
                 }
 
+            }else if(repaymentStartDate.isEqual(today)){
+                repaidPeriods = 1;
             }else{
                 repaidPeriods = 0;
             }
@@ -133,46 +135,32 @@ public class InstallmentController {
         }
     }
 
-    //TODO: implement editInstallment method
-    //edit also transactions if total amount, interest, strategy, total periods, repayment start date or category are changed
-    //edit balance of linked account if total amount, interest, strategy, total periods, repayment start date are changed
-
-    /*public boolean editInstallment(Installment plan, BigDecimal totalAmount, Integer totalPeriods,
-                                   BigDecimal interest, Installment.Strategy strategy, String name) {
-        try {
-            if (plan == null) {
-                return false;
-            }
-            if (name != null && !name.isEmpty()) {
-                plan.setName(name);
-            }
-
-            if (totalAmount != null) {
-                plan.setTotalAmount(totalAmount);
-            }
-
-            if (totalAmount != null) {
-                plan.setTotalAmount(totalAmount);
-            }
-            if (totalPeriods != null) {
-                plan.setTotalPeriods(totalPeriods);
-            }
-            if (interest != null) {
-                plan.setInterest(interest);
-            }
-
-            if (strategy != null) {
-                plan.setStrategy(strategy);
-            }
-
-            plan.setRemainingAmount(plan.getRemainingAmountWithRepaidPeriods());
-
-            return installmentDAO.update(plan); //update plan in db
-        }catch (SQLException e){
-            System.err.println("SQL Exception during editing installment plan: " + e.getMessage());
+    public boolean editInstallment(Installment plan, Boolean includedInCurrentDebts) {
+        if(plan == null){
             return false;
         }
-    }*/
+
+        if(includedInCurrentDebts != null && includedInCurrentDebts != plan.isIncludedInCurrentDebts()) {
+            CreditAccount creditAccount = (CreditAccount) plan.getLinkedAccount();
+            if (includedInCurrentDebts) {
+                BigDecimal oldDebt = creditAccount.getCurrentDebt();
+                creditAccount.setCurrentDebt(oldDebt.add(plan.getRemainingAmount()));
+            } else {
+                BigDecimal oldDebt = creditAccount.getCurrentDebt();
+                creditAccount.setCurrentDebt(oldDebt.subtract(plan.getRemainingAmount()));
+            }
+            plan.setIncludedInCurrentDebts(includedInCurrentDebts);
+            try {
+                accountDAO.update(creditAccount); //update current debt in db
+                return installmentDAO.update(plan); //update plan in db
+            } catch (SQLException e) {
+                System.err.println("SQL Exception during editing installment plan: " + e.getMessage());
+                return false;
+            }
+        }
+        return true;
+    }
+
 
     public boolean payInstallment(Installment plan) {
         try {
@@ -205,9 +193,11 @@ public class InstallmentController {
             plan.repayOnePeriod(); //update remaining amount and paid periods
             creditAccount.debit(paymentAmount); //reduce balance or increase debt
             creditAccount.getTransactions().add(tx); //add transaction to account
-            //creditAccount.getOutgoingTransactions().add(tx);
+            if(plan.isIncludedInCurrentDebts()){
+                BigDecimal oldDebt = creditAccount.getCurrentDebt();
+                creditAccount.setCurrentDebt(oldDebt.subtract(paymentAmount));
+            }
             accountDAO.update(creditAccount); //update balance and current debt in db
-
             category.getTransactions().add(tx); //add transaction to category
 
             return installmentDAO.update(plan); //update plan in db
