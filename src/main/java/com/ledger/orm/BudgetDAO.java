@@ -75,8 +75,8 @@ public class BudgetDAO {
         }
     }
 
-    @SuppressWarnings("SqlResolve") //get active categorized budget
-    public Budget getActiveBudgetsByCategoryId(Long categoryId, Budget.Period p) throws SQLException {
+    @SuppressWarnings("SqlResolve")
+    public Budget getBudgetByCategoryId(Long categoryId, Budget.Period p) throws SQLException {
         String sql = "SELECT id, amount, period, category_id, start_date, end_date " +
                 "FROM budgets " +
                 "WHERE category_id = ? AND period = ?";
@@ -101,8 +101,8 @@ public class BudgetDAO {
         return null;
     }
 
-    @SuppressWarnings("SqlResolve") //get all active budget for a ledger
-    public Budget getActiveBudgetsByLedgerId(Long ledgerId, Budget.Period p) throws SQLException {
+    @SuppressWarnings("SqlResolve") //get budget for a ledger
+    public Budget getBudgetByLedgerId(Long ledgerId, Budget.Period p) throws SQLException {
         String sql = "SELECT id, amount, period, category_id, start_date, end_date " +
                 "FROM budgets " +
                 "WHERE ledger_id = ? AND period = ?";

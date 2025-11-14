@@ -232,7 +232,7 @@ public class ReportController {
 
     public Budget getActiveBudgetByLedger(Ledger ledger, Budget.Period period) {
         try {
-            Budget budget = budgetDAO.getActiveBudgetsByLedgerId(ledger.getId(), period);
+            Budget budget = budgetDAO.getBudgetByLedgerId(ledger.getId(), period);
             if(budget!=null){
                 budget.refreshIfExpired();
                 budgetDAO.update(budget);
@@ -247,7 +247,7 @@ public class ReportController {
 
     public Budget getActiveBudgetByCategory(LedgerCategory category, Budget.Period period) {
         try {
-            Budget budget = budgetDAO.getActiveBudgetsByCategoryId(category.getId(), period);
+            Budget budget = budgetDAO.getBudgetByCategoryId(category.getId(), period);
             if(budget!=null){
                 budget.refreshIfExpired();
                 budgetDAO.update(budget);
