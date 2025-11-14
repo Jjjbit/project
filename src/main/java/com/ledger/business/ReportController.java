@@ -291,7 +291,8 @@ public class ReportController {
                         .filter(t -> t.getCategory() != null)
                         .filter(t -> t.getCategory().getId().equals(budget.getCategory().getId()))
                         .toList());
-                List<LedgerCategory> childCategories = budget.getCategory().getChildren();
+                LedgerCategory category= budget.getCategory();
+                List<LedgerCategory> childCategories = ledgerCategoryDAO.getCategoriesByParentId(category.getId());
                 for (LedgerCategory childCategory : childCategories) {
                     transactions.addAll(ledger.getTransactions().stream()
                             .filter(t -> t.getType() == TransactionType.EXPENSE)
@@ -311,6 +312,5 @@ public class ReportController {
             return false;
         }
     }
-
 
 }

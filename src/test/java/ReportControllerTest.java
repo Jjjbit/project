@@ -49,7 +49,7 @@ public class ReportControllerTest {
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
 
-        budgetController = new BudgetController(budgetDAO);
+        budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO, transactionDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
         UserController userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, transactionDAO);
@@ -565,7 +565,7 @@ public class ReportControllerTest {
     //test getTotalLiability
     @Test
     public void testGetTotalLiability() {
-        //create visible CreditAccount
+        //create visible CreditAccount +
         CreditAccount creditAccount1 = accountController.createCreditAccount("Credit Account 1", "Credit account notes",
                 BigDecimal.valueOf(500.00), //balance
                 true, true, testUser, AccountType.CREDIT_CARD,
@@ -587,7 +587,7 @@ public class ReportControllerTest {
                 1, 5);
         assertNotNull(creditAccount3);
 
-        //create installment (not included in current debt) for creditAccount1
+        //create installment (not included in current debt) for creditAccount1 +
         LedgerCategory electronics = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Electronics"))
                 .findFirst()
@@ -598,24 +598,24 @@ public class ReportControllerTest {
                 12,
                 BigDecimal.valueOf(1.00),  //interest
                 Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(), electronics, false); //remaining amount 1212.00
-        assertNotNull(installment);
-        //create second installment (included in current debt) for creditAccount1
+                LocalDate.now(), electronics, false); //remaining amount 1212.00-101=1111.00
+        assertNotNull(installment); //remaining amount 1212.00
+        //create second installment (included in current debt) for creditAccount1 +
         Installment installment2 = installmentController.createInstallment(creditAccount1, "Phone Installment",
                 BigDecimal.valueOf(600.00), //total amount
                 6,
                 BigDecimal.valueOf(1.50),  //interest
                 Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(), electronics, true); //remaining amount 609.00
+                LocalDate.now(), electronics, true); //remaining amount 609.00-101.50=507.50
         assertNotNull(installment2);
 
-        //create visible LoanAccount
+        //create visible LoanAccount +
         LoanAccount loanAccount1 = accountController.createLoanAccount("Loan Account 1", "Loan account notes",
                 true, testUser, 36, 0,
                 BigDecimal.valueOf(1.00),  BigDecimal.valueOf(5000.00), testAccount, LocalDate.now(),
                 LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger); //remaining amount 5077.44
         assertNotNull(loanAccount1);
-        //create hidden LoanAccount
+        //create hidden LoanAccount but included in net asset
         LoanAccount loanAccount2 = accountController.createLoanAccount("Loan Account 2", "Another loan account notes",
                 true, testUser, 24, 0,
                 BigDecimal.valueOf(1.50),  BigDecimal.valueOf(3000.00), testAccount, LocalDate.now(),
@@ -623,18 +623,18 @@ public class ReportControllerTest {
         assertNotNull(loanAccount2);
         accountController.hideAccount(loanAccount2);
 
-        //create visible borrowing account
+        //create visible borrowing account +
         BorrowingAccount borrowingAccount1 = accountController.createBorrowingAccount(testUser, "Borrowing Account 1",
                 BigDecimal.valueOf(50.00), "Car loan account", true, true,
                 testAccount, LocalDate.now(), testLedger); //balance of testAccount is 1000-50=950.00
         assertNotNull(borrowingAccount1);
-        //create hidden borrowing account
+        //create hidden borrowing account but included in net asset
         BorrowingAccount borrowingAccount2 = accountController.createBorrowingAccount(testUser, "Borrowing Account 2",
                 BigDecimal.valueOf(30.00), "Personal loan account", true, true,
                 testAccount, LocalDate.now(), testLedger); //balance of testAccount is 950-30=920.00
         assertNotNull(borrowingAccount2);
         accountController.hideAccount(borrowingAccount2);
-        //create second visible borrowing account
+        //create second visible borrowing account +
         BorrowingAccount borrowingAccount3 = accountController.createBorrowingAccount(testUser, "Borrowing Account 3",
                 BigDecimal.valueOf(70.00), "Student loan account", true, true,
                 testAccount, LocalDate.now(), testLedger); //balance of testAccount is 920-70=850.00
@@ -649,7 +649,7 @@ public class ReportControllerTest {
         List<BorrowingAccount> activeBorrowingAccounts = reportController.getActiveBorrowingAccounts(testUser);
         assertEquals(3, activeBorrowingAccounts.size());
 
-        assertEquals(0, totalLiability.compareTo(BigDecimal.valueOf(7168.44))); //5077.44+150+50+70+1212+609=7168.44
+        assertEquals(0, totalLiability.compareTo(BigDecimal.valueOf(6965.94))); //150 + 1111.00 + 507.50 + 5077.44 + 50 + 70 = 6965.94
     }
 
     //test getInstallments
@@ -1024,7 +1024,7 @@ public class ReportControllerTest {
     }
 
     @Test
-    public void testIsOverBudget_ExpiredBudget() {
+    public void testIsOverBudget_ExpiredBudget() throws SQLException{
         LedgerCategory entertainment = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Entertainment"))
                 .findFirst()
@@ -1036,17 +1036,18 @@ public class ReportControllerTest {
                 .orElse(null);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
-
         //simulate expired budget by setting start and end date in the past
         budget.setStartDate(LocalDate.of(2025, 1, 1));
         budget.setEndDate(LocalDate.of(2025, 1, 31));
+        budgetDAO.update(budget); //persist changes
 
         boolean isOverBudget = reportController.isOverBudget(budget);
         assertFalse(isOverBudget);
 
-        assertEquals(0, budget.getAmount().compareTo(BigDecimal.ZERO)); //should be reset to 0 after refresh
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), budget.getStartDate()); //should be refreshed to current month
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), budget.getEndDate()); //should be refreshed to current month
+        Budget updatedBudget = budgetDAO.getById(budget.getId());
+        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedBudget.getStartDate());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedBudget.getEndDate());
     }
 
     @Test
