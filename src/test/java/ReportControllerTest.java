@@ -52,7 +52,7 @@ public class ReportControllerTest {
         budgetController = new BudgetController(budgetDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
         UserController userController = new UserController(userDAO);
-        accountController = new AccountController(accountDAO, transactionDAO, installmentDAO);
+        accountController = new AccountController(accountDAO, transactionDAO);
         reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO,
                 installmentDAO, ledgerCategoryDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO,
@@ -350,14 +350,14 @@ public class ReportControllerTest {
     public void testGetActiveBorrowingAccounts() {
         //create borrowing account not hidden
         Account borrowingAccount1 = accountController.createBorrowingAccount(testUser, "Borrowing Account 1",
-                BigDecimal.valueOf(50.00), "Car loan account", true, true,
-                testAccount, LocalDate.now());
+                BigDecimal.valueOf(50.00), "Car loan account", true, true, testAccount,
+                LocalDate.now(), testLedger);
         assertNotNull(borrowingAccount1);
 
         //create hidden borrowing account
         Account borrowingAccount2 = accountController.createBorrowingAccount(testUser, "Borrowing Account 2",
-                BigDecimal.valueOf(30.00), "Personal loan account",
-                true, true, testAccount, LocalDate.now());
+                BigDecimal.valueOf(30.00), "Personal loan account", true, true,
+                testAccount, LocalDate.now(), testLedger);
         assertNotNull(borrowingAccount2);
         accountController.hideAccount(borrowingAccount2);
 
@@ -372,13 +372,13 @@ public class ReportControllerTest {
         //create visible lending account
         Account lendingAccount1 = accountController.createLendingAccount(testUser, "Lending Account 1",
                 BigDecimal.valueOf(100.00), "Mortgage account", true, true,
-                testAccount, LocalDate.now());
+                testAccount, LocalDate.now(), testLedger);
         assertNotNull(lendingAccount1);
 
         //create lending account hidden
         Account lendingAccount2 = accountController.createLendingAccount(testUser, "Lending Account 2",
                 BigDecimal.valueOf(200.00), "Friend loan account",
-                true, true, testAccount, LocalDate.now());
+                true, true, testAccount, LocalDate.now(), testLedger);
         assertNotNull(lendingAccount2);
         accountController.hideAccount(lendingAccount2);
 
@@ -416,37 +416,37 @@ public class ReportControllerTest {
         Account loanAccount1 = accountController.createLoanAccount("Loan Account 1", "Loan account notes",
                 true, testUser, 36, 0,
                 BigDecimal.valueOf(1.00),  BigDecimal.valueOf(5000.00), testAccount, LocalDate.now(),
-                LoanAccount.RepaymentType.EQUAL_INTEREST);
+                LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
         assertNotNull(loanAccount1);
         //create hidden LoanAccount
         Account loanAccount2 = accountController.createLoanAccount("Loan Account 2", "Another loan account notes",
                 true, testUser, 24, 0,
                 BigDecimal.valueOf(1.50),  BigDecimal.valueOf(3000.00), testAccount, LocalDate.now(),
-                LoanAccount.RepaymentType.EQUAL_INTEREST);
+                LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
         assertNotNull(loanAccount2);
         accountController.hideAccount(loanAccount2);
 
         //create visible LendingAccount
         Account lendingAccount1 = accountController.createLendingAccount(testUser, "Lending Account 1",
                 BigDecimal.valueOf(100.00), "Mortgage account", true, true,
-                testAccount, LocalDate.now());
+                testAccount, LocalDate.now(), testLedger);
         assertNotNull(lendingAccount1);
         //create hidden lending account
         Account lendingAccount2 = accountController.createLendingAccount(testUser, "Lending Account 2",
                 BigDecimal.valueOf(200.00), "Friend loan account",
-                true, true, testAccount, LocalDate.now());
+                true, true, testAccount, LocalDate.now(), testLedger);
         assertNotNull(lendingAccount2);
         accountController.hideAccount(lendingAccount2);
 
         //create visible BorrowingAccount
         Account borrowingAccount1 = accountController.createBorrowingAccount(testUser, "Borrowing Account 1",
                 BigDecimal.valueOf(50.00), "Car loan account", true, true,
-                testAccount, LocalDate.now());
+                testAccount, LocalDate.now(), testLedger);
         assertNotNull(borrowingAccount1);
         //create hidden borrowing account
         Account borrowingAccount2 = accountController.createBorrowingAccount(testUser, "Borrowing Account 2",
                 BigDecimal.valueOf(30.00), "Personal loan account",
-                true, true, testAccount, LocalDate.now());
+                true, true, testAccount, LocalDate.now(), testLedger);
         assertNotNull(borrowingAccount2);
         accountController.hideAccount(borrowingAccount2);
 
@@ -523,30 +523,30 @@ public class ReportControllerTest {
         //create visible lending account +
         LendingAccount lendingAccount1 = accountController.createLendingAccount(testUser, "Lending Account 1",
                 BigDecimal.valueOf(100.00), "Mortgage account", true, true,
-                testAccount, LocalDate.now());
+                testAccount, LocalDate.now(), testLedger);
         assertNotNull(lendingAccount1);
         //create hidden lending account but included in net asset
         LendingAccount lendingAccount2 = accountController.createLendingAccount(testUser, "Lending Account 2",
                 BigDecimal.valueOf(200.00), null,
-                true, true, testAccount, LocalDate.now());
+                true, true, testAccount, LocalDate.now(), testLedger);
         assertNotNull(lendingAccount2);
         accountController.hideAccount(lendingAccount2);
         //create second visible lending account +
         LendingAccount lendingAccount3 = accountController.createLendingAccount(testUser, "Lending Account 3",
                 BigDecimal.valueOf(150.00), null, true, true,
-                testAccount, LocalDate.now());
+                testAccount, LocalDate.now(), testLedger);
         assertNotNull(lendingAccount3);
         //create visible lending account but not included in net asset
         LendingAccount lendingAccount4 = accountController.createLendingAccount(testUser, "Lending Account 4",
                 BigDecimal.valueOf(250.00), null, false, true,
-                testAccount, LocalDate.now());
+                testAccount, LocalDate.now(), testLedger);
         assertNotNull(lendingAccount4);
         //balance of testAccount is 1000.00-100-200-150-250=300
 
         //create visible borrowing account
         BorrowingAccount borrowingAccount1 = accountController.createBorrowingAccount(testUser, "Borrowing Account 1",
                 BigDecimal.valueOf(50.00), "Car loan account", true, true,
-                testAccount, LocalDate.now()); //balance of testAccount is 300+50=350.00
+                testAccount, LocalDate.now(), testLedger); //balance of testAccount is 300+50=350.00
         assertNotNull(borrowingAccount1);
         List<BorrowingAccount> borrowingAccounts = reportController.getActiveBorrowingAccounts(testUser);
         assertEquals(1, borrowingAccounts.size());
@@ -613,36 +613,36 @@ public class ReportControllerTest {
         LoanAccount loanAccount1 = accountController.createLoanAccount("Loan Account 1", "Loan account notes",
                 true, testUser, 36, 0,
                 BigDecimal.valueOf(1.00),  BigDecimal.valueOf(5000.00), testAccount, LocalDate.now(),
-                LoanAccount.RepaymentType.EQUAL_INTEREST); //remaining amount 5077.44
+                LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger); //remaining amount 5077.44
         assertNotNull(loanAccount1);
         //create hidden LoanAccount
         LoanAccount loanAccount2 = accountController.createLoanAccount("Loan Account 2", "Another loan account notes",
                 true, testUser, 24, 0,
                 BigDecimal.valueOf(1.50),  BigDecimal.valueOf(3000.00), testAccount, LocalDate.now(),
-                LoanAccount.RepaymentType.EQUAL_INTEREST); //remaining amount 3047.04
+                LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger); //remaining amount 3047.04
         assertNotNull(loanAccount2);
         accountController.hideAccount(loanAccount2);
 
         //create visible borrowing account
         BorrowingAccount borrowingAccount1 = accountController.createBorrowingAccount(testUser, "Borrowing Account 1",
                 BigDecimal.valueOf(50.00), "Car loan account", true, true,
-                testAccount, LocalDate.now()); //balance of testAccount is 1000-50=950.00
+                testAccount, LocalDate.now(), testLedger); //balance of testAccount is 1000-50=950.00
         assertNotNull(borrowingAccount1);
         //create hidden borrowing account
         BorrowingAccount borrowingAccount2 = accountController.createBorrowingAccount(testUser, "Borrowing Account 2",
-                BigDecimal.valueOf(30.00), "Personal loan account",
-                true, true, testAccount, LocalDate.now()); //balance of testAccount is 950-30=920.00
+                BigDecimal.valueOf(30.00), "Personal loan account", true, true,
+                testAccount, LocalDate.now(), testLedger); //balance of testAccount is 950-30=920.00
         assertNotNull(borrowingAccount2);
         accountController.hideAccount(borrowingAccount2);
         //create second visible borrowing account
         BorrowingAccount borrowingAccount3 = accountController.createBorrowingAccount(testUser, "Borrowing Account 3",
                 BigDecimal.valueOf(70.00), "Student loan account", true, true,
-                testAccount, LocalDate.now()); //balance of testAccount is 920-70=850.00
+                testAccount, LocalDate.now(), testLedger); //balance of testAccount is 920-70=850.00
         assertNotNull(borrowingAccount3);
         //create visible borrowing account but not included in net asset
         BorrowingAccount borrowingAccount4 = accountController.createBorrowingAccount(testUser, "Borrowing Account 4",
                 BigDecimal.valueOf(90.00), "Credit card account", false, true,
-                testAccount, LocalDate.now()); //balance of testAccount is 850-90=760.00
+                testAccount, LocalDate.now(), testLedger); //balance of testAccount is 850-90=760.00
         assertNotNull(borrowingAccount4);
 
         BigDecimal totalLiability = reportController.getTotalLiabilities(testUser);
