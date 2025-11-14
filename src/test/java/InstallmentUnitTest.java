@@ -17,7 +17,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.EVENLY_SPLIT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
 
         for (int i = 0; i < 5; i++) {
@@ -40,7 +40,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.UPFRONT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         assertEquals(0, plan.getTotalPayment().compareTo(BigDecimal.valueOf(1100.00)));
 
@@ -72,7 +72,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.FINAL,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         for (int i = 0; i < 4; i++) {
             BigDecimal payment = plan.getMonthlyPayment(plan.getPaidPeriods() + 1);
@@ -100,7 +100,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.EVENLY_SPLIT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal totalPayment = plan.getTotalPayment();
         assertEquals(0, totalPayment.compareTo(BigDecimal.valueOf(1000.00)));
@@ -122,7 +122,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.UPFRONT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal totalPayment = plan.getTotalPayment();
         assertEquals(0, totalPayment.compareTo(BigDecimal.valueOf(1000.00)));
@@ -146,7 +146,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.FINAL,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal totalPayment = plan.getTotalPayment();
         assertEquals(0, totalPayment.compareTo(BigDecimal.valueOf(1000.00)));
@@ -172,7 +172,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.EVENLY_SPLIT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal totalPayment = plan.getTotalPayment();
         assertEquals(0, totalPayment.compareTo(BigDecimal.valueOf(1500.00)));
@@ -195,7 +195,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.UPFRONT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal totalPayment = plan.getTotalPayment();
         assertEquals(0, totalPayment.compareTo(BigDecimal.valueOf(1500.00)));
@@ -222,7 +222,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.FINAL,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal totalPayment = plan.getTotalPayment();
         assertEquals(0, totalPayment.compareTo(BigDecimal.valueOf(1500.00)));
@@ -250,7 +250,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.EVENLY_SPLIT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal payment = plan.getMonthlyPayment(1);
         assertEquals(0, payment.compareTo(BigDecimal.valueOf(1010.00)));
@@ -266,7 +266,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.UPFRONT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal firstPayment = plan.getMonthlyPayment(1);
         BigDecimal subsequentPayment = plan.getMonthlyPayment(2);
@@ -285,7 +285,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.FINAL,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal lastPayment = plan.getMonthlyPayment(5);
         BigDecimal priorPayment = plan.getMonthlyPayment(4);
@@ -305,7 +305,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.EVENLY_SPLIT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
 
         BigDecimal payment = plan.getMonthlyPayment(1);
@@ -326,7 +326,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.UPFRONT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal firstPayment = plan.getMonthlyPayment(1);
         BigDecimal subsequentPayment = plan.getMonthlyPayment(2);
@@ -347,7 +347,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.FINAL,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal lastPayment = plan.getMonthlyPayment(5);
         BigDecimal priorPayment = plan.getMonthlyPayment(4);
@@ -399,7 +399,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.EVENLY_SPLIT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal remaining = plan.getRemainingAmountWithRepaidPeriods();
 
@@ -415,7 +415,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.UPFRONT,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
 
         BigDecimal remaining = plan.getRemainingAmountWithRepaidPeriods();
 
@@ -433,7 +433,7 @@ public class InstallmentUnitTest {
                 Installment.Strategy.FINAL,
                 null,
                 LocalDate.now(),
-                null);
+                null, true);
         BigDecimal remaining = plan.getRemainingAmountWithRepaidPeriods();
         // last period = 150
         // prior periods = 100 each
