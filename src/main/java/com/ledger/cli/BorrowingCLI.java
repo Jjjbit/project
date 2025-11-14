@@ -3,10 +3,7 @@ package com.ledger.cli;
 import com.ledger.business.AccountController;
 import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
-import com.ledger.domain.Account;
-import com.ledger.domain.BorrowingAccount;
-import com.ledger.domain.Ledger;
-import com.ledger.domain.LoanAccount;
+import com.ledger.domain.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,6 +26,10 @@ public class BorrowingCLI {
     public void addBorrowing() {
         System.out.println("\n === Adding a new borrowing ===");
 
+        //enter ledger
+        System.out.println("Select a ledger for this borrowing:");
+        Ledger selectedLedger = selectLedger(userController.getCurrentUser());
+
         //enter amount
         System.out.println("Enter borrowing amount: ");
         BigDecimal amountInput =scanner.nextBigDecimal();
@@ -36,6 +37,10 @@ public class BorrowingCLI {
         //enter name
         System.out.println("Enter borrowing name: ");
         String nameInput = inputName();
+        if(nameInput.isEmpty()) {
+            System.out.println("Borrowing name cannot be empty.");
+            return;
+        }
 
         //enter note
         String noteInput = inputNote();
@@ -47,6 +52,10 @@ public class BorrowingCLI {
         //enter date
         System.out.print("Enter borrowing date (YYYY-MM-DD, e.g., 2024-12-31): ");
         LocalDate dateInput = inputBorrowingDate();
+        if(dateInput == null) {
+            System.out.println("Invalid date input.");
+            return;
+        }
 
         //select to account
         System.out.println("Select an account that receives this borrowing:");
@@ -71,7 +80,7 @@ public class BorrowingCLI {
         Account selectedAccount = accounts.get(accountIndex);
 
         BorrowingAccount borrowingAccount = accountController.createBorrowingAccount(userController.getCurrentUser(), nameInput, amountInput, noteInput,
-                includedInNetWorth, selectable, selectedAccount, dateInput);
+                includedInNetWorth, selectable, selectedAccount, dateInput, selectedLedger);
 
         if(borrowingAccount == null) {
             System.out.println("Failed to add borrowing.");
@@ -92,7 +101,9 @@ public class BorrowingCLI {
             System.out.println("Name: " + borrowing.getName() +
                     ", Remaining Amount: " + borrowing.getRemainingAmount() +
                     ", Total Borrowing: " + borrowing.getBorrowingAmount() +
-                    (borrowing.getNotes()!=null ? ", Note: " + borrowing.getNotes() : ", No Note"));
+                    (borrowing.getNotes()!=null ? ", Note: " + borrowing.getNotes() : ", No Note")+
+                    ", Included in Net Worth: " + (borrowing.getIncludedInNetAsset() ? "Yes" : "No") +
+                    ", Status: " + (borrowing.getIsEnded() ? "Ended" : "Active"));
         }
 
     }
@@ -327,6 +338,38 @@ public class BorrowingCLI {
 
     }
 
+    public void showBorrowingDetails() {
+        System.out.println("\n === Showing borrowing details ===");
+
+        //select borrowing to view
+        System.out.println("Select the borrowing to view details:");
+        List<BorrowingAccount> userBorrowings = reportController.getActiveBorrowingAccounts(userController.getCurrentUser());
+        for(int i=0;i<userBorrowings.size();i++){
+            BorrowingAccount borrowing=userBorrowings.get(i);
+            System.out.println((i+1) + ". " + "Name: " + borrowing.getName() +
+                    ", Remaining Amount: " + borrowing.getRemainingAmount());
+        }
+        System.out.print("Select a borrowing by number: ");
+        int borrowingIndex =scanner.nextInt() - 1;
+        scanner.nextLine(); // Consume newline
+        if(borrowingIndex < 0 || borrowingIndex >= userBorrowings.size()) {
+            System.out.println("Invalid borrowing selection.");
+            return;
+        }
+
+        BorrowingAccount borrowingToView = userBorrowings.get(borrowingIndex);
+
+        System.out.println("=== Borrowing Details ===");
+        System.out.println("Name: " + borrowingToView.getName());
+        System.out.println("Total Borrowing Amount: " + borrowingToView.getBorrowingAmount());
+        System.out.println("Remaining Amount: " + borrowingToView.getRemainingAmount());
+        System.out.println("Notes: " + (borrowingToView.getNotes() == null ? "No note" : borrowingToView.getNotes()));
+        System.out.println("Included in Net Worth: " + (borrowingToView.getIncludedInNetAsset() ? "Yes" : "No"));
+        System.out.println("Selectable: " + (borrowingToView.getSelectable() ? "Yes" : "No"));
+        System.out.println("Status: " + (borrowingToView.getIsEnded() ? "Ended" : "Active"));
+
+    }
+
     //input helpers
     private boolean inputIncludedInNetWorth() {
         System.out.print("Include in net worth calculation? (y/n): ");
@@ -359,8 +402,7 @@ public class BorrowingCLI {
     }
 
     private String inputName() {
-        String name = scanner.nextLine().trim();
-        return name;
+        return scanner.nextLine().trim();
     }
 
     private LocalDate inputBorrowingDate() {
@@ -372,8 +414,28 @@ public class BorrowingCLI {
             System.out.println("Invalid date format. Please use YYYY-MM-DD.");
             return inputBorrowingDate();
         }
-        LocalDate date = LocalDate.parse(dateInput);
-        return date;
+        return LocalDate.parse(dateInput);
+    }
 
+    private Ledger selectLedger(User user) {
+        List<Ledger> ledgers = reportController.getLedgerByUser(user);
+
+        if(ledgers.isEmpty()) {
+            System.out.println("No ledgers found for the user.");
+            return null;
+        }
+
+        for (int i = 0; i < ledgers.size(); i++) {
+            Ledger ledger = ledgers.get(i);
+            System.out.println("Ledger " + (i + 1) + ". "+ "Name: " + ledger.getName());
+        }
+        System.out.print("Enter the number of the ledger: ");
+        String input = scanner.nextLine().trim();
+        int choice = Integer.parseInt(input);
+        if(choice < 1 || choice > ledgers.size()) {
+            System.out.println("Invalid choice.");
+            return selectLedger(user);
+        }
+        return ledgers.get(choice - 1);
     }
 }
