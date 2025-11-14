@@ -14,29 +14,19 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BudgetControllerTest {
     private Connection connection;
-    private User testUser;
     private Ledger testLedger;
     private Account testAccount;
 
-    private UserDAO userDAO;
     private BudgetDAO budgetDAO;
-    private LedgerDAO ledgerDAO;
-    private TransactionDAO transactionDAO;
-    private CategoryDAO categoryDAO;
-    private LedgerCategoryDAO ledgerCategoryDAO;
-    private AccountDAO accountDAO;
-    private InstallmentDAO installmentDAO;
 
-    private UserController userController;
     private BudgetController budgetController;
-    private LedgerController ledgerController;
     private TransactionController transactionController;
-    private AccountController accountController;
 
     @BeforeEach
     public void setUp() throws SQLException {
@@ -44,30 +34,28 @@ public class BudgetControllerTest {
         readResetScript();
         runSchemaScript();
 
-        userDAO = new UserDAO(connection);
+        UserDAO userDAO = new UserDAO(connection);
         budgetDAO = new BudgetDAO(connection);
-        ledgerDAO = new LedgerDAO(connection);
-        transactionDAO = new TransactionDAO(connection);
-        categoryDAO = new CategoryDAO(connection);
-        accountDAO = new AccountDAO(connection);
-        ledgerCategoryDAO = new LedgerCategoryDAO(connection);
-        installmentDAO = new InstallmentDAO(connection);
+        LedgerDAO ledgerDAO = new LedgerDAO(connection);
+        TransactionDAO transactionDAO = new TransactionDAO(connection);
+        CategoryDAO categoryDAO = new CategoryDAO(connection);
+        AccountDAO accountDAO = new AccountDAO(connection);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
 
-        userController = new UserController(userDAO);
-        budgetController = new BudgetController(budgetDAO);
-        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
+        UserController userController = new UserController(userDAO);
+        budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO, transactionDAO);
+        LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
-        accountController = new AccountController(accountDAO, transactionDAO, installmentDAO);
+        AccountController accountController = new AccountController(accountDAO, transactionDAO);
 
-        userController.register("testuser", "password");
-        testUser =userController.login("testuser", "password");
+        userController.register("test user", "password");
+        User testUser =userController.login("test user", "password");
 
         testLedger = ledgerController.createLedger("Test Ledger", testUser);
 
         testAccount = accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000.00),
                 AccountType.DEBIT_CARD, AccountCategory.FUNDS, testUser, "Test account notes",
                 true, true);
-
     }
 
     private void runSchemaScript() {
@@ -81,8 +69,11 @@ public class BudgetControllerTest {
     private void executeSqlFile(String filePath) {
         try {
             Path path = Paths.get(filePath);
-            String sql = Files.lines(path)
-                    .collect(Collectors.joining("\n"));
+            String sql;
+            try (Stream<String> lines = Files.lines(path)) {
+                sql = lines.collect(Collectors.joining("\n"));
+            }
+
             try (Statement stmt = connection.createStatement()) {
                 for (String s : sql.split(";")) {
                     if (!s.trim().isEmpty()) {
@@ -102,6 +93,7 @@ public class BudgetControllerTest {
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget);
         assertEquals(0, budget.getAmount().compareTo(BigDecimal.ZERO));
 
         boolean result = budgetController.editBudget(budget, BigDecimal.valueOf(600.00));
@@ -114,20 +106,25 @@ public class BudgetControllerTest {
 
     //edit monthly category-level budget
     @Test
-    public void testEditBudget_WithCategory_Success()  {
+    public void testEditBudget_WithCategory_Success() throws SQLException {
         LedgerCategory entertainment = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Entertainment"))
                 .findFirst()
                 .orElse(null);
-        Budget budget = testLedger.getBudgets().stream()
+        assertNotNull(entertainment);
+        Budget budget = entertainment.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget);
         assertEquals(0, budget.getAmount().compareTo(BigDecimal.ZERO));
 
         boolean result = budgetController.editBudget(budget, BigDecimal.valueOf(450.00));
         assertTrue(result);
         assertEquals(0, budget.getAmount().compareTo(BigDecimal.valueOf(450.00)));
+
+        Budget updatedBudget= budgetDAO.getById(budget.getId()); //fetch from DB to verify
+        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(450.00)));
     }
 
     //merge category-level budget to uncategorized budget
@@ -137,167 +134,195 @@ public class BudgetControllerTest {
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
-
+        assertNotNull(food);
         LedgerCategory lunch = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Lunch"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(lunch);
 
         Budget budget1 = food.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget1);
         budgetController.editBudget(budget1, BigDecimal.valueOf(200.00));
 
-        Budget budget2 = testLedger.getBudgets().stream()
+        Budget budget2 = testLedger.getBudgets().stream() // ledger-level budget
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget2);
         budgetController.editBudget(budget2, BigDecimal.valueOf(300.00));
 
         Budget budget3 = lunch.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY)
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget3);
         budgetController.editBudget(budget3, BigDecimal.valueOf(100.00));
-
 
         boolean result = budgetController.mergeBudgets(budget2);
         assertTrue(result);
-        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.valueOf(500.00)));
+        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.valueOf(500.00))); //300+200=500
 
         Budget updatedBudget=budgetDAO.getById(budget2.getId());
         assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(500.00)));
     }
 
     @Test
-    public void testMergeBudgets_DifferentPeriods() {
+    public void testMergeBudgets_DifferentPeriods() throws SQLException {
         LedgerCategory food = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(food);
         Budget budget1 = food.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget1);
         budgetController.editBudget(budget1, BigDecimal.valueOf(200.00));
 
         Budget ledgerBudget=testLedger.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.YEARLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(ledgerBudget);
         budgetController.editBudget(ledgerBudget, BigDecimal.valueOf(100.00));
 
         boolean result = budgetController.mergeBudgets(ledgerBudget);
         assertTrue(result);
         assertEquals(0, ledgerBudget.getAmount().compareTo(BigDecimal.valueOf(100.00))); //amount should remain unchanged
+
+        Budget updatedBudget=budgetDAO.getById(ledgerBudget.getId());
+        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(100)));
     }
 
     //merge subcategory-level budget to category-level budget
     @Test
-    public void testMergeBudgets_WithCategory_Success() {
+    public void testMergeBudgets_WithCategory_Success() throws SQLException {
         LedgerCategory food = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(food);
         Budget budget1 = food.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget1);
         budgetController.editBudget(budget1, BigDecimal.valueOf(200.00));
 
         LedgerCategory dinner = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Dinner"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(dinner);
         Budget budget2 = dinner.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY)
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget2);
         budgetController.editBudget(budget2, BigDecimal.valueOf(150.00));
 
         boolean result = budgetController.mergeBudgets(budget1);
         assertTrue(result);
         assertEquals(0, budget1.getAmount().compareTo(BigDecimal.valueOf(350.00)));
+
+        Budget updatedBudget=budgetDAO.getById(budget1.getId());
+        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(350.00)));
     }
 
-
+    //merge expired budgets: monthly category-level budget and monthly ledger-level budget
     @Test
-    public void testMergeBudgets_ExpiredBudgets_Case1() {
+    public void testMergeBudgets_ExpiredBudgets_Case1() throws SQLException {
         LedgerCategory food = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(food);
         Budget budget1 = food.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
-        budgetController.editBudget(budget1, BigDecimal.valueOf(200.00));
-
+        assertNotNull(budget1);
+        budget1.setAmount(BigDecimal.valueOf(200.00));
         //simulate expired budget by setting start and end date in the past
         budget1.setStartDate(LocalDate.of(2025, 1, 1));
         budget1.setEndDate(LocalDate.of(2025, 1, 31));
+        budgetDAO.update(budget1);
 
         Budget ledgerBudget=testLedger.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
-        budgetController.editBudget(ledgerBudget, BigDecimal.valueOf(300.00));
+        assertNotNull(ledgerBudget);
+        ledgerBudget.setAmount(BigDecimal.valueOf(300.00));
         //simulate expired budget by setting start and end date in the past
         ledgerBudget.setStartDate(LocalDate.of(2025, 1, 1));
         ledgerBudget.setEndDate(LocalDate.of(2025, 1, 31));
+        budgetDAO.update(ledgerBudget);
 
         boolean result = budgetController.mergeBudgets(ledgerBudget);
         assertTrue(result);
-        assertEquals(0, ledgerBudget.getAmount().compareTo(BigDecimal.ZERO)); //0+0=0
 
-        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.ZERO)); //should be reset to 0 after refresh
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), budget1.getStartDate()); //should be refreshed to current month
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), budget1.getEndDate()); //should be refreshed to
+        Budget updatedLedgerBudget=budgetDAO.getById(ledgerBudget.getId());
+        assertEquals(0, updatedLedgerBudget.getAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedLedgerBudget.getStartDate());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedLedgerBudget.getEndDate());
 
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), ledgerBudget.getStartDate()); //should be refreshed to current month
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), ledgerBudget.getEndDate()); //should be refreshed to current month
+        Budget updatedCategoryBudget=budgetDAO.getById(budget1.getId());
+        assertEquals(0, updatedCategoryBudget.getAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedCategoryBudget.getStartDate());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedCategoryBudget.getEndDate());
     }
 
 
     @Test
-    public void testMergeBudgets_ExpiredBudgets_Case2() {
+    public void testMergeBudgets_ExpiredBudgets_Case2() throws SQLException {
         LedgerCategory food = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(food);
         Budget budget1 = food.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
-        budgetController.editBudget(budget1, BigDecimal.valueOf(200.00));
-
+        assertNotNull(budget1);
+        budget1.setAmount(BigDecimal.valueOf(200.00));
         budget1.setStartDate(LocalDate.of(2025, 1, 1));
         budget1.setEndDate(LocalDate.of(2025, 1, 31));
+        budgetDAO.update(budget1);
 
         LedgerCategory lunch = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Lunch"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(lunch);
         Budget lunchBudget=lunch.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY)
                 .findFirst()
                 .orElse(null);
-        budgetController.editBudget(lunchBudget, BigDecimal.valueOf(300.00));
-
+        assertNotNull(lunchBudget);
+        lunchBudget.setAmount(BigDecimal.valueOf(300.00));
         lunchBudget.setStartDate(LocalDate.of(2025, 1, 1));
         lunchBudget.setEndDate(LocalDate.of(2025, 1, 31));
-
+        budgetDAO.update(lunchBudget);
 
         boolean result = budgetController.mergeBudgets(budget1);
         assertTrue(result);
-        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.ZERO)); //0+0=0
-        assertEquals(0, lunchBudget.getAmount().compareTo(BigDecimal.ZERO)); //should be reset to 0 after refresh
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), lunchBudget.getStartDate()); //should be refreshed to current month
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), lunchBudget.getEndDate()); //should be refreshed to current month
 
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), budget1.getStartDate()); //should be refreshed to current month
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), budget1.getEndDate()); //should be refreshed to current month
+        Budget updatedCategoryBudget=budgetDAO.getById(budget1.getId());
+        assertEquals(0, updatedCategoryBudget.getAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedCategoryBudget.getStartDate());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedCategoryBudget.getEndDate());
+
+        Budget updatedSubcategoryBudget=budgetDAO.getById(lunchBudget.getId());
+        assertEquals(0, updatedSubcategoryBudget.getAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedSubcategoryBudget.getStartDate());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedSubcategoryBudget.getEndDate());
     }
 
     //test is_over_budget
@@ -307,45 +332,48 @@ public class BudgetControllerTest {
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(food);
         Budget budget = food.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(200.00));
 
         LedgerCategory lunch = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Lunch"))
                 .findFirst()
                 .orElse(null);
-
+        assertNotNull(lunch);
         Budget budget2 = lunch.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget2);
         budgetController.editBudget(budget2, BigDecimal.valueOf(500.00));
 
         //add transactions to exceed budget of food category
         transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now(), BigDecimal.valueOf(150.00));
         transactionController.createExpense(testLedger, testAccount, lunch, "Grocery shopping", LocalDate.now(), BigDecimal.valueOf(150.00));
 
-        boolean isOverBudget = budgetController.isOverBudget(budget);
-        assertTrue(isOverBudget);
+        assertTrue(budgetController.isOverBudget(budget));
 
         //not exceed budget of ledger
         assertFalse(budgetController.isOverBudget(budget2));
-
     }
 
     @Test
-    public void testIsOverBudget_NoTransactions_False() {
+    public void testIsOverBudget_NoTransactions() {
         LedgerCategory transport = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Transport"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(transport);
         Budget budget = transport.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(300.00));
 
         //ledger-level budget
@@ -353,53 +381,56 @@ public class BudgetControllerTest {
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget2);
         budgetController.editBudget(budget2, BigDecimal.valueOf(800.00));
 
-        boolean isOverBudget = budgetController.isOverBudget(budget);
-        assertFalse(isOverBudget);
+        assertFalse(budgetController.isOverBudget(budget));
         assertFalse(budgetController.isOverBudget(budget2));
     }
 
     @Test
-    public void testIsOverBudget_ExpiredBudget() {
+    public void testIsOverBudget_ExpiredBudget() throws SQLException {
         LedgerCategory entertainment = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Entertainment"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(entertainment);
         Budget budget = entertainment.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
-
         //simulate expired budget by setting start and end date in the past
         budget.setStartDate(LocalDate.of(2025, 1, 1));
         budget.setEndDate(LocalDate.of(2025, 1, 31));
+        budgetDAO.update(budget);
 
-        boolean isOverBudget = budgetController.isOverBudget(budget);
-        assertFalse(isOverBudget);
+        assertFalse(budgetController.isOverBudget(budget));
 
-        assertEquals(0, budget.getAmount().compareTo(BigDecimal.ZERO)); //should be reset to 0 after refresh
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), budget.getStartDate()); //should be refreshed to current month
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), budget.getEndDate()); //should be refreshed to current month
+        Budget updatedBudget= budgetDAO.getById(budget.getId()); //fetch from DB to verify
+        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedBudget.getStartDate());
+        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedBudget.getEndDate());
     }
 
     @Test
-    public void testIsOverBudget_TransactionOverPeriod_False() {
+    public void testIsOverBudget_TransactionOverPeriod() {
         LedgerCategory entertainment = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Entertainment"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(entertainment);
         Budget budget = entertainment.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
 
         transactionController.createExpense(testLedger, testAccount, entertainment, "Movie", LocalDate.of(2025, 1, 1), BigDecimal.valueOf(500.00));
 
-        boolean isOverBudget = budgetController.isOverBudget(budget);
-        assertFalse(isOverBudget); //should be false as budget period is over
+        assertFalse(budgetController.isOverBudget(budget)); //should be false as budget period is over
     }
 
     @Test
@@ -408,29 +439,32 @@ public class BudgetControllerTest {
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget1);
         budgetController.editBudget(budget1, BigDecimal.valueOf(300.00));
 
         LedgerCategory food = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(food);
         Budget budget = food.getBudgets().stream()
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(120.00));
 
         transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now().withDayOfMonth(1), BigDecimal.valueOf(100.00));
         transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()), BigDecimal.valueOf(21.00));
 
-        boolean isOverBudget = budgetController.isOverBudget(budget);
-        assertTrue(isOverBudget);
+        assertTrue(budgetController.isOverBudget(budget));
         assertFalse(budgetController.isOverBudget(budget1));
 
         LedgerCategory transport = testLedger.getCategories().stream()
                 .filter(c -> c.getName().equals("Transport"))
                 .findFirst()
                 .orElse(null);
+        assertNotNull(transport);
         transactionController.createExpense(testLedger, testAccount, transport, "Bus ticket", LocalDate.now().withDayOfMonth(1), BigDecimal.valueOf(100.00));
         transactionController.createExpense(testLedger, testAccount, transport, "Taxi", LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()), BigDecimal.valueOf(201.00));
         assertTrue(budgetController.isOverBudget(budget1));
@@ -443,6 +477,7 @@ public class BudgetControllerTest {
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(500.00));
         //simulate expired budget by setting start and end date in the past
         budget.setStartDate(LocalDate.of(2025, 1, 1));
@@ -467,6 +502,7 @@ public class BudgetControllerTest {
                 .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
                 .findFirst()
                 .orElse(null);
+        assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(500.00));
         LocalDate originalStartDate = budget.getStartDate();
         LocalDate originalEndDate = budget.getEndDate();
