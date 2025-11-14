@@ -32,9 +32,6 @@ public class LendingAccount extends Account {
     public LocalDate getDate() {
         return date;
     }
-    public BigDecimal getLendingAmount() {
-        return balance;
-    }
     public void receiveRepayment(Transaction tx, BigDecimal amount){
         balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
         transactions.add(tx);
