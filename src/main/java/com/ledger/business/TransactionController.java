@@ -14,9 +14,7 @@ public class TransactionController {
     private final AccountDAO accountDAO;
     private final LedgerDAO ledgerDAO;
 
-    public TransactionController(TransactionDAO transactionDAO,
-                                 AccountDAO accountDAO,
-                                 LedgerDAO ledgerDAO) {
+    public TransactionController(TransactionDAO transactionDAO, AccountDAO accountDAO, LedgerDAO ledgerDAO) {
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
         this.ledgerDAO = ledgerDAO;
@@ -24,33 +22,33 @@ public class TransactionController {
 
     public Income createIncome(Ledger ledger, Account toAccount, LedgerCategory category, String description,
                                LocalDate date, BigDecimal amount) {
-        if(ledger == null){
+        if (ledger == null) {
             return null;
         }
 
-        if(category == null){
+        if (category == null) {
             return null;
         }
 
-        if(category.getType() != CategoryType.INCOME){
+        if (category.getType() != CategoryType.INCOME) {
             return null;
         }
 
-        if( toAccount == null){
+        if (toAccount == null) {
             return null;
         }
 
-        if(!toAccount.getSelectable()){
+        if (!toAccount.getSelectable()) {
             return null;
         }
-        if(amount == null){
+        if (amount == null) {
             return null;
         }
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
-        if(!category.getLedger().equals(ledger)){
+        if (!category.getLedger().equals(ledger)) {
             return null;
         }
 
@@ -73,7 +71,7 @@ public class TransactionController {
             ledger.getTransactions().add(incomeTransaction);
 
             return incomeTransaction;
-        } catch (SQLException e){
+        } catch (SQLException e) {
             System.err.println("Error creating income transaction: " + e.getMessage());
             return null;
         }
@@ -82,18 +80,18 @@ public class TransactionController {
     public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String description,
                                  LocalDate date, BigDecimal amount) {
 
-        if(category == null){
+        if (category == null) {
             return null;
         }
 
-        if(category.getType() != CategoryType.EXPENSE){
+        if (category.getType() != CategoryType.EXPENSE) {
             return null;
         }
-        if(!category.getLedger().equals(ledger)){
+        if (!category.getLedger().equals(ledger)) {
             return null;
         }
 
-        if(amount == null){
+        if (amount == null) {
             return null;
         }
 
@@ -121,7 +119,7 @@ public class TransactionController {
 
 
             return expenseTransaction;
-        }catch (SQLException e){
+        } catch (SQLException e) {
             System.err.println("Error creating expense transaction: " + e.getMessage());
             return null;
         }
@@ -130,11 +128,11 @@ public class TransactionController {
     public Transfer createTransfer(Ledger ledger, Account fromAccount, Account toAccount, String description,
                                    LocalDate date, BigDecimal amount) {
 
-        if(fromAccount != null && toAccount != null && fromAccount.getId().equals(toAccount.getId())){
+        if (fromAccount != null && toAccount != null && fromAccount.getId().equals(toAccount.getId())) {
             return null;
         }
 
-        if(amount == null){
+        if (amount == null) {
             return null;
         }
 
@@ -170,14 +168,14 @@ public class TransactionController {
                 ledger.getTransactions().add(transferTransaction);
             }
             return transferTransaction;
-        }catch (SQLException e){
+        } catch (SQLException e) {
             System.err.println("Error creating transfer transaction: " + e.getMessage());
             return null;
         }
     }
 
     public boolean deleteTransaction(Transaction tx) {
-        if(tx == null){
+        if (tx == null) {
             return false;
         }
 
@@ -329,7 +327,6 @@ public class TransactionController {
                         return false;
                     }
 
-
                     prevFromAccount.credit(tx.getAmount());
                     prevFromAccount.getTransactions().remove(tx);
                     //prevFromAccount.getOutgoingTransactions().remove(tx);
@@ -439,5 +436,240 @@ public class TransactionController {
     }
 
 
+    public boolean updateIncome(Income income, Account toAccount, LedgerCategory category, String note,
+                                LocalDate date, BigDecimal amount, Ledger ledger) {
+        if (income == null) {
+            return false;
+        }
+
+        if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return false;
+        } //change amount and amount>0
+
+        BigDecimal oldAmount = income.getAmount();
+        Account oldToAccount = income.getToAccount();
+        LedgerCategory oldCategory = income.getCategory();
+        Ledger oldLedger = income.getLedger();
+
+        if (ledger != null && !ledger.getId().equals(oldLedger.getId())) {
+            oldLedger.getTransactions().remove(income);
+            ledger.getTransactions().add(income);
+            income.setLedger(ledger);
+        }
+
+        if (category != null && !category.getId().equals(oldCategory.getId())) {
+            if (!category.getLedger().getId().equals(income.getLedger().getId())) {
+                return false;
+            }
+            if (category.getType() != CategoryType.INCOME) {
+                return false;
+            }
+            oldCategory.getTransactions().remove(income);
+            category.getTransactions().add(income);
+            income.setCategory(category);
+        }
+
+        if (toAccount != null && !toAccount.getId().equals(oldToAccount.getId())) { //change account
+            //rollback old account
+            oldToAccount.debit(oldAmount);
+            oldToAccount.getTransactions().remove(income);
+            try {
+                accountDAO.update(oldToAccount);
+            } catch (SQLException e) {
+                System.err.println("Error updating old toAccount during income update: " + e.getMessage());
+                return false;
+            }
+
+            if (!toAccount.getSelectable()) {
+                return false;
+            }
+
+            //apply new account
+            toAccount.credit(amount != null ? amount : oldAmount);
+            toAccount.getTransactions().add(income);
+            income.setToAccount(toAccount);
+            try {
+                accountDAO.update(toAccount);
+            } catch (SQLException e) {
+                System.err.println("Error updating new toAccount during income update: " + e.getMessage());
+                return false;
+            }
+        }
+
+        income.setAmount(amount != null ? amount : oldAmount);
+        income.setDate(date != null ? date : income.getDate());
+        income.setNote(note != null ? note : income.getNote());
+        try {
+            return transactionDAO.update(income);
+        } catch (SQLException e) {
+            System.err.println("Error updating income transaction: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean updateExpense(Expense expense, Account fromAccount, LedgerCategory category, String note,
+                                 LocalDate date, BigDecimal amount, Ledger ledger) {
+        if (expense == null) {
+            return false;
+        }
+
+        if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return false;
+        } //change amount and amount>0
+
+        BigDecimal oldAmount = expense.getAmount();
+        Account oldFromAccount = expense.getFromAccount();
+        LedgerCategory oldCategory = expense.getCategory();
+        Ledger oldLedger = expense.getLedger();
+
+        if (ledger != null && !ledger.getId().equals(oldLedger.getId())) {
+            oldLedger.getTransactions().remove(expense);
+            ledger.getTransactions().add(expense);
+            expense.setLedger(ledger);
+        }
+
+        if (category != null && !category.getId().equals(oldCategory.getId())) {
+            if (!category.getLedger().getId().equals(expense.getLedger().getId())) {
+                return false;
+            }
+            if (category.getType() != CategoryType.EXPENSE) {
+                return false;
+            }
+            oldCategory.getTransactions().remove(expense);
+            category.getTransactions().add(expense);
+            expense.setCategory(category);
+        }
+
+        if (fromAccount != null && !fromAccount.getId().equals(oldFromAccount.getId())) { //change account
+            //rollback old account
+            oldFromAccount.credit(oldAmount);
+            oldFromAccount.getTransactions().remove(expense);
+            try {
+                accountDAO.update(oldFromAccount);
+            } catch (SQLException e) {
+                System.err.println("Error updating old fromAccount during expense update: " + e.getMessage());
+                return false;
+            }
+
+            if (!fromAccount.getSelectable()) {
+                return false;
+            }
+
+            //apply new account
+            fromAccount.debit(amount != null ? amount : oldAmount);
+            fromAccount.getTransactions().add(expense);
+            expense.setFromAccount(fromAccount);
+            try {
+                accountDAO.update(fromAccount);
+            } catch (SQLException e) {
+                System.err.println("Error updating new fromAccount during expense update: " + e.getMessage());
+                return false;
+            }
+        }
+
+        expense.setAmount(amount != null ? amount : oldAmount);
+        expense.setDate(date != null ? date : expense.getDate());
+        expense.setNote(note != null ? note : expense.getNote());
+        try {
+            return transactionDAO.update(expense);
+        } catch (SQLException e) {
+            System.err.println("Error updating expense transaction: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean updateTransfer(Transfer transfer, Account fromAccount, Account toAccount,
+                                  String note, LocalDate date, BigDecimal amount, Ledger ledger) {
+        if (transfer == null) {
+            return false;
+        }
+
+        if (fromAccount != null && toAccount != null && fromAccount.getId().equals(toAccount.getId())) {
+            return false;
+        }
+
+        if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return false;
+        } //change amount and amount>0
+
+        BigDecimal oldAmount = transfer.getAmount();
+        Account oldFromAccount = transfer.getFromAccount();
+        Account oldToAccount = transfer.getToAccount();
+        Ledger oldLedger = transfer.getLedger();
+
+        if (ledger != null && !ledger.getId().equals(oldLedger.getId())) {
+            oldLedger.getTransactions().remove(transfer);
+            ledger.getTransactions().add(transfer);
+            transfer.setLedger(ledger);
+        } //change ledger
+
+        //fromAccount change
+        if (fromAccount != null && (oldFromAccount == null || !fromAccount.getId().equals(oldFromAccount.getId()))) {
+            //rollback old fromAccount
+            if (oldFromAccount != null) {
+                oldFromAccount.credit(oldAmount);
+                oldFromAccount.getTransactions().remove(transfer);
+                try {
+                    accountDAO.update(oldFromAccount);
+                } catch (SQLException e) {
+                    System.err.println("Error updating old fromAccount during transfer update: " + e.getMessage());
+                    return false;
+                }
+            }
+
+            if (!fromAccount.getSelectable()) {
+                return false;
+            }
+
+            //apply new fromAccount
+            fromAccount.debit(amount != null ? amount : oldAmount);
+            fromAccount.getTransactions().add(transfer);
+            transfer.setFromAccount(fromAccount);
+            try {
+                accountDAO.update(fromAccount);
+            } catch (SQLException e) {
+                System.err.println("Error updating new fromAccount during transfer update: " + e.getMessage());
+                return false;
+            }
+        }
+
+        //toAccount change
+        if (toAccount != null && (oldToAccount == null || !toAccount.getId().equals(oldToAccount.getId()))) {
+            //rollback old toAccount
+            if (oldToAccount != null) {
+                oldToAccount.debit(oldAmount);
+                oldToAccount.getTransactions().remove(transfer);
+                try {
+                    accountDAO.update(oldToAccount);
+                } catch (SQLException e) {
+                    System.err.println("Error updating old toAccount during transfer update: " + e.getMessage());
+                    return false;
+                }
+            }
+            if (!toAccount.getSelectable()) {
+                return false;
+            }
+            //apply new toAccount
+            toAccount.credit(amount != null ? amount : oldAmount);
+            toAccount.getTransactions().add(transfer);
+            transfer.setToAccount(toAccount);
+            try {
+                accountDAO.update(toAccount);
+            } catch (SQLException e) {
+                System.err.println("Error updating new toAccount during transfer update: " + e.getMessage());
+                return false;
+            }
+        }
+
+        transfer.setAmount(amount != null ? amount : oldAmount);
+        transfer.setDate(date != null ? date : transfer.getDate());
+        transfer.setNote(note != null ? note : transfer.getNote());
+        try {
+            return transactionDAO.update(transfer);
+        } catch (SQLException e) {
+            System.err.println("Error updating transfer transaction: " + e.getMessage());
+            return false;
+        }
+    }
 
 }
