@@ -45,7 +45,7 @@ public class LedgerCategoryController {
             ledger.getCategories().add(category);
             ledgerCategoryDAO.insert(category);
 
-            //create budget for ledgercategory
+            //create budget for ledgerCategory
             for(Budget.Period period : Budget.Period.values()){
                 Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
                 category.getBudgets().add(budget);
@@ -85,7 +85,7 @@ public class LedgerCategoryController {
             ledger.getCategories().add(category);
             ledgerCategoryDAO.insert(category);
 
-            //create budget for ledgercategory
+            //create budget for ledgerCategory
             for(Budget.Period period : Budget.Period.values()){
                 Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
                 category.getBudgets().add(budget);
@@ -178,53 +178,54 @@ public class LedgerCategoryController {
 
     public boolean deleteCategory(LedgerCategory category, boolean deleteTransaction, LedgerCategory migrateCategory) {
         try{
-        if(category == null){
-            return false;
-        }
-        if(ledgerCategoryDAO.getById(category.getId()) == null) {
-            return false;
-        }
-        if(!category.getChildren().isEmpty()){
-            return false;
-        }
-
-        Ledger ledger = category.getLedger();
-        LedgerCategory parent = category.getParent();
-        List<Transaction> txs = category.getTransactions();
-
-        ledger.getCategories().remove(category); //remove from ledger
-
-        if(parent != null){
-            parent.getChildren().remove(category); //remove from parent
-        }
-
-        if(deleteTransaction){//delete transactions
-            for(Transaction tx : txs){
-                transactionDAO.delete(tx);
-            }
-
-        }else{ //migrate transactions
-            if(migrateCategory == null){
+            if(category == null){
                 return false;
             }
-            if(!migrateCategory.getLedger().getId().equals(ledger.getId())){
+            if(ledgerCategoryDAO.getById(category.getId()) == null) {
                 return false;
             }
-            if(migrateCategory.getId().equals(category.getId())){
+            if(!category.getChildren().isEmpty()){
                 return false;
             }
-            if(migrateCategory.getType() != category.getType()){
-                return false;
-            }
-            for(Transaction tx : txs){
-                tx.setCategory(migrateCategory);
-                transactionDAO.update(tx);
-            }
-            migrateCategory.getTransactions().addAll(txs);
 
-        }
+            Ledger ledger = category.getLedger();
+            LedgerCategory parent = category.getParent();
 
-        return ledgerCategoryDAO.delete(category);
+            List<Transaction> txs = transactionDAO.getByCategoryId(category.getId()); //get transactions from db
+
+            ledger.getCategories().remove(category); //remove from ledger
+
+            if(parent != null){
+                parent.getChildren().remove(category); //remove from parent
+            }
+
+            if(deleteTransaction){//delete transactions
+                for(Transaction tx : txs){
+                    transactionDAO.delete(tx);
+                }
+
+            }else{ //migrate transactions
+                if(migrateCategory == null){
+                    return false;
+                }
+                if(!migrateCategory.getLedger().getId().equals(ledger.getId())){
+                    return false;
+                }
+                if(migrateCategory.getId().equals(category.getId())){
+                    return false;
+                }
+                if(migrateCategory.getType() != category.getType()){
+                    return false;
+                }
+                for(Transaction tx : txs){
+                    tx.setCategory(migrateCategory);
+                    transactionDAO.update(tx);
+                }
+                migrateCategory.getTransactions().addAll(txs);
+
+            }
+
+            return ledgerCategoryDAO.delete(category);
         }catch (SQLException e){
             System.err.println("SQL Exception during deleteCategory: " + e.getMessage());
             return false;
@@ -265,16 +266,6 @@ public class LedgerCategoryController {
         }catch (SQLException e){
             System.err.println("SQL Exception during changeParent: " + e.getMessage());
             return false;
-        }
-    }
-
-    //getters
-    public List<Budget> getActiveBudgetsByLedgerCategory(LedgerCategory category, Budget.Period period) {
-        try{
-            return budgetDAO.getActiveBudgetsByCategoryId(category.getId(), period);
-        }catch (SQLException e){
-            System.err.println("SQL Exception in getActiveBudgetsByCategoryId: " + e.getMessage());
-            return List.of();
         }
     }
 
