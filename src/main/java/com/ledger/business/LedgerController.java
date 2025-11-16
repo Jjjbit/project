@@ -16,11 +16,8 @@ public class LedgerController {
     private final AccountDAO accountDAO;
     private final BudgetDAO budgetDAO;
 
-    public LedgerController(LedgerDAO ledgerDAO,
-                            TransactionDAO transactionDAO,
-                            CategoryDAO categoryDAO,
-                            LedgerCategoryDAO ledgerCategoryDAO,
-                            AccountDAO accountDAO, BudgetDAO budgetDAO) {
+    public LedgerController(LedgerDAO ledgerDAO, TransactionDAO transactionDAO, CategoryDAO categoryDAO,
+                            LedgerCategoryDAO ledgerCategoryDAO, AccountDAO accountDAO, BudgetDAO budgetDAO) {
         this.budgetDAO = budgetDAO;
         this.accountDAO = accountDAO;
         this.ledgerCategoryDAO = ledgerCategoryDAO;
@@ -209,6 +206,24 @@ public class LedgerController {
 
             copy.getCategories().addAll(categoryCopies);
 
+            //create Budget for ledger level for each Period
+            for (Budget.Period period : Budget.Period.values()) {
+                Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, copy);
+                copy.getBudgets().add(ledgerBudget);
+                budgetDAO.insert(ledgerBudget);
+            }
+
+            //create Budget for each default category
+            for (LedgerCategory cat : copy.getCategories()) {
+                if (cat.getType() == CategoryType.EXPENSE) {
+                    for (Budget.Period period : Budget.Period.values()) {
+                        Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, copy);
+                        cat.getBudgets().add(categoryBudget);
+                        budgetDAO.insert(categoryBudget);
+                    }
+                }
+            }
+
             return copy;
         } catch (SQLException e) {
             System.err.println("SQL Exception during ledger copy: " + e.getMessage());
@@ -232,6 +247,7 @@ public class LedgerController {
             for (LedgerCategory childCategory : childCategories) {
                 childCategory.setParent(copy);
                 copy.getChildren().add(childCategory);
+                ledgerCategoryDAO.update(childCategory);
             }
             result.addAll(childCategories);
         }
