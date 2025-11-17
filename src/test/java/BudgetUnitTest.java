@@ -11,12 +11,11 @@ import java.time.temporal.TemporalAdjusters;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BudgetUnitTest {
-    private User testUser;
     private Ledger testLedger;
 
     @BeforeEach
     public void setUp() {
-        testUser = new User("testuser", "password123");
+        User testUser = new User("test user", "password123");
         testLedger = new Ledger("Test Ledger", testUser);
     }
     @Test
