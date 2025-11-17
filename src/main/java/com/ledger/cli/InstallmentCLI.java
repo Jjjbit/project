@@ -216,71 +216,50 @@ public class InstallmentCLI {
 
     }
 
-    /*public void editInstallmentPlan() {
+    public void editInstallmentPlan() {
 
         System.out.println("\n=== Edit Installment===");
 
-        //select credit account
-        System.out.println("Select credit account:");
+        System.out.println("Select credit card account:");
         CreditAccount creditAccount = selectCreditCardAccount();
         if (creditAccount == null) return;
 
         List<Installment> plans = reportController.getActiveInstallments(creditAccount);
-
         if (plans.isEmpty()) {
             System.out.println("No installments found.");
             return;
         }
-
         System.out.println("\nSelect installment to edit:");
         for (int i = 0; i < plans.size(); i++) {
             Installment plan = plans.get(i);
             System.out.println((i + 1) + ". " + formatInstallment(plan));
         }
         System.out.print("Enter choice: ");
-        int choice = scanner.nextInt() - 1;
-
+        int choice = Integer.parseInt(scanner.nextLine().trim()) - 1;
         if (choice < 0 || choice >= plans.size()) {
             System.out.println("Invalid choice!");
             return;
         }
-
         Installment selectedPlan = plans.get(choice);
-        // input new details
-        //new total amount
-        System.out.print("Enter new total amount (current: " + selectedPlan.getTotalAmount() + ")"+ ", press Enter to keep): ");
-        String totalAmountInput = scanner.nextLine().trim();
-        BigDecimal totalAmount = totalAmountInput.isEmpty() ? null : new BigDecimal(totalAmountInput);
 
-        // new total periods
-        System.out.print("Enter new total periods (current: " + selectedPlan.getTotalPeriods() + ")"+ ", press Enter to keep): ");
-        String totalPeriodsInput = scanner.nextLine().trim();
-        Integer totalPeriods = totalPeriodsInput.isEmpty() ? null : Integer.parseInt(totalPeriodsInput);
+        if(selectedPlan.isIncludedInCurrentDebts()){
+            System.out.print("The installment is currently included in current debts. Do you want to exclude it? (y/n): ");
+        } else {
+            System.out.print("The installment is currently excluded from current debts. Do you want to include it? (y/n): ");
+        }
+        String input = scanner.nextLine().trim().toLowerCase();
+        Boolean includeInCurrentDebt = null;
+        if (input.equals("y") || input.equals("yes")) {
+            includeInCurrentDebt = !selectedPlan.isIncludedInCurrentDebts();
+        }
 
-        // new interest
-        System.out.print("Enter new interest (current: " + selectedPlan.getInterest() + ")"+ ", press Enter to keep): ");
-        String feeRateInput = scanner.nextLine().trim();
-        BigDecimal interest = feeRateInput.isEmpty() ? null : new BigDecimal(feeRateInput);
-
-        // new name
-        System.out.print("Enter new name (current: " + selectedPlan.getName() + ")"+ ", press Enter to keep): ");
-        String nameInput = scanner.nextLine().trim();
-        String name = nameInput.isEmpty() ? null : nameInput;
-
-
-        // select new strategy
-        System.out.println("Select new strategy (current: " + formatStrategy(selectedPlan.getStrategy()) + "):");
-        Installment.Strategy strategy = selectStrategy();
-
-        boolean success= installmentController.editInstallment(
-                selectedPlan, totalAmount, totalPeriods, interest, strategy,name);
+        boolean success= installmentController.editInstallment(selectedPlan, includeInCurrentDebt);
         if(!success) {
             System.out.println("Edit failed!");
             return;
         }
         System.out.println("Installment edited successfully!");
-
-    }*/
+    }
 
 
     //private helper methods
@@ -386,6 +365,7 @@ public class InstallmentCLI {
             System.out.println("No categories found in the selected ledger. Please create a category first.");
             return null;
         }
+
         // filter only expense parent categories
         List<LedgerCategory> parentCategories = categories.stream()
                 .filter(cat -> cat.getParent() == null && cat.getType() == CategoryType.EXPENSE)
@@ -397,18 +377,19 @@ public class InstallmentCLI {
             System.out.println((i + 1) + ". " + parent.getName());
 
             // display subcategories
-            List<LedgerCategory> subCategories = parent.getChildren();
-            if (subCategories != null && !subCategories.isEmpty()) {
+            List<LedgerCategory> subCategories = categories.stream()
+                    .filter(cat -> parent.getId().equals(cat.getParent().getId()))
+                    .toList();
+            if (!subCategories.isEmpty()) {
                 for (int j = 0; j < subCategories.size(); j++) {
                     LedgerCategory child = subCategories.get(j);
                     System.out.println("   " + (i + 1) + "." + (j + 1) + " " + child.getName());
                 }
             }
         }
+
         System.out.print("Enter choice (e.g. 1 or 1.2): ");
-
         String choiceInput = scanner.nextLine().trim();
-
 
         if (choiceInput.contains(".")) {
             // select subcategory
@@ -421,8 +402,11 @@ public class InstallmentCLI {
                 return inputCategory(ledger);
             }
 
-            List<LedgerCategory> subCategories = parentCategories.get(parentIndex).getChildren();
-            if (subCategories == null || childIndex < 0 || childIndex >= subCategories.size()) {
+            LedgerCategory parentCategory = parentCategories.get(parentIndex);
+            List<LedgerCategory> subCategories = categories.stream()
+                    .filter(cat -> parentCategory.getId().equals(cat.getParent().getId()))
+                    .toList();
+            if (childIndex < 0 || childIndex >= subCategories.size()) {
                 System.out.println("Invalid subcategory choice!");
                 return inputCategory(ledger);
             }
