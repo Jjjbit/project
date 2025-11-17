@@ -135,7 +135,7 @@ public class ReportController {
                     .map(Account::getBalance)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal totalLending = getActiveLendingAccounts(user).stream()
-                    .filter(account -> account.getIncludedInNetAsset())
+                    .filter(Account::getIncludedInNetAsset)
                     .map(LendingAccount::getBalance)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             return totalAssets.add(totalLending);
@@ -158,7 +158,7 @@ public class ReportController {
                     .map(account -> ((LoanAccount) account).getRemainingAmount()) //get this.remainingAmount
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal totalBorrowing = getActiveBorrowingAccounts(user).stream()
-                    .filter(account -> account.getIncludedInNetAsset())
+                    .filter(Account::getIncludedInNetAsset)
                     .map(BorrowingAccount::getRemainingAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal totalInstallmentDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
