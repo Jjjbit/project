@@ -76,25 +76,6 @@ public class LedgerCategoryDAO {
         }
     }
 
-    //not set parent and children
-    @SuppressWarnings("SqlResolve")
-    public List<LedgerCategory> getByLedgerId(Long ledgerId) throws SQLException {
-        String sql = "SELECT id, name, type FROM ledger_categories WHERE ledger_id = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, ledgerId);
-            ResultSet rs = stmt.executeQuery();
-            List<LedgerCategory> categories = new ArrayList<>();
-            while (rs.next()) {
-                LedgerCategory category = new LedgerCategory();
-                category.setId(rs.getLong("id"));
-                category.setName(rs.getString("name"));
-                category.setType(CategoryType.valueOf(rs.getString("type")));
-                categories.add(category);
-            }
-            return categories;
-        }
-    }
-
     //set parent and children
     public List<LedgerCategory> getTreeByLedgerId(Long ledgerId) throws SQLException {
         List<LedgerCategory> categoriesNullParent = getCategoriesNullParent(ledgerId);
@@ -148,19 +129,19 @@ public class LedgerCategoryDAO {
 
 
     private List<LedgerCategory> buildCategoryTree(List<LedgerCategory> categories) throws SQLException {
-        List<LedgerCategory> rootCategories = new ArrayList<>();
+        List<LedgerCategory> allCategories = new ArrayList<>();
 
         for (LedgerCategory category : categories) {
             List<LedgerCategory> children = getCategoriesByParentId(category.getId());
             category.setChildren(children);
-            rootCategories.add(category);
+            allCategories.add(category);
             for (LedgerCategory child : children) {
                 child.setParent(category);
-                rootCategories.add(child);
+                allCategories.add(child);
             }
         }
 
-        return rootCategories;
+        return allCategories;
     }
 
     @SuppressWarnings("SqlResolve")
@@ -172,30 +153,6 @@ public class LedgerCategoryDAO {
         }
     }
 
-    @SuppressWarnings("SqlResolve")
-    public int countCategoriesInLedger(Long ledgerId) throws SQLException {
-        String sql = "SELECT COUNT(*) AS total FROM ledger_categories WHERE ledger_id = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, ledgerId);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt("total");
-            }
-            return 0;
-        }
-    }
-
-    @SuppressWarnings("SqlResolve")
-    public int countCategoryInDatabase() throws SQLException {
-        String sql = "SELECT COUNT(*) AS total FROM ledger_categories";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt("total");
-            }
-            return 0;
-        }
-    }
     @SuppressWarnings("SqlResolve")
     public LedgerCategory getByNameAndLedger(String name, Ledger ledger) throws SQLException {
         String sql = "SELECT id, name, type, ledger_id, parent_id FROM ledger_categories WHERE name = ? AND ledger_id = ?";
