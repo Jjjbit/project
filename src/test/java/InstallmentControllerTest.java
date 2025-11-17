@@ -22,24 +22,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class InstallmentControllerTest {
     private Connection connection;
-    private User testUser;
+
     private CreditAccount account;
     private LedgerCategory category;
-    private Ledger testLedger;
 
-    private UserDAO userDAO;
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
     private InstallmentDAO installmentDAO;
-    private LedgerDAO ledgerDAO;
-    private CategoryDAO categoryDAO;
-    private LedgerCategoryDAO ledgerCategoryDAO;
-    private BudgetDAO budgetDAO;
 
-    private UserController userController;
     private InstallmentController installmentController;
-    private AccountController accountController;
-    private LedgerController ledgerController;
 
     @BeforeEach
     public void setUp() throws SQLException {
@@ -47,40 +38,34 @@ public class InstallmentControllerTest {
         readResetScript();
         runSchemaScript();
 
-        userDAO = new UserDAO(connection);
+        UserDAO userDAO = new UserDAO(connection);
         accountDAO = new AccountDAO(connection);
         installmentDAO = new InstallmentDAO(connection);
         transactionDAO = new TransactionDAO(connection);
-        ledgerDAO = new LedgerDAO(connection);
-        categoryDAO = new CategoryDAO(connection);
-        ledgerCategoryDAO = new LedgerCategoryDAO(connection);
-        budgetDAO = new BudgetDAO(connection);
+        LedgerDAO ledgerDAO = new LedgerDAO(connection);
+        CategoryDAO categoryDAO = new CategoryDAO(connection);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+        BudgetDAO budgetDAO = new BudgetDAO(connection);
 
-        userController = new UserController(userDAO);
-        accountController = new AccountController(accountDAO, transactionDAO);
+        UserController userController = new UserController(userDAO);
+        AccountController accountController = new AccountController(accountDAO, transactionDAO);
         installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
-        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
+        LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
 
         // Create a test user
         userController.register("test user", "password123");
-        testUser = userController.login("test user", "password123");
+        User testUser = userController.login("test user", "password123");
 
         // Create a test credit account for the user
-        account = accountController.createCreditAccount(
-                "Test Credit Account",
-                "Credit Account Note",
+        account = accountController.createCreditAccount("Test Credit Account", "Credit Account Note",
                 BigDecimal.valueOf(1000.00), // initial balance
-                true,
-                true,
-                testUser,
-                AccountType.CREDIT_CARD,
+                true, true, testUser, AccountType.CREDIT_CARD,
                 BigDecimal.valueOf(1000), // credit limit
                 BigDecimal.valueOf(20), // current debt
-                10, 25
-        );
+                10, 25);
 
         // Create a test ledger for the user
-        testLedger = ledgerController.createLedger("Test Ledger", testUser);
+        Ledger testLedger = ledgerController.createLedger("Test Ledger", testUser);
 
         // get a test ledger category
         category = testLedger.getCategories().stream()
@@ -149,7 +134,7 @@ public class InstallmentControllerTest {
         assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(135.50))); //20+115.5=135.5
 
         assertEquals(1, installmentDAO.getByAccountId(account.getId()).size());
-        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).get(0).getId());
+        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).getFirst().getId());
         assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
     }
 
@@ -184,7 +169,7 @@ public class InstallmentControllerTest {
         assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(20.00)));
 
         assertEquals(1, installmentDAO.getByAccountId(account.getId()).size());
-        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).get(0).getId());
+        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).getFirst().getId());
         assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
     }
 
@@ -216,7 +201,7 @@ public class InstallmentControllerTest {
         assertEquals(Installment.Strategy.EVENLY_SPLIT, savedPlan.getStrategy());
 
         assertEquals(1, installmentDAO.getByAccountId(account.getId()).size());
-        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).get(0).getId());
+        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).getFirst().getId());
         assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
         assertEquals(1, transactionDAO.getByCategoryId(category.getId()).size());
 
@@ -266,7 +251,7 @@ public class InstallmentControllerTest {
         assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(146.00))); //20+126=146
 
         assertEquals(1, installmentDAO.getByAccountId(account.getId()).size());
-        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).get(0).getId());
+        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).getFirst().getId());
         assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
     }
 
