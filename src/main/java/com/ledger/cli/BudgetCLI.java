@@ -49,7 +49,7 @@ public class BudgetCLI {
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
                 .toList();
 
-        printCategoryBudgets(expenseCategories, "", period, counter, budgetMap);
+        printCategoryBudgets(expenseCategories, period, counter, budgetMap);
 
         Budget uncategorizedBudget = reportController.getActiveBudgetByLedger(selectedLedger, period);
         if(uncategorizedBudget==null){
@@ -160,7 +160,7 @@ public class BudgetCLI {
         List<LedgerCategory> expenseCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
                 .toList();
-        printAllCategoryBudgets(expenseCategories, "", period, counter, budgetMap);
+        printAllCategoryBudgets(expenseCategories, period, counter, budgetMap);
 
         System.out.println("\n=== Uncategorized Budgets ===");
         Budget ledgerBudget = reportController.getActiveBudgetByLedger(selectedLedger, period);
@@ -217,7 +217,7 @@ public class BudgetCLI {
     }
 
     //for edit
-    private void printAllCategoryBudgets(List<LedgerCategory> categories, String indent, Budget.Period period,
+    private void printAllCategoryBudgets(List<LedgerCategory> categories, Budget.Period period,
                                          int[] counter, Map<Integer, Budget> budgetMap) {
 
         List<LedgerCategory> topCategories = categories.stream()
@@ -225,7 +225,7 @@ public class BudgetCLI {
                 .toList();
 
         for (LedgerCategory category : topCategories) {
-            System.out.println(indent + category.getName());
+            System.out.println(category.getName());
 
             // print budgets for this category
             Budget budget = reportController.getActiveBudgetByCategory(category, period);
@@ -235,7 +235,7 @@ public class BudgetCLI {
 
             //print category budget with number
             String status = budgetController.isOverBudget(budget) ? " [OVER BUDGET]" : " (within budget)";
-            String line = indent + counter[0] + ". Amount: " + budget.getAmount()
+            String line = counter[0] + ". Amount: " + budget.getAmount()
                     + ", Period: " + budget.getPeriod() + status;
             System.out.println(line);
 
@@ -248,7 +248,7 @@ public class BudgetCLI {
                     .toList();
             if (!children.isEmpty()) {
                 for(LedgerCategory subcategory : children){
-                    System.out.println(indent + "   " + subcategory.getName());
+                    System.out.println("   " + subcategory.getName());
 
                     Budget subcategoryBudget = reportController.getActiveBudgetByCategory(subcategory, period);
                     if(subcategoryBudget==null){
@@ -257,7 +257,7 @@ public class BudgetCLI {
 
                     //print subcategory budget with number
                     String subStatus = budgetController.isOverBudget(subcategoryBudget) ? " [OVER BUDGET]" : " (within budget)";
-                    String subLine = indent + "   " + counter[0] + ". Amount: " + subcategoryBudget.getAmount()
+                    String subLine = "   " + counter[0] + ". Amount: " + subcategoryBudget.getAmount()
                             + ", Period: " + subcategoryBudget.getPeriod() + subStatus;
                     System.out.println(subLine);
 
@@ -269,14 +269,14 @@ public class BudgetCLI {
     }
 
     //select only top-level category budgets. subcategories are printed but not selectable. for merge
-    private void printCategoryBudgets(List<LedgerCategory> categories, String indent, Budget.Period period,
+    private void printCategoryBudgets(List<LedgerCategory> categories, Budget.Period period,
                                       int[] counter, Map<Integer, Budget> budgetMap) {
         List<LedgerCategory> topCategories = categories.stream()
                 .filter(c -> c.getParent() == null)
                 .toList();
 
         for (LedgerCategory category : topCategories) {
-            System.out.println(indent + category.getName());
+            System.out.println(category.getName());
 
             // print budgets for this category
             Budget budget = reportController.getActiveBudgetByCategory(category, period);
@@ -286,7 +286,7 @@ public class BudgetCLI {
 
             // print top-level category budget with number
             String status = budgetController.isOverBudget(budget) ? " [OVER BUDGET]" : " (within budget)";
-            String line = indent + counter[0] + ". Amount: " + budget.getAmount()
+            String line = counter[0] + ". Amount: " + budget.getAmount()
                     + ", Period: " + budget.getPeriod() + status;
             System.out.println(line);
 
@@ -302,7 +302,7 @@ public class BudgetCLI {
                 continue;
             }
             for(LedgerCategory subcategory : children){
-                System.out.println(indent + "   " + subcategory.getName());
+                System.out.println("   " + subcategory.getName());
 
                 Budget subcategoryBudget = reportController.getActiveBudgetByCategory(subcategory, period);
                 if(subcategoryBudget==null){
@@ -311,7 +311,7 @@ public class BudgetCLI {
 
                 //print subcategory budget without number
                 String subStatus = budgetController.isOverBudget(subcategoryBudget) ? " [OVER BUDGET]" : " (within budget)";
-                String subLine = indent + "   " + "Amount: " + subcategoryBudget.getAmount()
+                String subLine = "   " + "Amount: " + subcategoryBudget.getAmount()
                         + ", Period: " + subcategoryBudget.getPeriod() + subStatus;
                 System.out.println(subLine);
             }
