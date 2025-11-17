@@ -9,8 +9,10 @@ import com.ledger.domain.Ledger;
 import com.ledger.domain.LedgerCategory;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 
 public class BudgetCLI {
     private final BudgetController budgetController;
@@ -43,28 +45,17 @@ public class BudgetCLI {
         int[] counter = {1};
 
         System.out.println("\n=== Available Budgets by Category ===");
-        List<LedgerCategory> topCategories = selectedLedger.getCategories().stream()
+        List<LedgerCategory> expenseCategories = selectedLedger.getCategories().stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
-                .filter(c -> c.getParent() == null)
                 .toList();
 
-        printCategoryBudgetsRecursive(topCategories, "", period, counter, budgetMap);
+        printCategoryBudgets(expenseCategories, "", period, counter, budgetMap);
 
-        Budget uncategorizedBudget = selectedLedger.getBudgets().stream()
-                .filter(b -> b.getCategory() == null)
-                .filter(b -> b.getPeriod() == period)
-                .findFirst()
-                .orElse(null);
+        Budget uncategorizedBudget = reportController.getActiveBudgetByLedger(selectedLedger, period);
         if(uncategorizedBudget==null){
             System.out.println("No ledger budget found for the selected period.");
             return;
         }
-        if(!uncategorizedBudget.isActive(LocalDate.now())){
-            uncategorizedBudget.refreshIfExpired();
-            budgetController.editBudget(uncategorizedBudget, BigDecimal.ZERO);
-        }
-
-
         System.out.println("\n=== Uncategorized Budgets ===");
         System.out.printf("%d. Amount: %s, Period: %s%s\n",
                 counter[0],
@@ -116,7 +107,8 @@ public class BudgetCLI {
                 (ledgerBudget.getCategory()!=null ? ", Category: " + ledgerBudget.getCategory() : ", No Category") +
                 (budgetController.isOverBudget(ledgerBudget) ? ", [OVER BUDGET]" : ", within budget"));
 
-        List<LedgerCategory> topCategories = selectedLedger.getCategories().stream()
+        List<LedgerCategory> categories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> topCategories = categories.stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
                 .filter(c -> c.getParent() == null)
                 .toList();
@@ -124,18 +116,20 @@ public class BudgetCLI {
         System.out.println("\n=== Categories' Budgets ===");
         for(LedgerCategory category : topCategories){
             Budget categoryBudget = reportController.getActiveBudgetByCategory(category, period);
-            if(categoryBudget!=null && categoryBudget.isActive(LocalDate.now())){
-                System.out.println("Amount: " + categoryBudget.getAmount() +
+            if(categoryBudget!=null){
+                System.out.println("Category: " + category.getName() + "Amount: " + categoryBudget.getAmount() +
                         ", Period: " + categoryBudget.getPeriod() +
-                        ", Category: " + category.getName() +
                         (budgetController.isOverBudget(categoryBudget) ? ", [OVER BUDGET]" : ", within budget"));
             }
-            if(category.getChildren().isEmpty()){
+            List<LedgerCategory> children = categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId().equals(category.getId()))
+                    .toList();
+            if(children.isEmpty()){
                 continue;
             }
-            for(LedgerCategory subcategory : category.getChildren()){
+            for(LedgerCategory subcategory : children){
                 Budget subcategoryBudget = reportController.getActiveBudgetByCategory(subcategory, period);
-                if(subcategoryBudget!=null && subcategoryBudget.isActive(LocalDate.now())){
+                if(subcategoryBudget!=null){
                     System.out.println(" " + "Amount: " + subcategoryBudget.getAmount() +
                             ", Period: " + subcategoryBudget.getPeriod() +
                             ", Category: " + subcategory.getName() +
@@ -161,29 +155,23 @@ public class BudgetCLI {
         //show budgets
         Map<Integer, Budget> budgetMap = new LinkedHashMap<>();
         int[] counter = {1};
+
         System.out.println("\n=== Available Budgets by Category ===");
-        List<LedgerCategory> topCategories = selectedLedger.getCategories().stream()
+        List<LedgerCategory> expenseCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
-                .filter(c -> c.getParent() == null)
                 .toList();
-        printAllCategoryBudgetsRecursive(topCategories, "", period, counter, budgetMap);
+        printAllCategoryBudgets(expenseCategories, "", period, counter, budgetMap);
 
         System.out.println("\n=== Uncategorized Budgets ===");
-        Budget ledgerBudget = selectedLedger.getBudgets().stream()
-                .filter(b -> b.getCategory() == null)
-                .filter(b -> b.getPeriod() == period)
-                .findFirst()
-                .orElse(null);
+        Budget ledgerBudget = reportController.getActiveBudgetByLedger(selectedLedger, period);
         if(ledgerBudget==null){
             System.out.println("No ledger budget found for the selected period.");
             return;
         }
-        if(!ledgerBudget.isActive(LocalDate.now())){
-            ledgerBudget.refreshIfExpired();
-            budgetController.editBudget(ledgerBudget, BigDecimal.ZERO);
-        }
-        System.out.printf("%d. Period: %s%s\n",
+
+        System.out.printf("%d. Amount: %s, Period: %s%s\n",
                 counter[0],
+                ledgerBudget.getAmount(),
                 ledgerBudget.getPeriod(),
                 budgetController.isOverBudget(ledgerBudget) ? " [OVER BUDGET]" : "within budget");
         budgetMap.put(counter[0]++, ledgerBudget);
@@ -228,28 +216,21 @@ public class BudgetCLI {
         return ledgers.get(ledgerIndex);
     }
 
-    //serve per edit
-    private void printAllCategoryBudgetsRecursive(
-            List<LedgerCategory> categories,
-            String indent,
-            Budget.Period period,
-            int[] counter,
-            Map<Integer, Budget> budgetMap) {
+    //for edit
+    private void printAllCategoryBudgets(List<LedgerCategory> categories, String indent, Budget.Period period,
+                                         int[] counter, Map<Integer, Budget> budgetMap) {
 
-        for (LedgerCategory category : categories) {
+        List<LedgerCategory> topCategories = categories.stream()
+                .filter(c -> c.getParent() == null)
+                .toList();
+
+        for (LedgerCategory category : topCategories) {
             System.out.println(indent + category.getName());
 
             // print budgets for this category
-            Budget budget = category.getBudgets().stream()
-                    .filter(b -> b.getPeriod() == period)
-                    .findFirst()
-                    .orElse(null);
+            Budget budget = reportController.getActiveBudgetByCategory(category, period);
             if (budget == null) {
                 continue;
-            }
-            if( !budget.isActive(LocalDate.now())){
-                budget.refreshIfExpired();
-                budgetController.editBudget(budget, BigDecimal.ZERO); //update budget's amount in DB
             }
 
             //print category budget with number
@@ -258,74 +239,83 @@ public class BudgetCLI {
                     + ", Period: " + budget.getPeriod() + status;
             System.out.println(line);
 
-            //budgetMap.put(counter[0]++, budget);
             budgetMap.put(counter[0], budget);
             counter[0]++;
 
             // print subcategories recursively
-            if (!category.getChildren().isEmpty()) {
-                printAllCategoryBudgetsRecursive(
-                        category.getChildren(),
-                        indent + "   ",
-                        period,
-                        counter,
-                        budgetMap);
+            List<LedgerCategory> children = categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId().equals(category.getId()))
+                    .toList();
+            if (!children.isEmpty()) {
+                for(LedgerCategory subcategory : children){
+                    System.out.println(indent + "   " + subcategory.getName());
+
+                    Budget subcategoryBudget = reportController.getActiveBudgetByCategory(subcategory, period);
+                    if(subcategoryBudget==null){
+                        continue;
+                    }
+
+                    //print subcategory budget with number
+                    String subStatus = budgetController.isOverBudget(subcategoryBudget) ? " [OVER BUDGET]" : " (within budget)";
+                    String subLine = indent + "   " + counter[0] + ". Amount: " + subcategoryBudget.getAmount()
+                            + ", Period: " + subcategoryBudget.getPeriod() + subStatus;
+                    System.out.println(subLine);
+
+                    budgetMap.put(counter[0], subcategoryBudget);
+                    counter[0]++;
+                }
             }
         }
     }
 
-    //può selezionare solo budget di categorie di primo livello. serve per merge
-    private void printCategoryBudgetsRecursive(
-            List<LedgerCategory> categories,
-            String indent,
-            Budget.Period period,
-            int[] counter,
-            Map<Integer, Budget> budgetMap) {
+    //select only top-level category budgets. subcategories are printed but not selectable. for merge
+    private void printCategoryBudgets(List<LedgerCategory> categories, String indent, Budget.Period period,
+                                      int[] counter, Map<Integer, Budget> budgetMap) {
+        List<LedgerCategory> topCategories = categories.stream()
+                .filter(c -> c.getParent() == null)
+                .toList();
 
-        for (LedgerCategory category : categories) {
+        for (LedgerCategory category : topCategories) {
             System.out.println(indent + category.getName());
 
             // print budgets for this category
-            Budget budget= category.getBudgets().stream()
-                    .filter(b -> b.getPeriod() == period)
-                    .findFirst()
-                    .orElse(null);
+            Budget budget = reportController.getActiveBudgetByCategory(category, period);
             if(budget==null){
                 continue;
             }
-            if( !budget.isActive(LocalDate.now())){
-                budget.refreshIfExpired();
-                budgetController.editBudget(budget, BigDecimal.ZERO); //update budget's amount in DB
+
+            // print top-level category budget with number
+            String status = budgetController.isOverBudget(budget) ? " [OVER BUDGET]" : " (within budget)";
+            String line = indent + counter[0] + ". Amount: " + budget.getAmount()
+                    + ", Period: " + budget.getPeriod() + status;
+            System.out.println(line);
+
+            //only top-level category budgets are selectable
+            budgetMap.put(counter[0], budget);
+            counter[0]++;
+
+            // print subcategories budget without number
+            List<LedgerCategory> children = categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId().equals(category.getId()))
+                    .toList();
+            if(children.isEmpty()){
+                continue;
             }
+            for(LedgerCategory subcategory : children){
+                System.out.println(indent + "   " + subcategory.getName());
 
-            boolean selectable = category.getParent() == null;
-            if (selectable) {
-                // print top-level category budget with number
-                String status = budgetController.isOverBudget(budget) ? " [OVER BUDGET]" : " (within budget)";
-                String line = indent + counter[0] + ". Amount: " + budget.getAmount()
-                        + ", Period: " + budget.getPeriod() + status;
-                System.out.println(line);
+                Budget subcategoryBudget = reportController.getActiveBudgetByCategory(subcategory, period);
+                if(subcategoryBudget==null){
+                    continue;
+                }
 
-                //budgetMap.put(counter[0]++, budget); //only top-level category budgets are selectable
-                budgetMap.put(counter[0], budget);
-                counter[0]++;
-            } else {
                 //print subcategory budget without number
-                String status = budgetController.isOverBudget(budget) ? " [OVER BUDGET]" : " (within budget)";
-                String line = indent  + " - Amount: " + budget.getAmount()
-                        + ", Period: " + budget.getPeriod() + status;
-                System.out.println(line);
+                String subStatus = budgetController.isOverBudget(subcategoryBudget) ? " [OVER BUDGET]" : " (within budget)";
+                String subLine = indent + "   " + "Amount: " + subcategoryBudget.getAmount()
+                        + ", Period: " + subcategoryBudget.getPeriod() + subStatus;
+                System.out.println(subLine);
             }
 
-            // print subcategories recursively
-            if (!category.getChildren().isEmpty()) {
-                printCategoryBudgetsRecursive(
-                        category.getChildren(),
-                        indent + "   ",
-                        period,
-                        counter,
-                        budgetMap);
-            }
         }
     }
 
