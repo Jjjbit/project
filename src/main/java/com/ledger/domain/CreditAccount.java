@@ -2,15 +2,13 @@ package com.ledger.domain;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.List;
 
 public class CreditAccount extends Account {
-    private BigDecimal creditLimit= BigDecimal.ZERO;
-    private BigDecimal currentDebt = BigDecimal.ZERO;
-    private Integer billDay=null;
-    private Integer dueDay=null;
-    private List<Installment> installments;
+    private BigDecimal creditLimit;
+    private BigDecimal currentDebt;
+    private Integer billDay;
+    private Integer dueDay;
+    //private List<Installment> installments;
 
     public CreditAccount(){}
     public CreditAccount(String name,
@@ -33,7 +31,7 @@ public class CreditAccount extends Account {
         }
         this.billDay = billDate;
         this.dueDay = dueDate;
-        this.installments = new ArrayList<>();
+        //this.installments = new ArrayList<>();
     }
 
     public BigDecimal getCurrentDebt() {
@@ -57,17 +55,14 @@ public class CreditAccount extends Account {
 
 
     public void repayDebt(Transaction tx){
-        //incomingTransactions.add(tx);
-        transactions.add(tx);
+        //transactions.add(tx);
         currentDebt = currentDebt.subtract(tx.getAmount()).setScale(2, RoundingMode.HALF_UP);
         if (currentDebt.compareTo(BigDecimal.ZERO) < 0) {
             currentDebt = BigDecimal.ZERO;
         }
     }
 
-    public List<Installment> getInstallmentPlans() {
-        return installments;
-    }
+    //public List<Installment> getInstallmentPlans() {return installments;}
 }
 
 
