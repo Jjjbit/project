@@ -1,7 +1,6 @@
 package com.ledger.orm;
 
 import com.ledger.domain.Ledger;
-import com.ledger.domain.User;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -75,19 +74,18 @@ public class LedgerDAO {
         return null;
     }
 
-    //set owner
+
     @SuppressWarnings("SqlResolve")
-    public Ledger getByNameAndOwner(String name, User owner) throws SQLException {
+    public Ledger getByNameAndOwnerId(String name, Long ownerId) throws SQLException {
         String sql = "SELECT id, name FROM ledgers WHERE name = ? AND user_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, name);
-            stmt.setLong(2, owner.getId());
+            stmt.setLong(2, ownerId);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 Ledger ledger = new Ledger();
                 ledger.setId(rs.getLong("id"));
                 ledger.setName(rs.getString("name"));
-                ledger.setOwner(owner);
                 return ledger;
             }
 
@@ -95,8 +93,7 @@ public class LedgerDAO {
         return null;
     }
 
-    //not set transactions
-    //not set owner
+
     @SuppressWarnings("SqlResolve")
     public List<Ledger> getLedgersByUserId(Long userId) throws SQLException {
         List<Ledger> ledgers = new ArrayList<>();
@@ -113,7 +110,6 @@ public class LedgerDAO {
             }
 
         }
-
 
         return ledgers;
     }
