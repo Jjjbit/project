@@ -12,7 +12,7 @@ public class Installment {
         FINAL
     }
 
-    private Long id; // Unique identifier for the installment plan
+    private long id; // Unique identifier for the installment plan
     private BigDecimal totalAmount;
     private int totalPeriods;
     private BigDecimal interest;
@@ -58,7 +58,7 @@ public class Installment {
     public Account getLinkedAccount() {
         return linkedAccount;
     }
-    public Long getId() {
+    public long getId() {
         return id;
     }
     public void setIncludedInCurrentDebts(boolean includedInCurrentDebts) {
@@ -103,7 +103,7 @@ public class Installment {
     public String getName() {
         return name;
     }
-    public void setId(Long id) {
+    public void setId(long id) {
         this.id = id;
     }
     public BigDecimal getMonthlyPayment(int period) {

@@ -9,8 +9,8 @@ public class Budget {
         MONTHLY, YEARLY
     }
 
-    private Long id;
-    private BigDecimal amount=BigDecimal.ZERO; // Budget amount
+    private long id;
+    private BigDecimal amount; // Budget amount
     private Period period; // e.g., "monthly", "yearly"
     private LedgerCategory category; // Category or subcategory
     private transient LocalDate startDate;
@@ -55,10 +55,10 @@ public class Budget {
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
-    public Long getId() {
+    public long getId() {
         return id;
     }
-    public void setId(Long id) {
+    public void setId(long id) {
         this.id = id;
     }
     public BigDecimal getAmount() {

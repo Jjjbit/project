@@ -2,24 +2,19 @@ package com.ledger.domain;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.YearMonth;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public abstract class Account {
-    protected Long id;
+    protected long id;
     protected String name;
     protected BigDecimal balance;
     protected AccountType type;
     protected AccountCategory category;
     protected User owner;
     protected String notes;
-    protected Boolean hidden = false;
-    protected List<Transaction> transactions = new ArrayList<>();
-    protected Boolean includedInNetAsset;
-    protected Boolean selectable;
+    protected boolean hidden;
+    //protected List<Transaction> transactions = new ArrayList<>();
+    protected boolean includedInNetAsset;
+    protected boolean selectable;
 
     public Account() {}
     public Account(
@@ -63,7 +58,7 @@ public abstract class Account {
     public void setOwner(User owner) {
         this.owner = owner;
     }
-    public void setId(Long id) {
+    public void setId(long id) {
         this.id = id;
     }
     public void setName(String name) {
@@ -86,25 +81,11 @@ public abstract class Account {
     public User getOwner() {
         return owner;
     }
-    public List<Transaction> getTransactions() {
-        return transactions;
-    }
-    /*public List<Transaction> getTransactions() {
-        List<Transaction> allTransactions = new ArrayList<>();
-        allTransactions.addAll(incomingTransactions);
-        allTransactions.addAll(outgoingTransactions);
-        return allTransactions;
-    }
-    public List<Transaction> getIncomingTransactions() {
-        return incomingTransactions;
-    }
-    public List<Transaction> getOutgoingTransactions() {
-        return outgoingTransactions;
-    }*/
+    //public List<Transaction> getTransactions() {return transactions;}
     public BigDecimal getBalance() {
         return this.balance;
     }
-    public Long getId() {
+    public long getId() {
         return id;
     }
     public String getNotes() {
@@ -128,63 +109,4 @@ public abstract class Account {
     public void setType(AccountType type) {
         this.type = type;
     }
-
-
-    /*public void addTransaction(Transaction transaction) { //for test
-        if(transaction instanceof Income){
-            if ( !this.hidden && this.selectable) {
-                credit(transaction.getAmount());
-                incomingTransactions.add(transaction);
-            }
-        } else if (transaction instanceof Expense) {
-            if (!this.hidden && this.selectable) {
-                if (! this.category.equals(AccountCategory.CREDIT) && this.balance.compareTo(transaction.getAmount()) <= 0) {
-                    throw new IllegalArgumentException("Insufficient funds in the account to execute this transaction.");
-                }
-                debit(transaction.getAmount());
-                outgoingTransactions.add(transaction);
-            }
-
-        } else if (transaction instanceof Transfer) {
-            if ((transaction.getFromAccount() != null && transaction.getFromAccount().equals(this))) {
-                if (! this.category.equals(AccountCategory.CREDIT) && this.balance.compareTo(transaction.getAmount()) <= 0) {
-                    throw new IllegalArgumentException("Insufficient funds in the account to execute this transaction.");
-                }
-                debit(transaction.getAmount());
-                outgoingTransactions.add(transaction);
-            }
-            if (transaction.getToAccount() != null &&  transaction.getToAccount().equals(this)) {
-                credit(transaction.getAmount());
-                incomingTransactions.add(transaction);
-            }
-        }
-    }*/
-
-
-    public List<Transaction> getTransactionsForMonth(YearMonth month) {
-        return getTransactions().stream()
-                .filter(t -> t.getDate().getYear() == month.getYear() && t.getDate().getMonth() == month.getMonth())
-                .sorted(Comparator.comparing(Transaction::getDate).reversed())
-                .collect(Collectors.toList());
-    }
-
-    public BigDecimal getAccountTotalIncomeForMonth(YearMonth month) {
-        return getTransactionsForMonth(month).stream()
-                .filter(tx -> tx.getType() == TransactionType.INCOME
-                        || (tx.getType() == TransactionType.TRANSFER
-                        && tx instanceof Transfer
-                        && ((Transfer) tx).getToAccount().equals(this)))
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-    public BigDecimal getAccountTotalExpenseForMonth(YearMonth month) {
-        return getTransactionsForMonth(month).stream()
-                .filter(tx -> tx.getType() == TransactionType.EXPENSE
-                        || (tx.getType() == TransactionType.TRANSFER
-                        && tx instanceof Transfer
-                        && ((Transfer) tx).getFromAccount().equals(this)))
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
 }

@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public abstract class Transaction {
-    protected Long id;
+    protected long id;
     protected LocalDate date;
     protected BigDecimal amount;
     protected String note;
@@ -35,7 +35,7 @@ public abstract class Transaction {
     public LedgerCategory getCategory() {
         return category;
     }
-    public Long getId() {
+    public long getId() {
         return id;
     }
     public TransactionType getType() {
@@ -90,7 +90,7 @@ public abstract class Transaction {
     public void setLedger(Ledger ledger){
         this.ledger = ledger;
     }
-    public void setId(Long id) {
+    public void setId(long id) {
         this.id = id;
     }
 }
