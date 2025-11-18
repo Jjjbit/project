@@ -50,7 +50,7 @@ public class UserController {
     }
 
      public boolean updateUsername(User user, String newUsername) {
-        if(currentUser == null || !currentUser.getId().equals(user.getId())){
+        if(currentUser == null || currentUser.getId() != user.getId()){
             return false;
         }
         try {
