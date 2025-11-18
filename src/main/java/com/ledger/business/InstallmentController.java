@@ -78,7 +78,7 @@ public class InstallmentController {
                     includedInCurrentDebts
             );
             installmentDAO.insert(plan); //insert to db
-            creditAccount.getInstallmentPlans().add(plan);
+            //creditAccount.getInstallmentPlans().add(plan);
             if(includedInCurrentDebts){
                 BigDecimal oldDebt = creditAccount.getCurrentDebt();
                 creditAccount.setCurrentDebt(oldDebt.add(plan.getRemainingAmount()));
@@ -98,8 +98,8 @@ public class InstallmentController {
                 );
                 transactionDAO.insert(tx); //insert transaction to db
                 creditAccount.debit(repaidAmount); //reduce balance or increase debt
-                creditAccount.getTransactions().add(tx);
-                category.getTransactions().add(tx);
+                //creditAccount.getTransactions().add(tx);
+                //category.getTransactions().add(tx);
                 accountDAO.update(creditAccount); //update balance and current debt in db
             }
 
@@ -121,7 +121,7 @@ public class InstallmentController {
             }
 
             CreditAccount creditAccount = (CreditAccount) plan.getLinkedAccount();
-            creditAccount.getInstallmentPlans().remove(plan);
+            //creditAccount.getInstallmentPlans().remove(plan);
             if(plan.isIncludedInCurrentDebts()){
                 BigDecimal oldDebt = creditAccount.getCurrentDebt();
                 creditAccount.setCurrentDebt(oldDebt.subtract(plan.getRemainingAmount()));
@@ -142,11 +142,10 @@ public class InstallmentController {
 
         if(includedInCurrentDebts != null && includedInCurrentDebts != plan.isIncludedInCurrentDebts()) {
             CreditAccount creditAccount = (CreditAccount) plan.getLinkedAccount();
+            BigDecimal oldDebt = creditAccount.getCurrentDebt();
             if (includedInCurrentDebts) {
-                BigDecimal oldDebt = creditAccount.getCurrentDebt();
                 creditAccount.setCurrentDebt(oldDebt.add(plan.getRemainingAmount()));
             } else {
-                BigDecimal oldDebt = creditAccount.getCurrentDebt();
                 creditAccount.setCurrentDebt(oldDebt.subtract(plan.getRemainingAmount()));
             }
             plan.setIncludedInCurrentDebts(includedInCurrentDebts);
@@ -192,13 +191,13 @@ public class InstallmentController {
 
             plan.repayOnePeriod(); //update remaining amount and paid periods
             creditAccount.debit(paymentAmount); //reduce balance or increase debt
-            creditAccount.getTransactions().add(tx); //add transaction to account
+            //creditAccount.getTransactions().add(tx); //add transaction to account
             if(plan.isIncludedInCurrentDebts()){
                 BigDecimal oldDebt = creditAccount.getCurrentDebt();
                 creditAccount.setCurrentDebt(oldDebt.subtract(paymentAmount));
             }
             accountDAO.update(creditAccount); //update balance and current debt in db
-            category.getTransactions().add(tx); //add transaction to category
+            //category.getTransactions().add(tx); //add transaction to category
 
             return installmentDAO.update(plan); //update plan in db
         }catch (SQLException e){
@@ -209,10 +208,10 @@ public class InstallmentController {
 
     public List<Installment> getActiveInstallments(CreditAccount account) {
         try {
-            List<Installment> installments = installmentDAO.getByAccountId(account.getId()).stream()
+            return installmentDAO.getByAccountId(account.getId()).stream()
                     .filter(plan -> plan.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
                     .toList();
-            return installments;
+
         }catch (SQLException e){
             System.err.println("SQL Exception in getActiveInstallmentPlansByAccount: " + e.getMessage());
             return List.of();

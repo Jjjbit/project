@@ -239,16 +239,6 @@ public class TransactionController {
 
             LedgerCategory oldCategory = tx.getCategory();
             if (category != null) { //category change
-                if (ledger != null) {
-                    if (category.getLedger().getId() != ledger.getId()) {
-                        return false;
-                    }
-                } else {
-                    if (category.getLedger().getId() != oldLedger.getId()) {
-                        return false;
-                    }
-                }
-
                 if (tx instanceof Income && category.getType() != CategoryType.INCOME) {
                     return false;
                 }
@@ -432,9 +422,6 @@ public class TransactionController {
         }
 
         if (category != null && category.getId() != oldCategory.getId()) {
-            if (category.getLedger().getId() != income.getLedger().getId()) {
-                return false;
-            }
             if (category.getType() != CategoryType.INCOME) {
                 return false;
             }
@@ -502,9 +489,6 @@ public class TransactionController {
         }
 
         if (category != null && category.getId() != oldCategory.getId()) {
-            if (category.getLedger().getId() != expense.getLedger().getId()) {
-                return false;
-            }
             if (category.getType() != CategoryType.EXPENSE) {
                 return false;
             }

@@ -42,13 +42,12 @@ public class LedgerCategoryController {
                 return null;
             }
             LedgerCategory category = new LedgerCategory(name, type, ledger);
-            ledger.getCategories().add(category);
             ledgerCategoryDAO.insert(category);
 
             //create budget for ledgerCategory
             for(Budget.Period period : Budget.Period.values()){
                 Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
-                category.getBudgets().add(budget);
+                //category.getBudgets().add(budget);
                 budgetDAO.insert(budget);
             }
 
@@ -59,7 +58,7 @@ public class LedgerCategoryController {
         }
     }
 
-    public LedgerCategory createSubCategory(String name, LedgerCategory parentCategory) {
+    public LedgerCategory createSubCategory(String name, LedgerCategory parentCategory, Ledger ledger) {
         if(parentCategory == null){
             return null;
         }
@@ -70,25 +69,20 @@ public class LedgerCategoryController {
             return null;
         }
         try {
-            Ledger ledger = parentCategory.getLedger();
-            if (ledgerDAO.getById(ledger.getId()) == null) {
-                return null;
-            }
-
             if (ledgerCategoryDAO.getByNameAndLedger(name, ledger) != null) {
                 return null;
             }
 
             LedgerCategory category = new LedgerCategory(name, parentCategory.getType(), ledger);
             category.setParent(parentCategory);
-            parentCategory.getChildren().add(category);
-            ledger.getCategories().add(category);
+            //parentCategory.getChildren().add(category);
+            //ledger.getCategories().add(category);
             ledgerCategoryDAO.insert(category);
 
             //create budget for ledgerCategory
             for(Budget.Period period : Budget.Period.values()){
                 Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
-                category.getBudgets().add(budget);
+                //category.getBudgets().add(budget);
                 budgetDAO.insert(budget);
             }
 
@@ -107,9 +101,9 @@ public class LedgerCategoryController {
             if (subCategory.getParent() == null) {
                 return false;
             }
-            LedgerCategory parentCategory = subCategory.getParent();
+            //LedgerCategory parentCategory = subCategory.getParent();
             subCategory.setParent(null);
-            parentCategory.getChildren().remove(subCategory);
+            //parentCategory.getChildren().remove(subCategory);
 
             return ledgerCategoryDAO.update(subCategory); //update parent_id in database
         }catch (SQLException e){
@@ -129,24 +123,23 @@ public class LedgerCategoryController {
             if (newParent.getParent() != null) {
                 return false;
             }
-            if (category.getId().equals(newParent.getId())) {
+            if (category.getId() == newParent.getId()) {
                 return false;
             }
             if (category.getParent() != null) {
                 return false;
             }
-            if (!category.getChildren().isEmpty()) {
+            /*if (!category.getChildren().isEmpty()) {
+                return false;
+            }*/
+            if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId()).isEmpty()){
                 return false;
             }
             if (category.getType() != newParent.getType()) {
                 return false;
             }
-            Ledger ledger = category.getLedger();
-            if (!newParent.getLedger().getId().equals(ledger.getId())) {
-                return false;
-            }
+
             category.setParent(newParent);
-            newParent.getChildren().add(category);
             return ledgerCategoryDAO.update(category); //update parent_id in database
         }catch (SQLException e){
             System.err.println("SQL Exception during demoteCategory: " + e.getMessage());
@@ -154,7 +147,7 @@ public class LedgerCategoryController {
         }
     }
 
-    public boolean renameCategory(LedgerCategory category, String newName) {
+    public boolean renameCategory(LedgerCategory category, String newName, Ledger ledger) {
         try{
         if(category == null){
             return false;
@@ -162,9 +155,9 @@ public class LedgerCategoryController {
         if(newName == null || newName.trim().isEmpty()) {
             return false;
         }
-        Ledger ledger = category.getLedger();
+
         LedgerCategory existingCategory = ledgerCategoryDAO.getByNameAndLedger(newName, ledger);
-        if(existingCategory != null && !existingCategory.getId().equals(category.getId())) {
+        if(existingCategory != null && existingCategory.getId() != category.getId()) {
             return false;
         }
 
@@ -184,20 +177,23 @@ public class LedgerCategoryController {
             if(ledgerCategoryDAO.getById(category.getId()) == null) {
                 return false;
             }
-            if(!category.getChildren().isEmpty()){
+            /*if(!category.getChildren().isEmpty()){
+                return false;
+            }*/
+            if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId()).isEmpty()){
                 return false;
             }
 
             Ledger ledger = category.getLedger();
-            LedgerCategory parent = category.getParent();
+            //LedgerCategory parent = category.getParent();
 
             List<Transaction> txs = transactionDAO.getByCategoryId(category.getId()); //get transactions from db
 
-            ledger.getCategories().remove(category); //remove from ledger
+            //ledger.getCategories().remove(category); //remove from ledger
 
-            if(parent != null){
-                parent.getChildren().remove(category); //remove from parent
-            }
+            /*if(parent != null){
+                parent.getChildren().remove(category);
+            }*/
 
             if(deleteTransaction){//delete transactions
                 for(Transaction tx : txs){
@@ -208,10 +204,7 @@ public class LedgerCategoryController {
                 if(migrateCategory == null){
                     return false;
                 }
-                if(!migrateCategory.getLedger().getId().equals(ledger.getId())){
-                    return false;
-                }
-                if(migrateCategory.getId().equals(category.getId())){
+                if(migrateCategory.getId() == category.getId()){
                     return false;
                 }
                 if(migrateCategory.getType() != category.getType()){
@@ -221,7 +214,7 @@ public class LedgerCategoryController {
                     tx.setCategory(migrateCategory);
                     transactionDAO.update(tx);
                 }
-                migrateCategory.getTransactions().addAll(txs);
+                //migrateCategory.getTransactions().addAll(txs);
 
             }
 
@@ -240,15 +233,12 @@ public class LedgerCategoryController {
             if (category.getParent() == null) {
                 return false;
             }
-            Ledger ledger = category.getLedger();
+
             if (newParent != null) {
-                if (!newParent.getLedger().getId().equals(ledger.getId())) {
-                    return false;
-                }
                 if (newParent.getParent() != null) {
                     return false;
                 }
-                if (category.getId().equals(newParent.getId())) {
+                if (category.getId() == newParent.getId()) {
                     return false;
                 }
                 if (category.getType() != newParent.getType()) {
@@ -258,10 +248,10 @@ public class LedgerCategoryController {
                 return false; //cannot set parent to null with this method
             }
 
-            LedgerCategory oldParent = category.getParent();
-            oldParent.getChildren().remove(category);
+            //LedgerCategory oldParent = category.getParent();
+            //oldParent.getChildren().remove(category);
             category.setParent(newParent);
-            newParent.getChildren().add(category);
+            //newParent.getChildren().add(category);
             return ledgerCategoryDAO.update(category);
         }catch (SQLException e){
             System.err.println("SQL Exception during changeParent: " + e.getMessage());

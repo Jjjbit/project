@@ -36,21 +36,21 @@ public class LedgerController {
         }
 
         try {
-            if (ledgerDAO.getByNameAndOwner(name, owner) != null) {
+            if (ledgerDAO.getByNameAndOwnerId(name, owner.getId()) != null) {
                 return null;
             }
 
             Ledger ledger = new Ledger(name, owner);
             ledgerDAO.insert(ledger); //insert to db
-            owner.getLedgers().add(ledger);
+            //owner.getLedgers().add(ledger); //add to user
 
-            List<Category> categoryTree = categoryDAO.getCategoryTree(); //get full tree
-            List<Category> templateCategories = new ArrayList<>();
-            for (Category cat : categoryTree) {
+            //List<Category> categoryTree = categoryDAO.getCategoryTree(); //get full tree
+            List<Category> templateCategories = new ArrayList<>(categoryDAO.getCategoriesNullParent()); //get only parents
+            /*for (Category cat : categoryTree) {
                 if (cat.getParent() == null) {
                     templateCategories.add(cat);
                 }
-            }
+            }*/
 
             List<LedgerCategory> allCategories = new ArrayList<>();
             for (Category template : templateCategories) {
@@ -58,21 +58,21 @@ public class LedgerController {
                 allCategories.addAll(categoriesFromTemplate);
             }
 
-            ledger.getCategories().addAll(allCategories);
+            //ledger.getCategories().addAll(allCategories);
 
             //create Budget for ledger level for each Period
             for (Budget.Period period : Budget.Period.values()) {
                 Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, ledger);
-                ledger.getBudgets().add(ledgerBudget);
+                //ledger.getBudgets().add(ledgerBudget);
                 budgetDAO.insert(ledgerBudget);
             }
 
             //create Budget for each default category
-            for (LedgerCategory cat : ledger.getCategories()) {
+            for (LedgerCategory cat : allCategories) {
                 if (cat.getType() == CategoryType.EXPENSE) {
                     for (Budget.Period period : Budget.Period.values()) {
                         Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, ledger);
-                        cat.getBudgets().add(categoryBudget);
+                        //cat.getBudgets().add(categoryBudget);
                         budgetDAO.insert(categoryBudget);
                     }
                 }
@@ -95,11 +95,11 @@ public class LedgerController {
             result.add(copy);
             ledgerCategoryDAO.insert(copy);
 
-            for (Category childTemplate : template.getChildren()) {
+            for (Category childTemplate : categoryDAO.getCategoriesByParentId(template.getId())) {
                 List<LedgerCategory> childCopies = copyCategoryTree(childTemplate, ledger);
                 for (LedgerCategory childCopy : childCopies) {
                     childCopy.setParent(copy);
-                    copy.getChildren().add(childCopy);
+                    //copy.getChildren().add(childCopy);
                     ledgerCategoryDAO.update(childCopy);
                 }
                 result.addAll(childCopies);
@@ -129,48 +129,44 @@ public class LedgerController {
                 if (tx instanceof Income) {
                     if (to != null) {
                         to.debit(tx.getAmount()); //modifica bilancio account
-                        to.getTransactions().remove(tx); //rimuove tx da account
-                        //to.getIncomingTransactions().remove(tx); //rimuove tx da account
+                        //to.getTransactions().remove(tx); //rimuove tx da account
                         tx.setToAccount(null); //rimuove riferimento a account in tx
                         accountDAO.update(to); //update balance in db
                     }
                 } else if (tx instanceof Expense) {
                     if (from != null) {
                         from.credit(tx.getAmount());
-                        from.getTransactions().remove(tx);
-                        //from.getOutgoingTransactions().remove(tx);
+                        //from.getTransactions().remove(tx);
                         tx.setFromAccount(null);
                         accountDAO.update(from);
                     }
                 } else if (tx instanceof Transfer) {
                     if (from != null) {
                         from.credit(tx.getAmount());
-                        from.getTransactions().remove(tx);
-                        //from.getOutgoingTransactions().remove(tx);
+                        //from.getTransactions().remove(tx);
                         tx.setFromAccount(null);
                         accountDAO.update(from);
                     }
                     if (to != null) {
                         to.debit(tx.getAmount());
-                        to.getTransactions().remove(tx);
-                        //to.getIncomingTransactions().remove(tx);
+                        //to.getTransactions().remove(tx);
                         tx.setToAccount(null);
                         accountDAO.update(to);
                     }
                 }
 
                 if (category != null) {
-                    category.getTransactions().remove(tx);
+                    //category.getTransactions().remove(tx);
                     tx.setCategory(null);
                 }
 
-                ledger.getTransactions().remove(tx); //rimuove tx da ledger
+                //ledger.getTransactions().remove(tx); //rimuove tx da ledger
                 tx.setLedger(null); //rimuove riferimento a ledger in tx
                 transactionDAO.delete(tx);
             }
 
-            User user = ledger.getOwner();
-            user.getLedgers().remove(ledger); //rimuove ledger da user
+            //User user = ledger.getOwner();
+            //user.getLedgers().remove(ledger); //rimuove ledger da user
             return ledgerDAO.delete(ledger);
         } catch (SQLException e) {
             System.err.println("SQL Exception during ledger deletion: " + e.getMessage());
@@ -187,16 +183,15 @@ public class LedgerController {
             String newName = original.getName() + " Copy";
             Ledger copy = new Ledger(newName, original.getOwner());
             ledgerDAO.insert(copy); // insert to db
-            original.getOwner().getLedgers().add(copy);
+            //original.getOwner().getLedgers().add(copy);
 
-            //List<LedgerCategory> originalCategories = ledgerCategoryDAO.getLedgerCategoriesTreeByLedgerId(original.getId());
-            List<LedgerCategory> tree = original.getCategories();
-            List<LedgerCategory> parents = new ArrayList<>();
-            for (LedgerCategory cat : tree) {
+            //List<LedgerCategory> tree = ledgerCategoryDAO.getTreeByLedgerId(original.getId());
+            List<LedgerCategory> parents = new ArrayList<>(ledgerCategoryDAO.getCategoriesNullParent(original.getId()));
+            /*for (LedgerCategory cat : tree) {
                 if (cat.getParent() == null) {
                     parents.add(cat);
                 }
-            }
+            }*/
 
             List<LedgerCategory> categoryCopies = new ArrayList<>();
             for (LedgerCategory originalCat : parents) {
@@ -204,21 +199,21 @@ public class LedgerController {
                 categoryCopies.addAll(copiedCats);
             }
 
-            copy.getCategories().addAll(categoryCopies);
+            //copy.getCategories().addAll(categoryCopies);
 
             //create Budget for ledger level for each Period
             for (Budget.Period period : Budget.Period.values()) {
                 Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, copy);
-                copy.getBudgets().add(ledgerBudget);
+                //copy.getBudgets().add(ledgerBudget);
                 budgetDAO.insert(ledgerBudget);
             }
 
             //create Budget for each default category
-            for (LedgerCategory cat : copy.getCategories()) {
+            for (LedgerCategory cat : categoryCopies) {
                 if (cat.getType() == CategoryType.EXPENSE) {
                     for (Budget.Period period : Budget.Period.values()) {
                         Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, copy);
-                        cat.getBudgets().add(categoryBudget);
+                        //cat.getBudgets().add(categoryBudget);
                         budgetDAO.insert(categoryBudget);
                     }
                 }
@@ -242,11 +237,11 @@ public class LedgerController {
         result.add(copy);
         ledgerCategoryDAO.insert(copy);
 
-        for(LedgerCategory child : oldCategory.getChildren()) {
+        for(LedgerCategory child : ledgerCategoryDAO.getCategoriesByParentId(oldCategory.getId())) {
             List<LedgerCategory> childCategories = copyLedgerCategoryTree(child, newLedger);
             for (LedgerCategory childCategory : childCategories) {
                 childCategory.setParent(copy);
-                copy.getChildren().add(childCategory);
+                //copy.getChildren().add(childCategory);
                 ledgerCategoryDAO.update(childCategory);
             }
             result.addAll(childCategories);
@@ -267,8 +262,8 @@ public class LedgerController {
             return false;
         }
         try {
-            Ledger existingLedger = ledgerDAO.getByNameAndOwner(newName, ledger.getOwner());
-            if (existingLedger != null && !existingLedger.getId().equals(ledger.getId())) {
+            Ledger existingLedger = ledgerDAO.getByNameAndOwnerId(newName, ledger.getOwner().getId());
+            if (existingLedger != null && existingLedger.getId() != ledger.getId()) {
                 return false;
             }
 
