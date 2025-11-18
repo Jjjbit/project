@@ -15,6 +15,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -67,8 +68,10 @@ public class InstallmentControllerTest {
         // Create a test ledger for the user
         Ledger testLedger = ledgerController.createLedger("Test Ledger", testUser);
 
+        List<LedgerCategory> testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+
         // get a test ledger category
-        category = testLedger.getCategories().stream()
+        category = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
                 .findFirst()
                 .orElse(null);
@@ -115,7 +118,6 @@ public class InstallmentControllerTest {
                 LocalDate.now(),
                 category, true);
         assertNotNull(plan);
-        assertEquals(1, account.getInstallmentPlans().size());
         assertNotNull(installmentDAO.getById(plan.getId()));
 
         Installment savedPlan = installmentDAO.getById(plan.getId());
@@ -150,7 +152,6 @@ public class InstallmentControllerTest {
                 LocalDate.now(),
                 category, false);
         assertNotNull(plan);
-        assertEquals(1, account.getInstallmentPlans().size());
         assertNotNull(installmentDAO.getById(plan.getId()));
 
         Installment savedPlan = installmentDAO.getById(plan.getId());
@@ -212,8 +213,6 @@ public class InstallmentControllerTest {
 
         assertEquals(3, plan.getPaidPeriods());
         assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.valueOf(94.50)));
-        assertEquals(1, account.getInstallmentPlans().size());
-        assertEquals(1, account.getTransactions().size());
         //balance of account 1000-31.5=968.5
         assertEquals(0, account.getBalance().compareTo(BigDecimal.valueOf(968.50)));
     }
@@ -270,7 +269,6 @@ public class InstallmentControllerTest {
 
         boolean deleted = installmentController.deleteInstallment(plan);
         assertTrue(deleted);
-        assertEquals(0, account.getInstallmentPlans().size());
         assertNull(installmentDAO.getById(plan.getId()));
         assertEquals(0, installmentDAO.getByAccountId(account.getId()).size());
     }
@@ -293,7 +291,7 @@ public class InstallmentControllerTest {
 
         boolean deleted = installmentController.deleteInstallment(plan);
         assertTrue(deleted);
-        assertEquals(0, account.getInstallmentPlans().size());
+
         assertNull(installmentDAO.getById(plan.getId()));
         assertEquals(0, installmentDAO.getByAccountId(account.getId()).size());
         assertEquals(2, transactionDAO.getByAccountId(account.getId()).size());
@@ -395,5 +393,52 @@ public class InstallmentControllerTest {
 
         assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
         assertEquals(1, transactionDAO.getByCategoryId(category.getId()).size());
+    }
+
+    //test edit installment plan
+    @Test
+    public void testEditInstallment_Success() throws SQLException {
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12, BigDecimal.valueOf(5.00), // interest
+                Installment.Strategy.EVENLY_SPLIT,
+                LocalDate.now(),
+                category, true);
+        //remaining amount = 126 -10.5=115.5
+        //balance of account =1000-10.5=989.5
+        //current debt =20 +115.5=135.5
+
+        boolean edited = installmentController.editInstallment(plan, false);
+        assertTrue(edited);
+
+        Installment updatedPlan = installmentDAO.getById(plan.getId());
+        assertNotNull(updatedPlan);
+        assertFalse(updatedPlan.isIncludedInCurrentDebts());
+
+        CreditAccount updatedAccount = (CreditAccount) accountDAO.getAccountById(account.getId());
+        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(989.50))); //balance remains the same
+        assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(20.00))); //current debt decreased by 115.5
+    }
+
+    @Test
+    public void testEditInstallment_Success2() throws SQLException {
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12, BigDecimal.valueOf(5.00), // interest
+                Installment.Strategy.EVENLY_SPLIT,
+                LocalDate.now(),
+                category, false);
+        //remaining amount = 126 -10.5=115.5
+        //balance of account =1000-10.5=989.5
+        //current debt =20
+
+        boolean edited = installmentController.editInstallment(plan, true);
+        assertTrue(edited);
+
+        Installment updatedPlan = installmentDAO.getById(plan.getId());
+        assertNotNull(updatedPlan);
+        assertTrue(updatedPlan.isIncludedInCurrentDebts());
+
+        CreditAccount updatedAccount = (CreditAccount) accountDAO.getAccountById(account.getId());
+        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(989.50))); //balance remains the same
+        assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(135.50))); //current debt increased by 115.5
     }
 }
