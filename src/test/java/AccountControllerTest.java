@@ -23,6 +23,7 @@ public class AccountControllerTest {
     private Connection connection;
     private User testUser;
     private Ledger testLedger;
+    private List<LedgerCategory> testCategories;
 
     private AccountController accountController;
     private TransactionController transactionController;
@@ -58,6 +59,8 @@ public class AccountControllerTest {
         testUser=userController.login("test user", "password123"); // login to set current user
 
         testLedger=ledgerController.createLedger("Test Ledger", testUser);
+
+        testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
     }
 
     private void runSchemaScript() {
@@ -91,13 +94,8 @@ public class AccountControllerTest {
     @Test
     public void testCreateBasicAccount() throws SQLException {
         BasicAccount account = accountController.createBasicAccount("Alice's Savings",
-                BigDecimal.valueOf(5000),
-                AccountType.CASH,
-                AccountCategory.FUNDS,
-                testUser,
-                null,
-                true,
-                true);
+                BigDecimal.valueOf(5000), AccountType.CASH, AccountCategory.FUNDS, testUser,
+                null, true, true);
         assertNotNull(account);
 
         Account savedAccount = accountDAO.getAccountById(account.getId());
@@ -107,29 +105,21 @@ public class AccountControllerTest {
         assertEquals(0, savedAccount.getBalance().compareTo(BigDecimal.valueOf(5000.00)));
         assertTrue(savedAccount.getSelectable());
         assertTrue(savedAccount.getIncludedInNetAsset());
+        assertFalse(savedAccount.getHidden());
 
         List<Account> userAccounts = accountDAO.getAccountsByOwnerId(testUser.getId());
         assertEquals(1, userAccounts.size());
         assertEquals(savedAccount.getId(), userAccounts.getFirst().getId());
-
-        assertEquals(1, testUser.getAccounts().size());
-        assertEquals(savedAccount.getId(), testUser.getAccounts().getFirst().getId());
     }
 
     @Test
     public void testCreateCreditAccount() throws SQLException {
-        CreditAccount account = accountController.createCreditAccount(
-                "Bob's Credit Card",
-                null,
+        CreditAccount account = accountController.createCreditAccount("Bob's Credit Card", null,
                 BigDecimal.valueOf(2000.00), //balance
-                true,
-                true,
-                testUser,
-                AccountType.CREDIT_CARD,
+                true, true, testUser, AccountType.CREDIT_CARD,
                 BigDecimal.valueOf(5000.00), //credit limit
                 BigDecimal.valueOf(1000.00), //current debt
-                null,
-                null);
+                null, null);
         assertNotNull(account);
 
         Account savedAccount = accountDAO.getAccountById(account.getId());
@@ -141,22 +131,17 @@ public class AccountControllerTest {
         assertEquals(0, ((CreditAccount)savedAccount).getCurrentDebt().compareTo(BigDecimal.valueOf(1000.00)));
         assertTrue(savedAccount.getSelectable());
         assertTrue(savedAccount.getIncludedInNetAsset());
-        assertNull(((CreditAccount)savedAccount).getDueDay());
-        assertNull(((CreditAccount)savedAccount).getBillDay());
+        assertEquals(0, ((CreditAccount) savedAccount).getDueDay());
+        assertEquals(0, ((CreditAccount)savedAccount).getBillDay());
+        assertFalse(savedAccount.getHidden());
 
         List<Account> userAccounts = accountDAO.getAccountsByOwnerId(testUser.getId());
         assertEquals(1, userAccounts.size());
         assertEquals(savedAccount.getId(), userAccounts.getFirst().getId());
-
-        assertEquals(1, testUser.getAccounts().size());
-        assertEquals(savedAccount.getId(), testUser.getAccounts().getFirst().getId());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.valueOf(2000.00)));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(1000.00)));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.valueOf(1000.00)));
     }
 
     @Test
-    public void testCreateLoanAccount_Success_NoReceivingAccount() throws SQLException {
+    public void testCreateLoanAccount_NoReceivingAccount() throws SQLException {
         LoanAccount account = accountController.createLoanAccount("Car Loan", null, true,
                 testUser, 60, 0,
                 BigDecimal.valueOf(3.5), //3.5% annual interest rate
@@ -165,7 +150,6 @@ public class AccountControllerTest {
                 LocalDate.now(), LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
         assertNotNull(account);
         //remaining amount 16372.80
-        assertEquals(1, account.getTransactions().size()); //initial loan disbursement transaction
 
         Account savedAccount = accountDAO.getAccountById(account.getId());
         assertNotNull(savedAccount);
@@ -174,6 +158,7 @@ public class AccountControllerTest {
         assertEquals(0, savedAccount.getBalance().compareTo(BigDecimal.ZERO));
         assertFalse(savedAccount.getSelectable());
         assertTrue(savedAccount.getIncludedInNetAsset());
+        assertFalse(savedAccount.getHidden());
         assertEquals(60, ((LoanAccount)savedAccount).getTotalPeriods());
         assertEquals(0, ((LoanAccount)savedAccount).getRepaidPeriods());
         assertEquals(0, ((LoanAccount)savedAccount).getAnnualInterestRate().compareTo(BigDecimal.valueOf(3.5)));
@@ -193,15 +178,10 @@ public class AccountControllerTest {
         assertEquals(account.getId(), tx.getFromAccount().getId());
         assertNull(tx.getToAccount());
         assertEquals("Loan disbursement", tx.getNote());
-
-        assertEquals(1, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(16372.80)));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.valueOf(-16372.80)));
     }
 
     @Test
-    public void testCreateLoanAccount_Success_WithReceivingAccount() throws SQLException {
+    public void testCreateLoanAccount_WithReceivingAccount() throws SQLException {
         BasicAccount receivingAccount = accountController.createBasicAccount("Savings Account",
                 BigDecimal.valueOf(5000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
                 true, true);
@@ -213,8 +193,6 @@ public class AccountControllerTest {
                 receivingAccount, LocalDate.now(), LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
         assertNotNull(loanAccount);
         //remaining amount 242988.00
-        assertEquals(1, loanAccount.getTransactions().size()); //initial loan disbursement transaction
-        assertEquals(1, receivingAccount.getTransactions().size()); //initial loan disbursement transaction in receiving account
 
         Account savedLoanAccount = accountDAO.getAccountById(loanAccount.getId());
         assertNotNull(savedLoanAccount);
@@ -249,17 +227,6 @@ public class AccountControllerTest {
         assertEquals(1, receivingTransactions.size()); //initial loan disbursement transaction in receiving account
         Transaction txReceiving=receivingTransactions.getFirst();
         assertEquals(txLoan.getId(), txReceiving.getId()); //same transaction
-
-
-        Transaction tx=loanAccount.getTransactions().getFirst(); //initial loan disbursement transaction
-        Transaction tx2=receivingAccount.getTransactions().getFirst(); //initial loan disbursement transaction in receiving account
-        assertEquals(tx.getId(), tx2.getId());
-
-        assertEquals(2, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.valueOf(205000.00)));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(242988.00)));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.valueOf(-37988.00)));
-        assertEquals(0, receivingAccount.getBalance().compareTo(BigDecimal.valueOf(205000.00)));
     }
 
     @Test
@@ -276,6 +243,8 @@ public class AccountControllerTest {
         assertEquals(0, savedAccount.getBalance().compareTo(BigDecimal.ZERO));
         assertTrue(savedAccount.getSelectable());
         assertTrue(savedAccount.getIncludedInNetAsset());
+        assertFalse(((BorrowingAccount)savedAccount).getIsEnded());
+        assertFalse(savedAccount.getHidden());
         assertEquals(0, ((BorrowingAccount)savedAccount).getBorrowingAmount().compareTo(BigDecimal.valueOf(3000.00)));
         assertEquals(0, ((BorrowingAccount)savedAccount).getRemainingAmount().compareTo(BigDecimal.valueOf(3000.00)));
 
@@ -290,11 +259,6 @@ public class AccountControllerTest {
         assertEquals(TransactionType.TRANSFER, tx.getType());
         assertEquals(savedAccount.getId(), tx.getFromAccount().getId());
         assertNull(tx.getToAccount());
-
-        assertEquals(1, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(3000.00)));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.valueOf(-3000.00)));
     }
 
     @Test
@@ -323,15 +287,11 @@ public class AccountControllerTest {
         assertEquals(txBorrowing.getId(), txToAccount.getId()); //same transaction
         assertEquals(savedToAccount.getId(), txToAccount.getToAccount().getId());
 
-        assertEquals(2, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.valueOf(2000.00)));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(1500.00)));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.valueOf(500.00)));
         assertEquals(0, toAccount.getBalance().compareTo(BigDecimal.valueOf(2000.00)));
     }
 
     @Test
-    public void testCreateLending_Success_NoFromAccount() throws SQLException {
+    public void testCreateLending_NoFromAccount() throws SQLException {
         LendingAccount account = accountController.createLendingAccount(testUser, "Charlie",
                 BigDecimal.valueOf(4000.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -344,6 +304,8 @@ public class AccountControllerTest {
         assertEquals(0, savedAccount.getBalance().compareTo(BigDecimal.valueOf(4000.00)));
         assertTrue(savedAccount.getSelectable());
         assertTrue(savedAccount.getIncludedInNetAsset());
+        assertFalse(((LendingAccount)savedAccount).getIsEnded());
+        assertFalse(savedAccount.getHidden());
 
         List<Account> userAccounts = accountDAO.getAccountsByOwnerId(testUser.getId());
         assertEquals(1, userAccounts.size());
@@ -355,15 +317,10 @@ public class AccountControllerTest {
         assertEquals(TransactionType.TRANSFER, tx.getType());
         assertNull(tx.getFromAccount());
         assertEquals(savedAccount.getId(), tx.getToAccount().getId());
-
-        assertEquals(1, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.valueOf(4000.00)));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.valueOf(4000.00)));
     }
 
     @Test
-    public void testCreateLending_Success_WithFromAccount() throws SQLException {
+    public void testCreateLending_WithFromAccount() throws SQLException {
         BasicAccount fromAccount = accountController.createBasicAccount("Emergency Fund",
                 BigDecimal.valueOf(800), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
                 true, true);
@@ -389,10 +346,6 @@ public class AccountControllerTest {
         assertEquals(txLending.getId(), txFromAccount.getId()); //same transaction
         assertEquals(savedFromAccount.getId(), txFromAccount.getFromAccount().getId());
 
-        assertEquals(2, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.valueOf(800.00)));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.valueOf(800.00)));
         assertEquals(0, fromAccount.getBalance().compareTo(BigDecimal.valueOf(550.00)));
     }
 
@@ -409,9 +362,6 @@ public class AccountControllerTest {
 
         List<Account> userAccounts = accountDAO.getAccountsByOwnerId(testUser.getId());
         assertEquals(0, userAccounts.size());
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
     }
 
     @Test
@@ -420,12 +370,13 @@ public class AccountControllerTest {
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
 
         //find categories for transactions
-        LedgerCategory salary=testLedger.getCategories().stream()
+        LedgerCategory salary=testCategories.stream()
                 .filter(cat->cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(salary);
-        LedgerCategory transport=testLedger.getCategories().stream()
+
+        LedgerCategory transport=testCategories.stream()
                 .filter(cat->cat.getName().equals("Transport"))
                 .findFirst()
                 .orElse(null);
@@ -455,9 +406,6 @@ public class AccountControllerTest {
         assertEquals(0, transportTransactions.size());
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
         assertEquals(0, ledgerTransactions.size());
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
     }
 
     @Test
@@ -465,12 +413,13 @@ public class AccountControllerTest {
         BasicAccount account = accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true,
                 true);
-        LedgerCategory salary = testLedger.getCategories().stream()
+
+        LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(salary);
-        LedgerCategory transport=testLedger.getCategories().stream()
+        LedgerCategory transport=testCategories.stream()
                 .filter(cat->cat.getName().equals("Transport"))
                 .findFirst()
                 .orElse(null);
@@ -496,9 +445,6 @@ public class AccountControllerTest {
         assertEquals(2, ledgerTransactions.size());
         List<Transaction> accountTransactions = transactionDAO.getByAccountId(account.getId());
         assertEquals(0, accountTransactions.size());
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
     }
 
     @Test
@@ -518,11 +464,6 @@ public class AccountControllerTest {
 
         List<Account> accounts=accountDAO.getAccountsByOwnerId(testUser.getId());
         assertEquals(0, accounts.size());
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.ZERO));
     }
 
     @Test
@@ -534,12 +475,12 @@ public class AccountControllerTest {
                 BigDecimal.valueOf(500.00), //current debt
                 null, null);
 
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(salary);
-        LedgerCategory transport=testLedger.getCategories().stream()
+        LedgerCategory transport=testCategories.stream()
                 .filter(cat->cat.getName().equals("Transport"))
                 .findFirst()
                 .orElse(null);
@@ -566,11 +507,6 @@ public class AccountControllerTest {
         assertEquals(0, salaryTransactions.size());
         List<Transaction> transportTransactions = transactionDAO.getByCategoryId(transport.getId());
         assertEquals(0, transportTransactions.size());
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.ZERO));
     }
 
     @Test
@@ -581,12 +517,12 @@ public class AccountControllerTest {
                 BigDecimal.valueOf(3000.00), //credit limit
                 BigDecimal.valueOf(500.00), //current debt
                 null, null);
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(salary);
-        LedgerCategory transport=testLedger.getCategories().stream()
+        LedgerCategory transport=testCategories.stream()
                 .filter(cat->cat.getName().equals("Transport"))
                 .findFirst()
                 .orElse(null);
@@ -613,17 +549,11 @@ public class AccountControllerTest {
         assertEquals(1, transportTransactions.size());
         List<Transaction> accountTransactions = transactionDAO.getByAccountId(account.getId());
         assertEquals(0, accountTransactions.size()); //account is deleted
-
-        assertEquals(2, testLedger.getTransactions().size());
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.ZERO));
     }
 
     @Test
     public void testDeleteCreditAccount_WithInstallmentPlan() throws SQLException{
-        LedgerCategory category=testLedger.getCategories().stream()
+        LedgerCategory category=testCategories.stream()
                 .filter(cat->cat.getName().equals("Shopping"))
                 .findFirst()
                 .orElse(null);
@@ -661,7 +591,7 @@ public class AccountControllerTest {
                 null, //no receiving account
                 LocalDate.now(), LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
 
-        Transaction tx=account.getTransactions().getFirst(); //initial loan disbursement transaction
+        Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial loan disbursement transaction
 
         boolean result = accountController.deleteAccount(account, true);
         assertTrue(result);
@@ -671,11 +601,6 @@ public class AccountControllerTest {
 
         //deleted transaction from db
         assertNull(transactionDAO.getById(tx.getId()));
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.ZERO));
     }
 
     @Test
@@ -687,10 +612,10 @@ public class AccountControllerTest {
                 null, //no receiving account
                 LocalDate.now(), LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
 
-        Transaction tx=account.getTransactions().getFirst(); //initial loan disbursement transaction
+        Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial loan disbursement transaction
 
         accountController.repayLoan(account, null, testLedger); //make a repayment to have another transaction
-        Transaction tx2=account.getTransactions().get(1); //repayment transaction
+        Transaction tx2= transactionDAO.getByAccountId(account.getId()).getLast();
 
         boolean result = accountController.deleteAccount(account, false);
         assertTrue(result);
@@ -700,11 +625,6 @@ public class AccountControllerTest {
 
         assertNotNull(transactionDAO.getById(tx.getId()));
         assertNotNull(transactionDAO.getById(tx2.getId()));
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.ZERO));
     }
 
     @Test
@@ -719,7 +639,7 @@ public class AccountControllerTest {
                 BigDecimal.valueOf(200000.00), //loan amount
                 receivingAccount, LocalDate.now(), LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
 
-        Transaction tx=loanAccount.getTransactions().getFirst(); //initial loan disbursement transaction
+        Transaction tx= transactionDAO.getByAccountId(loanAccount.getId()).getFirst(); //initial loan disbursement transaction
 
         boolean result = accountController.deleteAccount(loanAccount, false);
         assertTrue(result);
@@ -736,20 +656,16 @@ public class AccountControllerTest {
         assertEquals(1, receivingAccountTransactions.size());
         Transaction txInReceiving=receivingAccountTransactions.getFirst();
         assertEquals(tx.getId(), txInReceiving.getId());
-
-        assertEquals(1, testUser.getAccounts().size()); //receiving account still exists
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.valueOf(205000.00)));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.valueOf(205000.00)));
     }
 
     @Test
-    public void testDeleteBorrowing_Success_DeleteTransaction() throws SQLException {
+    public void testDeleteBorrowing_DeleteTransaction() throws SQLException {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Eve",
                 BigDecimal.valueOf(2000.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger);
 
-        Transaction tx=account.getTransactions().getFirst(); //initial borrowing transaction
+        //Transaction tx=account.getTransactions().getFirst(); //initial borrowing transaction
+        Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial borrowing transaction
 
         boolean result = accountController.deleteAccount(account, true);
         assertTrue(result);
@@ -760,11 +676,6 @@ public class AccountControllerTest {
         assertNull(transactionDAO.getById(tx.getId()));
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
         assertEquals(0, ledgerTransactions.size());
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.ZERO));
     }
 
     @Test
@@ -773,18 +684,14 @@ public class AccountControllerTest {
                 BigDecimal.valueOf(2000.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger);
 
-        Transaction tx=account.getTransactions().getFirst(); //initial borrowing transaction
+        //Transaction tx=account.getTransactions().getFirst(); //initial borrowing transaction
+        Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial borrowing transaction
 
         boolean result = accountController.deleteAccount(account, false);
         assertTrue(result);
 
         Account deletedAccount = accountDAO.getAccountById(account.getId());
         assertNull(deletedAccount);
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.ZERO));
 
         assertNotNull(transactionDAO.getById(tx.getId()));
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
@@ -797,18 +704,14 @@ public class AccountControllerTest {
                 BigDecimal.valueOf(1000.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
 
-        Transaction tx=account.getTransactions().getFirst(); //initial lending transaction
+        //Transaction tx=account.getTransactions().getFirst(); //initial lending transaction
+        Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial lending transaction
 
         boolean result = accountController.deleteAccount(account, true);
         assertTrue(result);
 
         Account deletedAccount = accountDAO.getAccountById(account.getId());
         assertNull(deletedAccount);
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.ZERO));
 
         assertNull(transactionDAO.getById(tx.getId()));
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
@@ -821,18 +724,14 @@ public class AccountControllerTest {
                 BigDecimal.valueOf(1000.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
 
-        Transaction tx=account.getTransactions().getFirst(); //initial lending transaction
+        //Transaction tx=account.getTransactions().getFirst(); //initial lending transaction
+        Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial lending transaction
 
         boolean result = accountController.deleteAccount(account, false);
         assertTrue(result);
 
         Account deletedAccount = accountDAO.getAccountById(account.getId());
         assertNull(deletedAccount);
-
-        assertEquals(0, testUser.getAccounts().size());
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.ZERO));
-        assertEquals(0, testUser.getNetAssets().compareTo(BigDecimal.ZERO));
 
         assertNotNull(transactionDAO.getById(tx.getId()));
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
@@ -851,7 +750,8 @@ public class AccountControllerTest {
         boolean result= accountController.repayDebt(account, BigDecimal.valueOf(500.00), null, testLedger);
         assertTrue(result);
 
-        Transaction tx=account.getTransactions().getFirst(); //repayment transaction
+        //Transaction tx=account.getTransactions().getFirst(); //repayment transaction
+        Transaction tx= transactionDAO.getByAccountId(account.getId()).getFirst(); //repayment transaction
         assertNotNull(transactionDAO.getById(tx.getId()));
 
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
@@ -867,7 +767,6 @@ public class AccountControllerTest {
         assertEquals(0, savedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2500.00)));
 
         assertEquals(0, account.getCurrentDebt().compareTo(BigDecimal.valueOf(2500.00)));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(2500.00)));
     }
 
     @Test
@@ -886,7 +785,8 @@ public class AccountControllerTest {
         boolean result= accountController.repayDebt(account, BigDecimal.valueOf(800.00), fromAccount, testLedger);
         assertTrue(result);
 
-        Transaction tx=account.getTransactions().getFirst(); //repayment transaction
+        //Transaction tx=account.getTransactions().getFirst(); //repayment transaction
+        Transaction tx= transactionDAO.getByAccountId(account.getId()).getFirst(); //repayment transaction
         assertNotNull(transactionDAO.getById(tx.getId()));
 
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
@@ -910,7 +810,6 @@ public class AccountControllerTest {
 
         assertEquals(0, account.getCurrentDebt().compareTo(BigDecimal.valueOf(2200.00)));
         assertEquals(0, fromAccount.getBalance().compareTo(BigDecimal.valueOf(200.00)));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(2200.00)));
     }
 
     @Test
@@ -925,7 +824,8 @@ public class AccountControllerTest {
         boolean result=accountController.repayLoan(account, null, testLedger);
         assertTrue(result);
 
-        Transaction tx=account.getTransactions().getFirst(); //repayment transaction
+        //Transaction tx=account.getTransactions().getFirst(); //repayment transaction
+        Transaction tx= transactionDAO.getByAccountId(account.getId()).get(1); //repayment transaction
         assertNotNull(transactionDAO.getById(tx.getId()));
 
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
@@ -941,8 +841,6 @@ public class AccountControllerTest {
         assertEquals(0, savedAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(4993.76)));
 
         assertEquals(0, account.getRemainingAmount().compareTo(BigDecimal.valueOf(4993.76)));
-        assertEquals(2, account.getTransactions().size());
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(4993.76)));
     }
 
     @Test
@@ -977,9 +875,7 @@ public class AccountControllerTest {
         assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(1782.88)));
 
         assertEquals(0, account.getRemainingAmount().compareTo(BigDecimal.valueOf(4993.76))); //first installment
-        assertEquals(2, account.getTransactions().size());
         assertEquals(0, fromAccount.getBalance().compareTo(BigDecimal.valueOf(1782.88)));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(4993.76)));
     }
 
     @Test
@@ -1000,8 +896,6 @@ public class AccountControllerTest {
         assertEquals(0, savedAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(1200.00)));
 
         assertEquals(0, account.getRemainingAmount().compareTo(BigDecimal.valueOf(1200.00)));
-        assertEquals(2, account.getTransactions().size()); //initial borrowing + repayment
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(1200.00)));
     }
 
     @Test
@@ -1032,10 +926,7 @@ public class AccountControllerTest {
         assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(600.00)));
 
         assertEquals(0, account.getRemainingAmount().compareTo(BigDecimal.valueOf(1100.00)));
-        assertEquals(2, account.getTransactions().size());
-        assertEquals(1, fromAccount.getTransactions().size());
         assertEquals(0, fromAccount.getBalance().compareTo(BigDecimal.valueOf(600.00)));
-        assertEquals(0, testUser.getTotalLiabilities().compareTo(BigDecimal.valueOf(1100.00)));
     }
 
     @Test
@@ -1056,8 +947,6 @@ public class AccountControllerTest {
         assertEquals(0, savedAccount.getBalance().compareTo(BigDecimal.valueOf(800.00)));
 
         assertEquals(0, account.getBalance().compareTo(BigDecimal.valueOf(800.00)));
-        assertEquals(2, account.getTransactions().size()); //initial lending + receiving
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.valueOf(800.00)));
     }
 
     @Test
@@ -1087,10 +976,7 @@ public class AccountControllerTest {
         assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(800.00)));
 
         assertEquals(0, account.getBalance().compareTo(BigDecimal.valueOf(700.00)));
-        assertEquals(2, account.getTransactions().size());
-        assertEquals(1, toAccount.getTransactions().size()); //transfer to toAccount transaction
         assertEquals(0, toAccount.getBalance().compareTo(BigDecimal.valueOf(800.00)));
-        assertEquals(0, testUser.getTotalAssets().compareTo(BigDecimal.valueOf(1500.00)));
     }
 
     @Test
