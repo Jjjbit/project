@@ -74,7 +74,7 @@ public class AccountDAO {
                 stmt.setBoolean(8, account.getIncludedInNetAsset());
                 stmt.setBoolean(9, account.getSelectable());
 
-                //esecute account insert and return affected rows
+                //execute account insert and return affected rows
                 int affectedRows = stmt.executeUpdate();
                 if (affectedRows == 0) {
                     connection.rollback();
@@ -474,11 +474,6 @@ public class AccountDAO {
                 stmt.setBigDecimal(3, loan.getAnnualInterestRate());
                 stmt.setBigDecimal(4, loan.getLoanAmount());
 
-                /*if (loan.getReceivingAccount() != null) {
-                    stmt.setLong(5, loan.getReceivingAccount().getId());
-                }else {
-                    stmt.setNull(5, Types.BIGINT);
-                }*/
                 if (loan.getRepaymentDay() != null) {
                     stmt.setDate(5, Date.valueOf(loan.getRepaymentDay()));
                 } else {
