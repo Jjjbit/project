@@ -61,17 +61,16 @@ public class LedgerCategoryDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean update(LedgerCategory category) throws SQLException {
-        String sql = "UPDATE ledger_categories SET name = ?, type = ?, ledger_id = ?, parent_id = ? WHERE id = ?";
+        String sql = "UPDATE ledger_categories SET name = ?, type = ?, parent_id = ? WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, category.getName());
             stmt.setString(2, category.getType().name());
-            stmt.setLong(3, category.getLedger().getId());
             if (category.getParent() != null) {
-                stmt.setLong(4, category.getParent().getId());
+                stmt.setLong(3, category.getParent().getId());
             } else {
-                stmt.setNull(4, Types.BIGINT);
+                stmt.setNull(3, Types.BIGINT);
             }
-            stmt.setLong(5, category.getId());
+            stmt.setLong(4, category.getId());
             return stmt.executeUpdate() > 0;
         }
     }
@@ -133,7 +132,7 @@ public class LedgerCategoryDAO {
 
         for (LedgerCategory category : categories) {
             List<LedgerCategory> children = getCategoriesByParentId(category.getId());
-            category.setChildren(children);
+            //category.setChildren(children);
             allCategories.add(category);
             for (LedgerCategory child : children) {
                 child.setParent(category);
