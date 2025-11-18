@@ -24,6 +24,7 @@ public class ReportControllerTest {
     private User testUser;
     private Ledger testLedger;
     private Account testAccount;
+    private List<LedgerCategory> testCategories;
 
     private BudgetDAO budgetDAO;
 
@@ -62,6 +63,7 @@ public class ReportControllerTest {
         userController.register("test user", "password123");
         testUser = userController.login("test user", "password123");
         testLedger = ledgerController.createLedger("Test Ledger", testUser);
+        testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
         testAccount = accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000.00),
                 AccountType.DEBIT_CARD, AccountCategory.FUNDS, testUser, "Test account notes",
                 true, true);
@@ -98,12 +100,12 @@ public class ReportControllerTest {
     //test getTransactionsByLedgerInRangeDate
     @Test
     public void testGetTransactionsByLedgerInRangeDate() {
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
 
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(c -> c.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -147,7 +149,7 @@ public class ReportControllerTest {
         LocalDate startDate = LocalDate.now().withDayOfMonth(1);
         LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
 
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
@@ -185,12 +187,12 @@ public class ReportControllerTest {
     //test getTransactionsByAccountInRangeDate
     @Test
     public void testGetTransactionsByAccountInRangeDate() {
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
 
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(c -> c.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -242,11 +244,11 @@ public class ReportControllerTest {
         LocalDate startDate = LocalDate.now().withDayOfMonth(1);
         LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
 
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(c -> c.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -286,12 +288,12 @@ public class ReportControllerTest {
     //test getIncomeByAccount and getExpenseByAccount
     @Test
     public void testGetIncomeAndExpenseByAccount() {
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
 
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(c -> c.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -317,12 +319,12 @@ public class ReportControllerTest {
     //test getIncomeByLedger and getExpenseByLedger
     @Test
     public void testGetIncomeAndExpenseByLedger() {
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
 
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(c -> c.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -588,7 +590,7 @@ public class ReportControllerTest {
         assertNotNull(creditAccount3);
 
         //create installment (not included in current debt) for creditAccount1 +
-        LedgerCategory electronics = testLedger.getCategories().stream()
+        LedgerCategory electronics = testCategories.stream()
                 .filter(c -> c.getName().equals("Electronics"))
                 .findFirst()
                 .orElse(null);
@@ -655,7 +657,7 @@ public class ReportControllerTest {
     //test getInstallments
     @Test
     public void testGetInstallments() {
-        LedgerCategory electronics = testLedger.getCategories().stream()
+        LedgerCategory electronics = testCategories.stream()
                 .filter(c -> c.getName().equals("Electronics"))
                 .findFirst()
                 .orElse(null);
@@ -725,7 +727,7 @@ public class ReportControllerTest {
 
         List<LedgerCategory> rootCategories = categories.stream()
                 .filter(c -> c.getParent() == null)
-                .collect(Collectors.toList());
+                .toList();
         assertEquals(12, rootCategories.size());
 
         List<LedgerCategory> incomeRootCategories = rootCategories.stream()
@@ -743,7 +745,9 @@ public class ReportControllerTest {
             System.out.println("Category ID: " + category.getId() +
                     ", Name: " + category.getName() +
                     ", Parent: " + (category.getParent() != null ? category.getParent().getName() : "null"));
-            for (LedgerCategory subcategory : category.getChildren()) {
+            for (LedgerCategory subcategory : categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == category.getId())
+                    .toList()) {
                 System.out.println("  Subcategory ID: " + subcategory.getId() +
                         ", Name: " + subcategory.getName() +
                         ", Parent: " + subcategory.getParent().getName() );
@@ -755,7 +759,9 @@ public class ReportControllerTest {
             System.out.println("Category ID: " + category.getId() +
                     ", Name: " + category.getName() +
                     ", Parent: " + (category.getParent() != null ? category.getParent().getName() : "null"));
-            for (LedgerCategory subcategory : category.getChildren()) {
+            for (LedgerCategory subcategory : categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == category.getId())
+                    .toList()) {
                 System.out.println("  Subcategory ID: " + subcategory.getId() +
                         ", Name: " + subcategory.getName() +
                         ", Parent: " +  subcategory.getParent().getName());
@@ -782,10 +788,7 @@ public class ReportControllerTest {
     //test getActiveBudgetsByLedger if budgets are expired
     @Test
     public void testGetActiveBudgetsByLedger_ExpiredBudgets() throws SQLException{
-        Budget budget = testLedger.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+        Budget budget = budgetDAO.getBudgetByLedgerId(testLedger.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget);
         //set start and end date to past to simulate expired budget
         budget.setStartDate(LocalDate.of(2025, 1, 1));
@@ -799,10 +802,7 @@ public class ReportControllerTest {
         assertEquals(Budget.Period.MONTHLY, activeBudget.getPeriod());
         assertEquals(0, activeBudget.getAmount().compareTo(BigDecimal.ZERO));
 
-        Budget budget2 = testLedger.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.YEARLY)
-                .findFirst()
-                .orElse(null);
+        Budget budget2 = budgetDAO.getBudgetByLedgerId(testLedger.getId(), Budget.Period.YEARLY);
         assertNotNull(budget2);
         //set start and end date to past to simulate expired budget
         budget2.setStartDate(LocalDate.of(2023, 1, 1));
@@ -820,7 +820,7 @@ public class ReportControllerTest {
     //test getActiveBudgetsByCategory
     @Test
     public void testGetActiveBudgetsByCategory() {
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
@@ -842,16 +842,13 @@ public class ReportControllerTest {
     //test getActiveBudgetsByCategory (first level) if budgets are expired
     @Test
     public void testGetActiveBudgetsByCategory_ExpiredBudgets() throws SQLException{
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(food);
 
-        Budget budget = food.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+        Budget budget = budgetDAO.getBudgetByCategoryId(food.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget);
         //set start and end date to past to simulate expired budget
         budget.setStartDate(LocalDate.of(2025, 1, 1));
@@ -865,10 +862,7 @@ public class ReportControllerTest {
         assertEquals(Budget.Period.MONTHLY, activeBudget.getPeriod());
         assertEquals(0, activeBudget.getAmount().compareTo(BigDecimal.ZERO));
 
-        Budget budget2 = food.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.YEARLY)
-                .findFirst()
-                .orElse(null);
+        Budget budget2 = budgetDAO.getBudgetByCategoryId(food.getId(), Budget.Period.YEARLY);
         assertNotNull(budget2);
         //set start and end date to past to simulate expired budget
         budget2.setStartDate(LocalDate.of(2023, 1, 1));
@@ -886,7 +880,7 @@ public class ReportControllerTest {
     //test getActiveBudgetsByCategory (second level)
     @Test
     public void testGetActiveBudgetsByCategory_SecondLevel() {
-        LedgerCategory lunch = testLedger.getCategories().stream()
+        LedgerCategory lunch = testCategories.stream()
                 .filter(c -> c.getName().equals("Lunch"))
                 .findFirst()
                 .orElse(null);
@@ -908,15 +902,12 @@ public class ReportControllerTest {
     //test getActiveBudgetsByCategory (second level) if budgets are expired
     @Test
     public void testGetActiveBudgetsByCategory_SecondLevel_ExpiredBudgets() throws SQLException{
-        LedgerCategory lunch = testLedger.getCategories().stream()
+        LedgerCategory lunch = testCategories.stream()
                 .filter(c -> c.getName().equals("Lunch"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(lunch);
-        Budget budget = lunch.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+        Budget budget = budgetDAO.getBudgetByCategoryId(lunch.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget);
         //set start and end date to past to simulate expired budget
         budget.setStartDate(LocalDate.of(2025, 1, 1));
@@ -930,10 +921,7 @@ public class ReportControllerTest {
         assertEquals(Budget.Period.MONTHLY, activeBudget.getPeriod());
         assertEquals(0, activeBudget.getAmount().compareTo(BigDecimal.ZERO));
 
-        Budget budget2 = lunch.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.YEARLY)
-                .findFirst()
-                .orElse(null);
+        Budget budget2 = budgetDAO.getBudgetByCategoryId(lunch.getId(), Budget.Period.YEARLY);
         assertNotNull(budget2);
         //set start and end date to past to simulate expired budget
         budget2.setStartDate(LocalDate.of(2023, 1, 1));
@@ -949,28 +937,22 @@ public class ReportControllerTest {
 
     //test is_over_budget
     @Test
-    public void testIsOverBudget() {
-        LedgerCategory food = testLedger.getCategories().stream()
+    public void testIsOverBudget() throws SQLException{
+        LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(food);
-        Budget budget = food.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+        Budget budget = budgetDAO.getBudgetByCategoryId(food.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(200.00)); //set monthly budget to 200
 
-        LedgerCategory lunch = testLedger.getCategories().stream()
+        LedgerCategory lunch = testCategories.stream()
                 .filter(c -> c.getName().equals("Lunch"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(lunch);
-        Budget budget2 = lunch.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+        Budget budget2 = budgetDAO.getBudgetByCategoryId(lunch.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget2);
         budgetController.editBudget(budget2, BigDecimal.valueOf(500.00)); //set monthly budget to 500
 
@@ -984,8 +966,7 @@ public class ReportControllerTest {
                 ", Period: " + budget.getPeriod() +
                 ", Category: " + budget.getCategory().getName() +
                 ", Start Date: " + budget.getStartDate() +
-                ", End Date: " + budget.getEndDate() +
-                ", Is Over Budget: " + isOverBudget);
+                ", End Date: " + budget.getEndDate());
 
         //not exceed budget of ledger
         assertFalse(reportController.isOverBudget(budget2)); //expense of lunch is 150 < 500
@@ -997,24 +978,18 @@ public class ReportControllerTest {
     }
 
     @Test
-    public void testIsOverBudget_NoTransactions_False() {
-        LedgerCategory transport = testLedger.getCategories().stream()
+    public void testIsOverBudget_NoTransactions_False() throws SQLException{
+        LedgerCategory transport = testCategories.stream()
                 .filter(c -> c.getName().equals("Transport"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(transport);
-        Budget budget = transport.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+        Budget budget = budgetDAO.getBudgetByCategoryId(transport.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(300.00));
 
         //ledger-level budget
-        Budget budget2 =testLedger.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+        Budget budget2 = budgetDAO.getBudgetByLedgerId(testLedger.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget2);
         budgetController.editBudget(budget2, BigDecimal.valueOf(800.00));
 
@@ -1025,15 +1000,12 @@ public class ReportControllerTest {
 
     @Test
     public void testIsOverBudget_ExpiredBudget() throws SQLException{
-        LedgerCategory entertainment = testLedger.getCategories().stream()
+        LedgerCategory entertainment = testCategories.stream()
                 .filter(c -> c.getName().equals("Entertainment"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(entertainment);
-        Budget budget = entertainment.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+        Budget budget = budgetDAO.getBudgetByCategoryId(entertainment.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
         //simulate expired budget by setting start and end date in the past
@@ -1051,16 +1023,13 @@ public class ReportControllerTest {
     }
 
     @Test
-    public void testIsOverBudget_TransactionOverPeriod_False() {
-        LedgerCategory entertainment = testLedger.getCategories().stream()
+    public void testIsOverBudget_TransactionOverPeriod_False() throws SQLException {
+        LedgerCategory entertainment = testCategories.stream()
                 .filter(c -> c.getName().equals("Entertainment"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(entertainment);
-        Budget budget = entertainment.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+        Budget budget = budgetDAO.getBudgetByCategoryId(entertainment.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
 
@@ -1071,23 +1040,17 @@ public class ReportControllerTest {
     }
 
     @Test
-    public void testIsOverBudget_BoundaryCase() {
-        Budget budget1 = testLedger.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+    public void testIsOverBudget_BoundaryCase() throws SQLException {
+        Budget budget1 = budgetDAO.getBudgetByLedgerId(testLedger.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget1);
         budgetController.editBudget(budget1, BigDecimal.valueOf(300.00));
 
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(food);
-        Budget budget = food.getBudgets().stream()
-                .filter(b -> b.getPeriod() == Budget.Period.MONTHLY )
-                .findFirst()
-                .orElse(null);
+        Budget budget = budgetDAO.getBudgetByCategoryId(food.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(120.00));
 
@@ -1098,7 +1061,7 @@ public class ReportControllerTest {
         assertTrue(isOverBudget);
         assertFalse(reportController.isOverBudget(budget1));
 
-        LedgerCategory transport = testLedger.getCategories().stream()
+        LedgerCategory transport = testCategories.stream()
                 .filter(c -> c.getName().equals("Transport"))
                 .findFirst()
                 .orElse(null);

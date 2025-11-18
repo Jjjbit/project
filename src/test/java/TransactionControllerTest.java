@@ -15,6 +15,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -26,9 +27,11 @@ public class TransactionControllerTest {
     private User testUser;
     private Ledger testLedger;
     private BasicAccount testAccount;
+    private List<LedgerCategory> testCategories;
 
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
+    private LedgerCategoryDAO ledgerCategoryDAO;
 
     private TransactionController transactionController;
     private LedgerController ledgerController;
@@ -44,7 +47,7 @@ public class TransactionControllerTest {
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
         accountDAO = new AccountDAO(connection);
         transactionDAO = new TransactionDAO(connection);
-        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+        ledgerCategoryDAO = new LedgerCategoryDAO(connection);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection);
 
@@ -57,6 +60,8 @@ public class TransactionControllerTest {
         testUser = userController.login("test user", "password123");
 
         testLedger = ledgerController.createLedger("Test Ledger", testUser);
+
+        testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
 
         testAccount = accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000.00),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
@@ -93,7 +98,7 @@ public class TransactionControllerTest {
     //create
     @Test
     public void testCreateIncome_Success() throws SQLException {
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -126,7 +131,7 @@ public class TransactionControllerTest {
 
     @Test
     public void testCreateExpense_Success() throws SQLException {
-        LedgerCategory shopping = testLedger.getCategories().stream()
+        LedgerCategory shopping = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
                 .findFirst()
                 .orElse(null);
@@ -193,7 +198,7 @@ public class TransactionControllerTest {
     //delete
     @Test
     public void testDeleteIncome_Success() throws SQLException {
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -217,7 +222,7 @@ public class TransactionControllerTest {
 
     @Test
     public void testDeleteExpense_Success() throws SQLException {
-        LedgerCategory shopping = testLedger.getCategories().stream()
+        LedgerCategory shopping = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
                 .findFirst()
                 .orElse(null);
@@ -268,7 +273,7 @@ public class TransactionControllerTest {
     //edit
     @Test
     public void testEditIncome_Success() throws SQLException {
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -282,8 +287,9 @@ public class TransactionControllerTest {
                 true, true);
 
         Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
+        List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedgerId(newLedger.getId());
 
-        LedgerCategory newCategory = newLedger.getCategories().stream()
+        LedgerCategory newCategory = newLedgerCategories.stream()
                 .filter(cat -> cat.getName().equals("Bonus"))
                 .findFirst()
                 .orElse(null);
@@ -319,8 +325,8 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testEditIncome_NewFromAccount_Failure() {
-        LedgerCategory salary = testLedger.getCategories().stream()
+    public void testEditIncome_NewFromAccount_Failure() throws SQLException {
+        LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -334,8 +340,9 @@ public class TransactionControllerTest {
                 true, true);
 
         Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
+        List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedgerId(newLedger.getId());
 
-        LedgerCategory newCategory = newLedger.getCategories().stream()
+        LedgerCategory newCategory = newLedgerCategories.stream()
                 .filter(cat -> cat.getName().equals("Bonus"))
                 .findFirst()
                 .orElse(null);
@@ -349,7 +356,7 @@ public class TransactionControllerTest {
 
     @Test
     public void testEditIncome_Invariant_Success() throws SQLException {
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -379,7 +386,7 @@ public class TransactionControllerTest {
 
     @Test
     public void testEditExpense_Success() throws SQLException {
-        LedgerCategory shopping = testLedger.getCategories().stream()
+        LedgerCategory shopping = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
                 .findFirst()
                 .orElse(null);
@@ -394,8 +401,9 @@ public class TransactionControllerTest {
                 true, true);
 
         Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
+        List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedgerId(newLedger.getId());
 
-        LedgerCategory newCategory = newLedger.getCategories().stream()
+        LedgerCategory newCategory = newLedgerCategories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
@@ -428,16 +436,11 @@ public class TransactionControllerTest {
         assertNull(updatedExpense.getToAccount());
         assertEquals(newCategory.getId(), updatedExpense.getCategory().getId());
         assertEquals(newLedger.getId(), updatedExpense.getLedger().getId());
-
-        assertEquals(1, newLedger.getTransactions().size());
-        assertEquals(0, testLedger.getTransactions().size());
-        assertEquals(1, newCategory.getTransactions().size());
-        assertEquals(0, shopping.getTransactions().size());
     }
 
     @Test
     public void testEditExpense_Invariant() throws SQLException {
-        LedgerCategory shopping = testLedger.getCategories().stream()
+        LedgerCategory shopping = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
                 .findFirst()
                 .orElse(null);
@@ -467,8 +470,8 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testEditExpense_NewToAccount_Failure() {
-        LedgerCategory shopping = testLedger.getCategories().stream()
+    public void testEditExpense_NewToAccount_Failure() throws SQLException {
+        LedgerCategory shopping = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
                 .findFirst()
                 .orElse(null);
@@ -483,8 +486,9 @@ public class TransactionControllerTest {
                 true, true);
 
         Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
+        List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedgerId(newLedger.getId());
 
-        LedgerCategory newCategory = newLedger.getCategories().stream()
+        LedgerCategory newCategory = newLedgerCategories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);

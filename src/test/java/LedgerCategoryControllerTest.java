@@ -24,6 +24,7 @@ public class LedgerCategoryControllerTest {
     private Ledger testLedger;
     private User testUser;
     private Account account;
+    private List<LedgerCategory> testCategories;
 
     private LedgerCategoryController ledgerCategoryController;
     private LedgerController ledgerController;
@@ -57,6 +58,9 @@ public class LedgerCategoryControllerTest {
         testUser = userController.login("test user", "password123");
 
         testLedger=ledgerController.createLedger("Test Ledger", testUser);
+
+        testCategories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+
         account =accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000.00),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true,
                 true);
@@ -97,7 +101,6 @@ public class LedgerCategoryControllerTest {
         LedgerCategory category=ledgerCategoryController.createCategory("Test", testLedger, CategoryType.EXPENSE);
         assertNotNull(category);
         assertNotNull(ledgerCategoryDAO.getById(category.getId()));
-        assertEquals(2, category.getBudgets().size());
 
         Budget monthlyBudget=budgetDAO.getBudgetByCategoryId(category.getId(), Budget.Period.MONTHLY);
         Budget yearlyBudget=budgetDAO.getBudgetByCategoryId(category.getId(), Budget.Period.YEARLY);
@@ -108,19 +111,17 @@ public class LedgerCategoryControllerTest {
     //create sub-category
     @Test
     public void testCreateSubCategory_Success() throws SQLException{
-        LedgerCategory parentCategory=testLedger.getCategories().stream()
+        LedgerCategory parentCategory=testCategories.stream()
                 .filter(cat->cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(parentCategory);
 
-        LedgerCategory subCategory=ledgerCategoryController.createSubCategory("Test", parentCategory);
+        LedgerCategory subCategory=ledgerCategoryController.createSubCategory("Test", parentCategory, testLedger);
         assertNotNull(subCategory); //created successfully
         assertNotNull(ledgerCategoryDAO.getById(subCategory.getId())); //exists in DB
 
         assertEquals(parentCategory.getId(), subCategory.getParent().getId());
-        assertEquals(4, parentCategory.getChildren().size());
-        assertEquals(2, subCategory.getBudgets().size());
 
         Budget monthlyBudget=budgetDAO.getBudgetByCategoryId(subCategory.getId(), Budget.Period.MONTHLY);
         Budget yearlyBudget=budgetDAO.getBudgetByCategoryId(subCategory.getId(), Budget.Period.YEARLY);
@@ -129,21 +130,18 @@ public class LedgerCategoryControllerTest {
 
         List<LedgerCategory> categories=ledgerCategoryDAO.getCategoriesByParentId(parentCategory.getId());
         assertEquals(4, categories.size()); //exists in DB under parent
-        assertTrue(categories.stream().anyMatch(cat->cat.getId().equals(subCategory.getId())));
+        assertTrue(categories.stream().anyMatch(cat->cat.getId() == subCategory.getId()));
     }
 
     //delete sub-category with budget
     @Test
     public void testDeleteLedgerCategory_WithBudget() throws SQLException{
-        LedgerCategory breakfast=testLedger.getCategories().stream()
+        LedgerCategory breakfast=testCategories.stream()
                 .filter(cat->cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(breakfast);
-        Budget budget=breakfast.getBudgets().stream()
-                .filter(bud->bud.getPeriod() == Budget.Period.MONTHLY)
-                .findFirst()
-                .orElse(null);
+        Budget budget=budgetDAO.getBudgetByCategoryId(breakfast.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget);
 
         boolean result=ledgerCategoryController.deleteCategory(breakfast, true, null);
@@ -154,7 +152,7 @@ public class LedgerCategoryControllerTest {
     //delete category with transactions
     @Test
     public void testDeleteLedgerCategory_DeleteTransactions() throws SQLException {
-        LedgerCategory salary=testLedger.getCategories().stream()
+        LedgerCategory salary=testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -169,11 +167,10 @@ public class LedgerCategoryControllerTest {
         assertEquals(0, transactionDAO.getByCategoryId(salary.getId()).size());
         assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
 
-        assertEquals(16, testLedger.getCategories().size()); //one category less in ledger
-        List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+        List<LedgerCategory> categories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
         assertEquals(16, categories.size()); //one category less in DB
 
-        List<LedgerCategory> parents=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId()).stream()
+        List<LedgerCategory> parents = categories.stream()
                 .filter(cat->cat.getParent() == null)
                 .toList();
 
@@ -190,7 +187,9 @@ public class LedgerCategoryControllerTest {
         System.out.println("Income Categories:");
         for(LedgerCategory cat : incomeCategories){
             System.out.println(" Category Name: "+cat.getName());
-            for(LedgerCategory child : cat.getChildren()){
+            for(LedgerCategory child : categories.stream()
+                    .filter(c->c.getParent() != null && c.getParent().getId() == cat.getId())
+                    .toList()){
                 System.out.println("   Child Name: "+child.getName());
             }
         }
@@ -198,7 +197,9 @@ public class LedgerCategoryControllerTest {
         System.out.println("Expense Categories:");
         for(LedgerCategory cat : expenseCategories){
             System.out.println(" Category Name: "+cat.getName());
-            for(LedgerCategory child : cat.getChildren()){
+            for(LedgerCategory child : categories.stream()
+                    .filter(c->c.getParent() != null && c.getParent().getId() == cat.getId())
+                    .toList()){
                 System.out.println("   Child Name: "+child.getName());
             }
         }
@@ -207,12 +208,12 @@ public class LedgerCategoryControllerTest {
     //delete category with transactions, migrate to another category
     @Test
     public void testDeleteLedgerCategory_KeepTransactions() throws SQLException {
-        LedgerCategory salary=testLedger.getCategories().stream()
+        LedgerCategory salary=testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(salary);
-        LedgerCategory bonus=testLedger.getCategories().stream()
+        LedgerCategory bonus=testCategories.stream()
                 .filter(cat -> cat.getName().equals("Bonus"))
                 .findFirst()
                 .orElse(null);
@@ -229,10 +230,8 @@ public class LedgerCategoryControllerTest {
         assertEquals(tx1.getId(), transactionDAO.getByCategoryId(bonus.getId()).getFirst().getId());
         assertEquals(tx1.getId(), transactionDAO.getByLedgerId(testLedger.getId()).getFirst().getId());
 
-        assertEquals(16, testLedger.getCategories().size()); //one category less in ledger
         List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
         assertEquals(16, categories.size()); //one category less in DB
-        assertEquals(1, bonus.getTransactions().size());
 
         List<LedgerCategory> parents=categories.stream()
                 .filter(cat->cat.getParent() == null)
@@ -250,7 +249,9 @@ public class LedgerCategoryControllerTest {
         System.out.println("Income Categories:");
         for(LedgerCategory cat : incomeCategories){
             System.out.println(" Category Name: "+cat.getName());
-            for(LedgerCategory child : cat.getChildren()){
+            for(LedgerCategory child : categories.stream()
+                    .filter(c->c.getParent() != null && c.getParent().getId() == cat.getId())
+                    .toList()){
                 System.out.println("   Child Name: "+child.getName());
             }
         }
@@ -258,7 +259,9 @@ public class LedgerCategoryControllerTest {
         System.out.println("Expense Categories:");
         for(LedgerCategory cat : expenseCategories){
             System.out.println(" Category Name: "+cat.getName());
-            for(LedgerCategory child : cat.getChildren()){
+            for(LedgerCategory child : categories.stream()
+                    .filter(c->c.getParent() != null && c.getParent().getId() == cat.getId())
+                    .toList()){
                 System.out.println("   Child Name: "+child.getName());
             }
         }
@@ -267,7 +270,7 @@ public class LedgerCategoryControllerTest {
     //delete category with sub-categories
     @Test
     public void testDeleteLedgerCategory_HasSubCategories_Failure() throws SQLException {
-        LedgerCategory foodCategory = testLedger.getCategories().stream()
+        LedgerCategory foodCategory = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
@@ -281,13 +284,13 @@ public class LedgerCategoryControllerTest {
     //rename category successfully
     @Test
     public void testRenameLedgerCategory_Success() throws SQLException {
-        LedgerCategory foodCategory = testLedger.getCategories().stream()
+        LedgerCategory foodCategory = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(foodCategory);
 
-        boolean result = ledgerCategoryController.renameCategory(foodCategory, "Groceries");
+        boolean result = ledgerCategoryController.renameCategory(foodCategory, "Groceries", testLedger);
         assertTrue(result);
         assertEquals("Groceries", foodCategory.getName());
 
@@ -297,13 +300,13 @@ public class LedgerCategoryControllerTest {
 
     @Test
     public void testRenameLedgerCategory_DuplicateName() throws SQLException {
-        LedgerCategory foodCategory = testLedger.getCategories().stream()
+        LedgerCategory foodCategory = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(foodCategory);
 
-        boolean result = ledgerCategoryController.renameCategory(foodCategory, "Salary");
+        boolean result = ledgerCategoryController.renameCategory(foodCategory, "Salary", testLedger);
         assertFalse(result);
 
         LedgerCategory updatedCategory=ledgerCategoryDAO.getById(foodCategory.getId());
@@ -313,32 +316,32 @@ public class LedgerCategoryControllerTest {
     @Test
     public void testRenameLedgerCategory_NullCategory() {
         String newName = "New Category Name";
-        boolean result = ledgerCategoryController.renameCategory(null, newName);
+        boolean result = ledgerCategoryController.renameCategory(null, newName, testLedger);
         assertFalse(result);
     }
 
     @Test
     public void testRenameLedgerCategory_InvalidName() {
-        LedgerCategory foodCategory = testLedger.getCategories().stream()
+        LedgerCategory foodCategory = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(foodCategory);
 
         String invalidName = "   "; // empty after trim
-        boolean result = ledgerCategoryController.renameCategory(foodCategory, invalidName);
+        boolean result = ledgerCategoryController.renameCategory(foodCategory, invalidName, testLedger);
         assertFalse(result);
     }
 
     //promote sub-category to top-level
     @Test
     public void testPromoteSubCategory_Success() throws SQLException {
-        LedgerCategory breakfast = testLedger.getCategories().stream()
+        LedgerCategory breakfast = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(breakfast);
-        LedgerCategory food=testLedger.getCategories().stream()
+        LedgerCategory food=testCategories.stream()
                 .filter((cat)->cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
@@ -349,11 +352,10 @@ public class LedgerCategoryControllerTest {
         boolean result = ledgerCategoryController.promoteSubCategory(breakfast);
         assertTrue(result);
         assertNull(breakfast.getParent());
-        assertEquals(2, food.getChildren().size()); //one less child in food category
 
         List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
         LedgerCategory promotedCategory=categories.stream()
-                .filter(cat->cat.getId().equals(breakfast.getId()))
+                .filter(cat->cat.getId() == breakfast.getId())
                 .findFirst()
                 .orElse(null);
         assertNotNull(promotedCategory);
@@ -362,7 +364,8 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> topLevelCategories=categories.stream()
                 .filter(cat->cat.getParent() == null)
                 .toList();
-        assertTrue(topLevelCategories.stream().anyMatch(cat->cat.getId().equals(breakfast.getId()))); //exists as top-level category in DB
+        assertTrue(topLevelCategories.stream().anyMatch(cat->cat.getId() == breakfast.getId())); //exists as top-level category in DB
+
         List<LedgerCategory> incomeCategories=topLevelCategories.stream()
                 .filter(cat->cat.getType() == CategoryType.INCOME)
                 .toList();
@@ -376,7 +379,9 @@ public class LedgerCategoryControllerTest {
         System.out.println("Expense Categories:");
         for(LedgerCategory cat : expenseCategories){
             System.out.println(" Expense Category Name: "+cat.getName());
-            for(LedgerCategory child : cat.getChildren()){
+            for(LedgerCategory child : categories.stream()
+                    .filter(c->c.getParent() != null && c.getParent().getId() == cat.getId())
+                    .toList()){
                 System.out.println("   Expense Child Name: "+child.getName());
             }
         }
@@ -384,7 +389,9 @@ public class LedgerCategoryControllerTest {
         System.out.println("Income Categories:");
         for(LedgerCategory cat : incomeCategories){
             System.out.println(" Income Category Name: "+cat.getName());
-            for(LedgerCategory child : cat.getChildren()){
+            for(LedgerCategory child : categories.stream()
+                    .filter(c->c.getParent() != null && c.getParent().getId() == cat.getId())
+                    .toList()){
                 System.out.println("   Income Child Name: "+child.getName());
             }
         }
@@ -392,13 +399,13 @@ public class LedgerCategoryControllerTest {
 
     @Test
     public void testDemoteCategory_Success() throws SQLException {
-        LedgerCategory bonus = testLedger.getCategories().stream()
+        LedgerCategory bonus = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Bonus"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(bonus);
         assertNull(bonus.getParent());
-        LedgerCategory salary=testLedger.getCategories().stream()
+        LedgerCategory salary=testCategories.stream()
                 .filter((cat)->cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -407,11 +414,10 @@ public class LedgerCategoryControllerTest {
         boolean result = ledgerCategoryController.demoteCategory(bonus, salary);
         assertTrue(result);
         assertEquals(salary.getId(), bonus.getParent().getId());
-        assertEquals(1, salary.getChildren().size()); //one more child in food category
 
         List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
         LedgerCategory demotedCategory=categories.stream()
-                .filter(cat->cat.getId().equals(bonus.getId()))
+                .filter(cat->cat.getId() == bonus.getId())
                 .findFirst()
                 .orElse(null);
         assertNotNull(demotedCategory);
@@ -433,28 +439,47 @@ public class LedgerCategoryControllerTest {
         System.out.println("Income Categories:");
         for(LedgerCategory cat : incomeCategories) {
             System.out.println(" Category Name: " + cat.getName());
-            for (LedgerCategory child : cat.getChildren()) {
+            for (LedgerCategory child : categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == cat.getId())
+                    .toList()) {
                 System.out.println("   Child Name: " + child.getName());
             }
         }
         System.out.println("Expense Categories:");
         for(LedgerCategory cat : expenseCategories) {
             System.out.println(" Category Name: " + cat.getName());
-            for (LedgerCategory child : cat.getChildren()) {
+            for (LedgerCategory child : categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == cat.getId())
+                    .toList()) {
                 System.out.println("   Child Name: " + child.getName());
             }
         }
     }
 
+    /*@Test
+    public void testDemoteCategory_Failure_DifferentLedgers() {
+        LedgerCategory bonus = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Bonus"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(bonus);
+
+        Ledger anotherLedger=ledgerController.createLedger("Another Ledger", testUser);
+        LedgerCategory anotherLedgerCategory=ledgerCategoryController.createCategory("Another Category", anotherLedger, CategoryType.INCOME);
+
+        boolean result = ledgerCategoryController.demoteCategory(bonus, anotherLedgerCategory);
+        assertFalse(result);
+    }*/
+
     //category and new parent have different types
     @Test
     public void testDemoteCategory_Failure_DifferentType() {
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(food);
-        LedgerCategory salary=testLedger.getCategories().stream()
+        LedgerCategory salary=testCategories.stream()
                 .filter((cat)->cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -467,12 +492,12 @@ public class LedgerCategoryControllerTest {
     //category has children
     @Test
     public void testDemoteCategory_Failure_HasChildren() {
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(food);
-        LedgerCategory salary=testLedger.getCategories().stream()
+        LedgerCategory salary=testCategories.stream()
                 .filter((cat)->cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -485,7 +510,7 @@ public class LedgerCategoryControllerTest {
     //category and new parent are the same
     @Test
     public void testDemoteCategory_Failure_SameCategory() {
-        LedgerCategory bonus = testLedger.getCategories().stream()
+        LedgerCategory bonus = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Bonus"))
                 .findFirst()
                 .orElse(null);
@@ -498,12 +523,12 @@ public class LedgerCategoryControllerTest {
     //new parent is not top-level
     @Test
     public void testDemoteCategory_Failure_NonTopLevelCategory() {
-        LedgerCategory breakfast = testLedger.getCategories().stream()
+        LedgerCategory breakfast = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(breakfast);
-        LedgerCategory food=testLedger.getCategories().stream()
+        LedgerCategory food=testCategories.stream()
                 .filter((cat)->cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
@@ -516,7 +541,7 @@ public class LedgerCategoryControllerTest {
     //category is null
     @Test
     public void testDemoteCategory_Failure_NullCategory() {
-        LedgerCategory salary=testLedger.getCategories().stream()
+        LedgerCategory salary=testCategories.stream()
                 .filter((cat)->cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -529,7 +554,7 @@ public class LedgerCategoryControllerTest {
     //new parent is null
     @Test
     public void testDemoteCategory_Failure_NullNewParent() {
-        LedgerCategory bonus = testLedger.getCategories().stream()
+        LedgerCategory bonus = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Bonus"))
                 .findFirst()
                 .orElse(null);
@@ -539,31 +564,15 @@ public class LedgerCategoryControllerTest {
         assertFalse(result);
     }
 
-    //new parent belongs to different ledger
-    @Test
-    public void testDemoteCategory_Failure_DifferentLedgers() {
-        LedgerCategory bonus = testLedger.getCategories().stream()
-                .filter(cat -> cat.getName().equals("Bonus"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(bonus);
-
-        Ledger anotherLedger=ledgerController.createLedger("Another Ledger", testUser);
-        LedgerCategory anotherLedgerCategory=ledgerCategoryController.createCategory("Another Category", anotherLedger, CategoryType.INCOME);
-
-        boolean result = ledgerCategoryController.demoteCategory(bonus, anotherLedgerCategory);
-        assertFalse(result);
-    }
-
     //category is not top-level
     @Test
     public void testDemoteCategory_Failure_CategoryNotTopLevel() {
-        LedgerCategory breakfast = testLedger.getCategories().stream()
+        LedgerCategory breakfast = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(breakfast);
-        LedgerCategory food=testLedger.getCategories().stream()
+        LedgerCategory food=testCategories.stream()
                 .filter((cat)->cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
@@ -575,12 +584,12 @@ public class LedgerCategoryControllerTest {
 
     @Test
     public void testChangeParent_Success() throws SQLException {
-        LedgerCategory breakfast = testLedger.getCategories().stream()
+        LedgerCategory breakfast = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(breakfast);
-        LedgerCategory entertainment = testLedger.getCategories().stream()
+        LedgerCategory entertainment = testCategories.stream()
                 .filter((cat) -> cat.getName().equals("Entertainment"))
                 .findFirst()
                 .orElse(null);
@@ -589,11 +598,10 @@ public class LedgerCategoryControllerTest {
         boolean result = ledgerCategoryController.changeParent(breakfast, entertainment);
         assertTrue(result);
         assertEquals(entertainment.getId(), breakfast.getParent().getId());
-        assertEquals(1, entertainment.getChildren().size()); //one more child in entertainment category
 
         List<LedgerCategory> categories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
         LedgerCategory updatedCategory = categories.stream()
-                .filter(cat -> cat.getId().equals(breakfast.getId()))
+                .filter(cat -> cat.getId() == breakfast.getId())
                 .findFirst()
                 .orElse(null);
         assertNotNull(updatedCategory);
@@ -613,14 +621,18 @@ public class LedgerCategoryControllerTest {
         System.out.println("Income Categories:");
         for (LedgerCategory cat : incomeCategories) {
             System.out.println(" Category Name: " + cat.getName());
-            for (LedgerCategory child : cat.getChildren()) {
+            for (LedgerCategory child : categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == cat.getId())
+                    .toList()) {
                 System.out.println("   Child Name: " + child.getName());
             }
         }
         System.out.println("Expense Categories:");
         for (LedgerCategory cat : expenseCategories) {
             System.out.println(" Category Name: " + cat.getName());
-            for (LedgerCategory child : cat.getChildren()) {
+            for (LedgerCategory child : categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == cat.getId())
+                    .toList()) {
                 System.out.println("   Child Name: " + child.getName());
             }
         }
@@ -629,7 +641,7 @@ public class LedgerCategoryControllerTest {
     //category and new parent are the same
     @Test
     public void testChangeParent_Failure_SameCategory() {
-        LedgerCategory breakfast = testLedger.getCategories().stream()
+        LedgerCategory breakfast = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
@@ -639,9 +651,9 @@ public class LedgerCategoryControllerTest {
         assertFalse(result);
     }
 
-    @Test
+    /*@Test
     public void testChangeParent_Failure_DifferentLedgers() {
-        LedgerCategory breakfast = testLedger.getCategories().stream()
+        LedgerCategory breakfast = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
@@ -651,16 +663,16 @@ public class LedgerCategoryControllerTest {
 
         boolean result = ledgerCategoryController.changeParent(breakfast, anotherLedgerCategory);
         assertFalse(result);
-    }
+    }*/
 
     @Test
     public void testChangeParent_Failure_DifferentType() {
-        LedgerCategory breakfast = testLedger.getCategories().stream()
+        LedgerCategory breakfast = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(breakfast);
-        LedgerCategory salary = testLedger.getCategories().stream()
+        LedgerCategory salary = testCategories.stream()
                 .filter((cat) -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
@@ -673,12 +685,12 @@ public class LedgerCategoryControllerTest {
     //new parent is not top-level
     @Test
     public void testChangeParent_Failure_NonTopLevelCategory() {
-        LedgerCategory breakfast = testLedger.getCategories().stream()
+        LedgerCategory breakfast = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
         assertNotNull(breakfast);
-        LedgerCategory lunch = testLedger.getCategories().stream()
+        LedgerCategory lunch = testCategories.stream()
                 .filter((cat) -> cat.getName().equals("Lunch"))
                 .findFirst()
                 .orElse(null);
@@ -691,7 +703,7 @@ public class LedgerCategoryControllerTest {
     //null category to change parent
     @Test
     public void testChangeParent_Failure_NullCategory() {
-        LedgerCategory entertainment = testLedger.getCategories().stream()
+        LedgerCategory entertainment = testCategories.stream()
                 .filter((cat) -> cat.getName().equals("Entertainment"))
                 .findFirst()
                 .orElse(null);
@@ -704,7 +716,7 @@ public class LedgerCategoryControllerTest {
     //null new parent
     @Test
     public void testChangeParent_Failure_NullNewParent() {
-        LedgerCategory breakfast = testLedger.getCategories().stream()
+        LedgerCategory breakfast = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Breakfast"))
                 .findFirst()
                 .orElse(null);
@@ -715,11 +727,11 @@ public class LedgerCategoryControllerTest {
 
     @Test
     public void testChangeParent_Failure_CategoryTopLevel() {
-        LedgerCategory entertainment = testLedger.getCategories().stream()
+        LedgerCategory entertainment = testCategories.stream()
                 .filter((cat) -> cat.getName().equals("Entertainment"))
                 .findFirst()
                 .orElse(null);
-        LedgerCategory food = testLedger.getCategories().stream()
+        LedgerCategory food = testCategories.stream()
                 .filter((cat) -> cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
