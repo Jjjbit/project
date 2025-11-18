@@ -91,7 +91,7 @@ public class LedgerCategoryCLI {
         String subCategoryName = scanner.nextLine().trim();
 
         //create sub-category
-        LedgerCategory subCategory = ledgerCategoryController.createSubCategory(subCategoryName, parentCategory);
+        LedgerCategory subCategory = ledgerCategoryController.createSubCategory(subCategoryName, parentCategory, selectedLedger);
         if (subCategory == null) {
             System.out.println("Failed to create sub-category. It may already exist or the input was invalid.");
             return;
@@ -130,7 +130,7 @@ public class LedgerCategoryCLI {
         String newName = scanner.nextLine().trim();
 
         //rename category
-        boolean success = ledgerCategoryController.renameCategory(categoryToRename, newName);
+        boolean success = ledgerCategoryController.renameCategory(categoryToRename, newName, selectedLedger);
         if (!success) {
             System.out.println("Failed to rename category. The new name may already exist or the input was invalid.");
             return;
