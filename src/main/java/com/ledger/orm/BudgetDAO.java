@@ -117,6 +117,9 @@ public class BudgetDAO {
                     budget.setPeriod(Budget.Period.valueOf(rs.getString("period")));
                     budget.setStartDate(rs.getDate("start_date").toLocalDate());
                     budget.setEndDate(rs.getDate("end_date").toLocalDate());
+
+                    LedgerDAO ledgerDAO = new LedgerDAO(connection);
+                    budget.setLedger(ledgerDAO.getById(ledgerId));
                     return budget;
                 }
             }
