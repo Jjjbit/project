@@ -385,6 +385,12 @@ public class TransactionCLI {
 
     private LedgerCategory selectCategory(Ledger ledger, CategoryType type) {
         List<LedgerCategory> categories=reportController.getLedgerCategoryTreeByLedger(ledger);
+
+        if(categories.isEmpty()) {
+            System.out.println("No categories found in the selected ledger.");
+            return null;
+        }
+
         //filter by type
         List<LedgerCategory> filteredCategories = categories.stream()
                 .filter(category -> category.getType() == type)
@@ -393,6 +399,7 @@ public class TransactionCLI {
             System.out.println("No categories found for the selected type.");
             return null;
         }
+
         //get only parent categories
         List<LedgerCategory> parentCategories = filteredCategories.stream()
                 .filter(category -> category.getParent() == null)
@@ -404,8 +411,10 @@ public class TransactionCLI {
             System.out.println( (i + 1) + ". "+ "Name: " + parent.getName());
 
             //display sub-categories
-            List<LedgerCategory> subCategories = parent.getChildren();
-            if (subCategories != null && !subCategories.isEmpty()) {
+            List<LedgerCategory> subCategories = filteredCategories.stream()
+                    .filter(category -> category.getParent() != null && category.getParent().getId() == parent.getId())
+                    .toList();
+            if (!subCategories.isEmpty()) {
                 for (int j = 0; j < subCategories.size(); j++) {
                     LedgerCategory child = subCategories.get(j);
                     System.out.println("   " + (i + 1) + "." + (j + 1) + " " + child.getName());
@@ -426,8 +435,11 @@ public class TransactionCLI {
                 return selectCategory(ledger, type);
             }
 
-            List<LedgerCategory> subCategories = parentCategories.get(parentIndex).getChildren();
-            if (subCategories == null || childIndex < 0 || childIndex >= subCategories.size()) {
+            LedgerCategory parentCategory = parentCategories.get(parentIndex);
+            List<LedgerCategory> subCategories = filteredCategories.stream()
+                    .filter(category -> category.getParent() != null && category.getParent().getId() == parentCategory.getId())
+                    .toList();
+            if (childIndex < 0 || childIndex >= subCategories.size()) {
                 System.out.println("Invalid subcategory choice!");
                 return selectCategory(ledger, type);
             }
