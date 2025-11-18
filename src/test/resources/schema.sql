@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS loan_account (
 --borrowing account table for inheritance
 CREATE TABLE IF NOT EXISTS borrowing_account (
     id BIGINT PRIMARY KEY,
-    is_ended BOOLEAN,
+    is_ended BOOLEAN DEFAULT FALSE,
     borrowing_date DATE,
     borrowing_amount DECIMAL(15,2) NOT NULL,
     borrowing_remaining_amount DECIMAL(15,2) NOT NULL,
