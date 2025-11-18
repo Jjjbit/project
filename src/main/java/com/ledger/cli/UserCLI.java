@@ -1,14 +1,21 @@
 package com.ledger.cli;
 
+import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
+import com.ledger.domain.Account;
+import com.ledger.domain.BorrowingAccount;
 import com.ledger.domain.User;
 
+import java.math.BigDecimal;
 import java.util.Scanner;
 
 public class UserCLI {
-    private UserController userController;
+    private final UserController userController;
+    private final ReportController reportController;
     private final Scanner scanner = new Scanner(System.in);
-    public UserCLI(UserController userController) {
+
+    public UserCLI(UserController userController, ReportController reportController) {
+        this.reportController = reportController;
         this.userController = userController;
     }
 
@@ -62,13 +69,27 @@ public class UserCLI {
     public void showCurrentUser() {
 
         User user = userController.getCurrentUser();
+        BigDecimal totalAssets = reportController.getTotalAssets(user);
+        BigDecimal totalLiabilities = reportController.getTotalLiabilities(user);
+        BigDecimal netWorth = totalAssets.subtract(totalLiabilities);
+
+        BigDecimal totalBorrowing = reportController.getActiveBorrowingAccounts(user).stream()
+                .filter(Account::getIncludedInNetAsset)
+                .map(BorrowingAccount::getRemainingAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalLending = reportController.getActiveLendingAccounts(user).stream()
+                .filter(Account::getIncludedInNetAsset)
+                .map(Account::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         System.out.println("\n=== Current User ===");
         System.out.println("\nUsername: " + user.getUsername());
-        System.out.println("\nNet Worth: " + user.getNetAssets());
-        System.out.println("\nTotal Worth: " + user.getTotalAssets());
-        System.out.println("\nTotal Liabilities: " + user.getTotalLiabilities());
-        System.out.println("\nTotal Borrowing: " + user.getTotalBorrowing());
-        System.out.println("\nTotal Lending: " + user.getTotalLending());
+        System.out.println("\nNet Worth: " + netWorth);
+        System.out.println("\nTotal Worth: " + totalAssets);
+        System.out.println("\nTotal Liabilities: " + totalLiabilities);
+        System.out.println("\nTotal Borrowing: " + totalBorrowing);
+        System.out.println("\nTotal Lending: " + totalLending);
     }
 
 
