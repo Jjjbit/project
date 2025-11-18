@@ -45,7 +45,7 @@ public class BudgetCLI {
         int[] counter = {1};
 
         System.out.println("\n=== Available Budgets by Category ===");
-        List<LedgerCategory> expenseCategories = selectedLedger.getCategories().stream()
+        List<LedgerCategory> expenseCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
                 .toList();
 
@@ -122,7 +122,7 @@ public class BudgetCLI {
                         (budgetController.isOverBudget(categoryBudget) ? ", [OVER BUDGET]" : ", within budget"));
             }
             List<LedgerCategory> children = categories.stream()
-                    .filter(c -> c.getParent() != null && c.getParent().getId().equals(category.getId()))
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == category.getId())
                     .toList();
             if(children.isEmpty()){
                 continue;
@@ -244,7 +244,7 @@ public class BudgetCLI {
 
             // print subcategories recursively
             List<LedgerCategory> children = categories.stream()
-                    .filter(c -> c.getParent() != null && c.getParent().getId().equals(category.getId()))
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == category.getId())
                     .toList();
             if (!children.isEmpty()) {
                 for(LedgerCategory subcategory : children){
@@ -296,7 +296,7 @@ public class BudgetCLI {
 
             // print subcategories budget without number
             List<LedgerCategory> children = categories.stream()
-                    .filter(c -> c.getParent() != null && c.getParent().getId().equals(category.getId()))
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == category.getId())
                     .toList();
             if(children.isEmpty()){
                 continue;

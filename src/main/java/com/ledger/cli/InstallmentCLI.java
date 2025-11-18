@@ -378,7 +378,7 @@ public class InstallmentCLI {
 
             // display subcategories
             List<LedgerCategory> subCategories = categories.stream()
-                    .filter(cat -> parent.getId().equals(cat.getParent().getId()))
+                    .filter(cat -> parent.getId() == cat.getParent().getId())
                     .toList();
             if (!subCategories.isEmpty()) {
                 for (int j = 0; j < subCategories.size(); j++) {
@@ -404,7 +404,7 @@ public class InstallmentCLI {
 
             LedgerCategory parentCategory = parentCategories.get(parentIndex);
             List<LedgerCategory> subCategories = categories.stream()
-                    .filter(cat -> parentCategory.getId().equals(cat.getParent().getId()))
+                    .filter(cat -> parentCategory.getId() == cat.getParent().getId())
                     .toList();
             if (childIndex < 0 || childIndex >= subCategories.size()) {
                 System.out.println("Invalid subcategory choice!");

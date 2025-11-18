@@ -66,13 +66,32 @@ public class LedgerCLI {
         // Display summary for selected ledger
         System.out.println("Ledger Name: " + selectedLedger.getName());
 
-        //select date range for summary
-        System.out.print("Enter start date (YYYY-MM-DD): ");
-        LocalDate startDate =inputStartDate();
+        LocalDate startDate;
+        LocalDate endDate;
+        //select monthly or yearly summary
+        System.out.print("Do you want a monthly summary or yearly summary? (m/y):");
+        String summaryType = scanner.nextLine().trim().toLowerCase();
+        if(summaryType.equals("y") || summaryType.equals("yearly")){
+            //select year
+            System.out.print("Enter year (e.g., 2024) for yearly summary: ");
+            int year= scanner.nextInt();
+            startDate = LocalDate.of(year, 1, 1);
+            endDate = LocalDate.of(year, 12, 31);
+        } else if(summaryType.equals("m") || summaryType.equals("monthly")){
+            //select month
+            System.out.print("Enter month (1-12) for monthly summary: ");
+            int month= scanner.nextInt();
+            if(month<1 || month>12){
+                System.out.println("Invalid month. Please enter a value between 1 and 12.");
+                return;
+            }
+            startDate = LocalDate.of(LocalDate.now().getYear(), month, 1);
+            endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+        } else {
+            System.out.println("Invalid choice. Please enter 'm' for monthly or 'y' for yearly.");
+            return;
+        }
 
-
-        System.out.print("Enter end date (YYYY-MM-DD): ");
-        LocalDate endDate=inputEndDate();
 
         //display income and expense
         System.out.println("Ledger Name: " + selectedLedger.getName());
@@ -87,14 +106,25 @@ public class LedgerCLI {
             return;
         }
         System.out.println("Transactions for Ledger: " + selectedLedger.getName());
-        for(Transaction tx : transactions) {
-            System.out.println("Date: " + tx.getDate() +
-                    ", Type: " + tx.getType() +
-                    ", Amount: " + tx.getAmount() +
-                    ", Category: " + (tx.getCategory() != null ? tx.getCategory().getName() : "N/A") +
-                    ", From Account: " + (tx.getFromAccount() != null ? tx.getFromAccount().getName() : "N/A") +
-                    ", To Account: " + (tx.getToAccount() != null ? tx.getToAccount().getName() : "N/A") +
-                    ", Note: " + tx.getNote());
+        for (Transaction tx : transactions) {
+            String info = "Transaction ID: " + tx.getId()
+                    + ", Date: " + tx.getDate()
+                    + ", Amount: " + tx.getAmount()
+                    + ", Type: " + tx.getType();
+
+            if(tx.getCategory() != null) {
+                info += ", Category: " + tx.getCategory().getName();
+            }
+            if (tx.getToAccount() != null) {
+                info += ", To Account: " + tx.getToAccount().getName();
+            } else if (tx.getFromAccount() != null) {
+                info += ", From Account: " + tx.getFromAccount().getName();
+            }
+            if(tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info += ", Note: " + tx.getNote();
+            }
+
+            System.out.println(info);
         }
     }
 
@@ -184,6 +214,7 @@ public class LedgerCLI {
             return;
         }
         System.out.println("Category Tree for Ledger: " + selectedLedger.getName());
+
         List<LedgerCategory> expenseRootCategories = categories.stream()
                 .filter(cat -> cat.getParent() == null && cat.getType() == CategoryType.EXPENSE)
                 .toList();
@@ -192,15 +223,28 @@ public class LedgerCLI {
                 .toList();
         System.out.println("Expense Categories:");
         for(LedgerCategory root : expenseRootCategories) {
-            printCategoryTree(root, "  ");
+            System.out.println(" Category Name: " + root.getName());
+            List<LedgerCategory> children = categories.stream()
+                    .filter(cat -> cat.getParent() != null && cat.getParent().getId() == root.getId())
+                    .toList();
+            for(LedgerCategory child : children) {
+                System.out.println("  SubCategory Name: " + child.getName());
+            }
         }
+
         System.out.println("Income Categories:");
         for(LedgerCategory root : incomeRootCategories) {
-            printCategoryTree(root, "  ");
+            System.out.println(" Category Name: " + root.getName());
+            List<LedgerCategory> children = categories.stream()
+                    .filter(cat -> cat.getParent() != null && cat.getParent().getId() == root.getId())
+                    .toList();
+            for(LedgerCategory child : children) {
+                System.out.println("  SubCategory Name: " + child.getName());
+            }
         }
     }
 
-    public void showTransaction(){
+    /*public void showTransaction(){
         System.out.println("\n === Ledger Transactions ===");
 
         //select ledger
@@ -241,7 +285,7 @@ public class LedgerCLI {
             System.out.println(", Note: " + tx.getNote());
         }
 
-    }
+    }*/
 
 
     //private helper method
@@ -258,12 +302,6 @@ public class LedgerCLI {
             return LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
         }
         return LocalDate.parse(dateStr);
-    }
-    private void printCategoryTree(LedgerCategory category, String indent) {
-        System.out.println(indent + "- " + category.getName());
-        for(LedgerCategory child : category.getChildren()) {
-            printCategoryTree(child, indent + "  ");
-        }
     }
 
     private Ledger selectLedger() {

@@ -60,6 +60,11 @@ public class AccountCLI {
             }
         }
 
+        if (account == null) {
+            System.out.println(" Failed to create account.");
+            return;
+        }
+
         System.out.println(" Account created successfully: " + account.getName());
 
     }
