@@ -55,11 +55,9 @@ public class UserController {
         }
         try {
             if (userDAO.getUserByUsername(newUsername) != null) {
-                if (user.getUsername().equals(newUsername)) {
-                    return true; // No change needed
-                }
-                return false; // Username already taken
+                return user.getUsername().equals(newUsername);
             }
+
             user.setUsername(newUsername);
             return userDAO.updateUser(user);
         }catch (SQLException e){
