@@ -52,7 +52,7 @@ public class ReportControllerTest {
         LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
 
         budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO, transactionDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO);
         UserController userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, transactionDAO);
         reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO,
@@ -605,7 +605,7 @@ public class ReportControllerTest {
                 12,
                 BigDecimal.valueOf(1.00),  //interest
                 Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(), electronics, false); //remaining amount 1212.00-101=1111.00
+                LocalDate.now(), electronics, false, testLedger); //remaining amount 1212.00-101=1111.00
         assertNotNull(installment); //remaining amount 1212.00
         //create second installment (included in current debt) for creditAccount1 +
         Installment installment2 = installmentController.createInstallment(creditAccount1, "Phone Installment",
@@ -613,7 +613,7 @@ public class ReportControllerTest {
                 6,
                 BigDecimal.valueOf(1.50),  //interest
                 Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(), electronics, true); //remaining amount 609.00-101.50=507.50
+                LocalDate.now(), electronics, true, testLedger); //remaining amount 609.00-101.50=507.50
         assertNotNull(installment2);
 
         //create visible LoanAccount +
@@ -683,7 +683,7 @@ public class ReportControllerTest {
                 6,
                 BigDecimal.valueOf(2.00),  //interest
                 Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(), electronics, true);
+                LocalDate.now(), electronics, true, testLedger);
         assertNotNull(installment1);
         //create completed installment
         Installment installmentCompleted = installmentController.createInstallment(creditAccount, "Completed Installment",
@@ -692,7 +692,7 @@ public class ReportControllerTest {
                 BigDecimal.valueOf(1.50),  //interest
                 Installment.Strategy.EVENLY_SPLIT,
                 LocalDate.now().minusMonths(4), //4 months ago
-                electronics, true);
+                electronics, true, testLedger);
         assertNotNull(installmentCompleted);
 
         //create second credit account
@@ -709,7 +709,7 @@ public class ReportControllerTest {
                 3,
                 BigDecimal.valueOf(1.50),  //interest
                 Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(), electronics, true);
+                LocalDate.now(), electronics, true, testLedger);
         assertNotNull(installment2);
 
         List<Installment> installments = reportController.getActiveInstallments(creditAccount);

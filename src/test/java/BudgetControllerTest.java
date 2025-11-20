@@ -48,7 +48,7 @@ public class BudgetControllerTest {
         UserController userController = new UserController(userDAO);
         budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO, transactionDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO);
         AccountController accountController = new AccountController(accountDAO, transactionDAO);
 
         userController.register("test user", "password");

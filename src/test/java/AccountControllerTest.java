@@ -52,7 +52,7 @@ public class AccountControllerTest {
 
         UserController userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, transactionDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
 
@@ -574,7 +574,7 @@ public class AccountControllerTest {
         Installment plan= installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(1200.00), 12,
                 BigDecimal.valueOf(2.00), //2% interest
-                Installment.Strategy.EVENLY_SPLIT, LocalDate.now(), category, true);
+                Installment.Strategy.EVENLY_SPLIT, LocalDate.now(), category, true, testLedger);
 
         boolean result= accountController.deleteAccount(account, true);
         assertTrue(result);
@@ -755,7 +755,6 @@ public class AccountControllerTest {
         boolean result= accountController.repayDebt(account, BigDecimal.valueOf(500.00), null, testLedger);
         assertTrue(result);
 
-        //Transaction tx=account.getTransactions().getFirst(); //repayment transaction
         Transaction tx= transactionDAO.getByAccountId(account.getId()).getFirst(); //repayment transaction
         assertNotNull(transactionDAO.getById(tx.getId()));
 
@@ -790,7 +789,6 @@ public class AccountControllerTest {
         boolean result= accountController.repayDebt(account, BigDecimal.valueOf(800.00), fromAccount, testLedger);
         assertTrue(result);
 
-        //Transaction tx=account.getTransactions().getFirst(); //repayment transaction
         Transaction tx= transactionDAO.getByAccountId(account.getId()).getFirst(); //repayment transaction
         assertNotNull(transactionDAO.getById(tx.getId()));
 

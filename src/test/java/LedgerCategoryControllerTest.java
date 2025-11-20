@@ -52,7 +52,7 @@ public class LedgerCategoryControllerTest {
         UserController userController = new UserController(userDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO);
         AccountController accountController = new AccountController(accountDAO, transactionDAO);
 
         userController.register("test user", "password123");

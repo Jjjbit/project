@@ -36,7 +36,7 @@ public class Main {
             UserController userController = new UserController(userDAO);
             AccountController accountController = new AccountController(accountDAO, transactionDAO);
             LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-            TransactionController transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
+            TransactionController transactionController = new TransactionController(transactionDAO, accountDAO);
             InstallmentController installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
             LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
             BudgetController budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO, transactionDAO);

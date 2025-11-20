@@ -2,7 +2,6 @@ package com.ledger.business;
 
 import com.ledger.domain.*;
 import com.ledger.orm.AccountDAO;
-import com.ledger.orm.LedgerDAO;
 import com.ledger.orm.TransactionDAO;
 
 import java.math.BigDecimal;
@@ -12,12 +11,10 @@ import java.time.LocalDate;
 public class TransactionController {
     private final TransactionDAO transactionDAO;
     private final AccountDAO accountDAO;
-    private final LedgerDAO ledgerDAO;
 
-    public TransactionController(TransactionDAO transactionDAO, AccountDAO accountDAO, LedgerDAO ledgerDAO) {
+    public TransactionController(TransactionDAO transactionDAO, AccountDAO accountDAO) {
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
-        this.ledgerDAO = ledgerDAO;
     }
 
     public Income createIncome(Ledger ledger, Account toAccount, LedgerCategory category, String description,
@@ -213,7 +210,7 @@ public class TransactionController {
         }
     }
 
-    public boolean updateTransaction(Transaction tx, Account fromAccount, Account toAccount,
+    /*public boolean updateTransaction(Transaction tx, Account fromAccount, Account toAccount,
                                      LedgerCategory category, String note, LocalDate date, BigDecimal amount,
                                      Ledger ledger) {
         if (tx == null) {
@@ -397,7 +394,7 @@ public class TransactionController {
             System.err.println("Error updating transaction: " + e.getMessage());
             return false;
         }
-    }
+    }*/
 
 
     public boolean updateIncome(Income income, Account toAccount, LedgerCategory category, String note,
