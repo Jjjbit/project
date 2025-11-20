@@ -8,7 +8,6 @@ public class CreditAccount extends Account {
     private BigDecimal currentDebt;
     private Integer billDay;
     private Integer dueDay;
-    //private List<Installment> installments;
 
     public CreditAccount(){}
     public CreditAccount(String name,
@@ -18,7 +17,7 @@ public class CreditAccount extends Account {
                          boolean includedInNetWorth,
                          boolean selectable,
                          BigDecimal creditLimit,
-                         BigDecimal currentDebt, //contiene importo residuo delle rate
+                         BigDecimal currentDebt,
                          Integer billDate,
                          Integer dueDate,
                          AccountType type) {
@@ -31,7 +30,6 @@ public class CreditAccount extends Account {
         }
         this.billDay = billDate;
         this.dueDay = dueDate;
-        //this.installments = new ArrayList<>();
     }
 
     public BigDecimal getCurrentDebt() {
@@ -53,16 +51,12 @@ public class CreditAccount extends Account {
         this.dueDay = dueDate;
     }
 
-
-    public void repayDebt(Transaction tx){
-        //transactions.add(tx);
-        currentDebt = currentDebt.subtract(tx.getAmount()).setScale(2, RoundingMode.HALF_UP);
+    public void repayDebt(BigDecimal amount){
+        currentDebt = currentDebt.subtract(amount).setScale(2, RoundingMode.HALF_UP);
         if (currentDebt.compareTo(BigDecimal.ZERO) < 0) {
             currentDebt = BigDecimal.ZERO;
         }
     }
-
-    //public List<Installment> getInstallmentPlans() {return installments;}
 }
 
 
