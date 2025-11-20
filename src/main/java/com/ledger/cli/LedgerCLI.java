@@ -35,7 +35,7 @@ public class LedgerCLI {
             return;
         }
         System.out.println("Ledger created successfully!");
-        System.out.println("Ledger Name: " + ledger.getName());
+        viewLedgers();
     }
 
     public void viewLedgers() {
@@ -47,14 +47,15 @@ public class LedgerCLI {
             System.out.println("No ledgers found.");
             return;
         }
+
         for (int i = 0; i < ledgers.size(); i++) {
             Ledger ledger = ledgers.get(i);
-            System.out.println("Ledger" + (i + 1) + ". "+ "Name: " + ledger.getName());
+            System.out.println((i + 1) + ". "+ "Ledger Name: " + ledger.getName());
         }
     }
 
     public void viewLedgerSummary() {
-        System.out.println("\n === Ledger Summary ===");
+        System.out.println("\n === Ledger's Summary ===");
 
         //select ledger
         System.out.println("Select a ledger to view its summary:");
@@ -63,9 +64,6 @@ public class LedgerCLI {
             return;
         }
 
-        // Display summary for selected ledger
-        System.out.println("Ledger Name: " + selectedLedger.getName());
-
         LocalDate startDate;
         LocalDate endDate;
         //select monthly or yearly summary
@@ -73,7 +71,7 @@ public class LedgerCLI {
         String summaryType = scanner.nextLine().trim().toLowerCase();
         if(summaryType.equals("y") || summaryType.equals("yearly")){
             //select year
-            System.out.print("Enter year (e.g., 2024) for yearly summary: ");
+            System.out.print("Enter year (e.g., 2025) for yearly summary: ");
             int year= scanner.nextInt();
             startDate = LocalDate.of(year, 1, 1);
             endDate = LocalDate.of(year, 12, 31);
@@ -88,15 +86,15 @@ public class LedgerCLI {
             startDate = LocalDate.of(LocalDate.now().getYear(), month, 1);
             endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
         } else {
-            System.out.println("Invalid choice. Please enter 'm' for monthly or 'y' for yearly.");
-            return;
+            startDate = LocalDate.now().withDayOfMonth(1);
+            endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
         }
 
 
         //display income and expense
-        System.out.println("Ledger Name: " + selectedLedger.getName());
-        System.out.println("\nTotal Income: " + reportController.getTotalIncomeByLedger(selectedLedger, startDate, endDate));
-        System.out.println("\nTotal Expense: " + reportController.getTotalExpenseByLedger(selectedLedger, startDate, endDate));
+        System.out.println("\nLedger Name: " + selectedLedger.getName());
+        System.out.println("Total Income: " + reportController.getTotalIncomeByLedger(selectedLedger, startDate, endDate));
+        System.out.println("Total Expense: " + reportController.getTotalExpenseByLedger(selectedLedger, startDate, endDate));
 
         //show transaction
         List<Transaction> transactions = reportController.getTransactionsByLedgerInRangeDate(
@@ -139,17 +137,16 @@ public class LedgerCLI {
         }
 
         //prompt for new name
-        System.out.println("Current name: " + selectedLedger.getName());
-        System.out.print("\nEnter new name for the ledger (leave blank to keep current): ");
+        System.out.println("\nCurrent name: " + selectedLedger.getName());
+        System.out.print("Enter new name for the ledger (leave blank to keep current): ");
         String newName = scanner.nextLine().trim();
 
-        boolean updated = ledgerController.renameLedger(selectedLedger, newName);
+        boolean updated = ledgerController.renameLedger(selectedLedger, newName, userController.getCurrentUser());
         if(!updated) {
             System.out.println("Failed to update ledger.");
             return;
         }
-        System.out.println("Ledger updated successfully.");
-
+        System.out.println("Ledger updated successfully.  New ledger name: " + selectedLedger.getName());
     }
 
     public void copyLedger(){
@@ -162,13 +159,12 @@ public class LedgerCLI {
             return;
         }
 
-        Ledger copiedLedger = ledgerController.copyLedger(selectedLedger);
+        Ledger copiedLedger = ledgerController.copyLedger(selectedLedger, userController.getCurrentUser());
         if(copiedLedger != null) {
             System.out.println("Ledger copied successfully. New ledger name: " + copiedLedger.getName());
         } else {
             System.out.println("Failed to copy ledger.");
         }
-
     }
 
     public void deleteLedger() {
@@ -183,9 +179,9 @@ public class LedgerCLI {
 
         // Confirm deletion
         System.out.print("Are you sure you want to delete the ledger '" + selectedLedger.getName() + "'? (y/n): ");
-        String confirmation = System.console().readLine();
+        String confirmation = scanner.nextLine().trim().toLowerCase();
 
-        if(confirmation.equalsIgnoreCase("n") || confirmation.equalsIgnoreCase("no") ) {
+        if(confirmation.equals("n") || confirmation.equals("no") ) {
             System.out.println("Ledger deletion cancelled.");
             return;
         }
@@ -196,6 +192,7 @@ public class LedgerCLI {
             return;
         }
         System.out.println("Ledger deleted successfully.");
+        viewLedgers();
     }
 
     public void showCategoryTree(){
@@ -215,14 +212,17 @@ public class LedgerCLI {
         }
         System.out.println("Category Tree for Ledger: " + selectedLedger.getName());
 
-        List<LedgerCategory> expenseRootCategories = categories.stream()
-                .filter(cat -> cat.getParent() == null && cat.getType() == CategoryType.EXPENSE)
+        List<LedgerCategory> expenseRoot = categories.stream()
+                .filter(cat -> cat.getType() == CategoryType.EXPENSE)
+                .filter(cat -> cat.getParent() == null)
                 .toList();
-        List<LedgerCategory> incomeRootCategories = categories.stream()
-                .filter(cat -> cat.getParent() == null && cat.getType() == CategoryType.INCOME)
+        List<LedgerCategory> incomeRoot = categories.stream()
+                .filter(cat -> cat.getType() == CategoryType.INCOME)
+                .filter(cat -> cat.getParent() == null)
                 .toList();
+
         System.out.println("Expense Categories:");
-        for(LedgerCategory root : expenseRootCategories) {
+        for(LedgerCategory root : expenseRoot) {
             System.out.println(" Category Name: " + root.getName());
             List<LedgerCategory> children = categories.stream()
                     .filter(cat -> cat.getParent() != null && cat.getParent().getId() == root.getId())
@@ -233,7 +233,7 @@ public class LedgerCLI {
         }
 
         System.out.println("Income Categories:");
-        for(LedgerCategory root : incomeRootCategories) {
+        for(LedgerCategory root : incomeRoot) {
             System.out.println(" Category Name: " + root.getName());
             List<LedgerCategory> children = categories.stream()
                     .filter(cat -> cat.getParent() != null && cat.getParent().getId() == root.getId())
@@ -244,85 +244,27 @@ public class LedgerCLI {
         }
     }
 
-    /*public void showTransaction(){
-        System.out.println("\n === Ledger Transactions ===");
-
-        //select ledger
-        System.out.println("Select a ledger to view its transactions:");
-        Ledger selectedLedger = selectLedger();
-        if(selectedLedger == null) {
-            return;
-        }
-
-        System.out.print("Enter start date (YYYY-MM-DD): ");
-        LocalDate startDate=inputStartDate();
-
-        System.out.print("Enter end date (YYYY-MM-DD): ");
-        LocalDate endDate=inputEndDate();
-
-        List<Transaction> transactions = reportController.getTransactionsByLedgerInRangeDate(
-                selectedLedger, startDate, endDate);
-        if(transactions.isEmpty()) {
-            System.out.println("No transactions found for the selected period.");
-            return;
-        }
-        System.out.println("Transactions for Ledger: " + selectedLedger.getName());
-        for(Transaction tx : transactions) {
-            System.out.println("Date: " + tx.getDate() +
-                    ", Type: " + tx.getType() +
-                    ", Amount: " + tx.getAmount() +
-                    ", Category: " + (tx.getCategory() != null ? tx.getCategory().getName() : "N/A"));
-            if(tx instanceof Expense){
-                System.out.print(", From Account: " + (tx.getFromAccount() != null ? tx.getFromAccount().getName() : "N/A"));
-            }
-            if(tx instanceof Income){
-                System.out.print(", To Account: " + (tx.getToAccount() != null ? tx.getToAccount().getName() : "N/A") );
-            }
-            if(tx instanceof Transfer){
-                System.out.print(", From Account: " + (tx.getFromAccount() != null ? tx.getFromAccount().getName() : "N/A"));
-                System.out.print(", To Account: " + (tx.getToAccount() != null ? tx.getToAccount().getName() : "N/A"));
-            }
-            System.out.println(", Note: " + tx.getNote());
-        }
-
-    }*/
-
 
     //private helper method
-    private LocalDate inputStartDate() {
-        String dateStr = scanner.nextLine().trim();
-        if(dateStr.isEmpty()){
-            return LocalDate.now().withDayOfMonth(1);
-        }
-        return LocalDate.parse(dateStr);
-    }
-    private LocalDate inputEndDate() {
-        String dateStr = scanner.nextLine().trim();
-        if(dateStr.isEmpty()){
-            return LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
-        }
-        return LocalDate.parse(dateStr);
-    }
-
     private Ledger selectLedger() {
         List<Ledger> ledgers =reportController.getLedgerByUser(userController.getCurrentUser());
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found.");
             return null;
         }
+
         for (int i = 0; i < ledgers.size(); i++) {
             Ledger ledger = ledgers.get(i);
-            System.out.println("Ledger " + (i + 1) + ". "+ "Name: " + ledger.getName());
+            System.out.println((i + 1) + ". "+ "Name: " + ledger.getName());
         }
         System.out.print("Enter the number of the ledger: ");
-        String input = scanner.nextLine().trim();
-        int choice = Integer.parseInt(input);
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // consume newline
+
         if(choice < 1 || choice > ledgers.size()) {
             System.out.println("Invalid choice.");
             return selectLedger();
         }
         return ledgers.get(choice - 1);
     }
-
-
 }
