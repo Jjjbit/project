@@ -25,7 +25,8 @@ public class InstallmentController {
 
     public Installment createInstallment(CreditAccount creditAccount, String name, BigDecimal totalAmount,
                                          int totalPeriods, BigDecimal interest, Installment.Strategy strategy,
-                                         LocalDate repaymentStartDate, LedgerCategory category, Boolean includedInCurrentDebts) {
+                                         LocalDate repaymentStartDate, LedgerCategory category, Boolean includedInCurrentDebts,
+                                         Ledger ledger) {
         try {
             if(creditAccount == null){
                 return null;
@@ -78,7 +79,6 @@ public class InstallmentController {
                     includedInCurrentDebts
             );
             installmentDAO.insert(plan); //insert to db
-            //creditAccount.getInstallmentPlans().add(plan);
             if(includedInCurrentDebts){
                 BigDecimal oldDebt = creditAccount.getCurrentDebt();
                 creditAccount.setCurrentDebt(oldDebt.add(plan.getRemainingAmount()));
@@ -93,13 +93,11 @@ public class InstallmentController {
                         repaidAmount,
                         "Record of already repaid installments for " + name,
                         creditAccount,
-                        category.getLedger(),
+                        ledger,
                         category
                 );
                 transactionDAO.insert(tx); //insert transaction to db
                 creditAccount.debit(repaidAmount); //reduce balance or increase debt
-                //creditAccount.getTransactions().add(tx);
-                //category.getTransactions().add(tx);
                 accountDAO.update(creditAccount); //update balance and current debt in db
             }
 
