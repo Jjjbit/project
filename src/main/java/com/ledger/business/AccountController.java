@@ -69,7 +69,10 @@ public class AccountController {
             if (type == null) {
                 return null;
             }
-            if (creditLimit == null || creditLimit.compareTo(BigDecimal.ZERO) <= 0) {
+            if(creditLimit == null){
+                creditLimit = BigDecimal.ZERO;
+            }
+            if (creditLimit.compareTo(BigDecimal.ZERO) <= 0) {
                 return null;
             }
             if (currentDebt == null) {
@@ -106,10 +109,14 @@ public class AccountController {
             if (repaymentType == null) {
                 repaymentType = LoanAccount.RepaymentType.EQUAL_INTEREST;
             }
+            if(receivingAccount != null){
+                if(!receivingAccount.getSelectable()){
+                    return null;
+                }
+            }
             LoanAccount account = new LoanAccount(name, user, notes, includedInNetAsset, totalPeriods, repaidPeriods,
                     annualInterestRate, loanAmount, repaymentDate, repaymentType);
             accountDAO.createLoanAccount(account); //insert loan account to db
-            //user.getAccounts().add(account);
 
             Transaction tx = new Transfer(LocalDate.now(),
                     "Loan disbursement",
@@ -118,15 +125,11 @@ public class AccountController {
                     loanAmount,
                     ledger);
             transactionDAO.insert(tx); //insert transaction to db
-            //account.getTransactions().add(tx);
 
             if (receivingAccount != null) {
                 receivingAccount.credit(loanAmount);
-                //receivingAccount.getTransactions().add(tx);
                 accountDAO.update(receivingAccount); //update balance in db
             }
-
-            //ledger.getTransactions().add(tx);
 
             return account;
         }catch (SQLException e){
@@ -135,9 +138,8 @@ public class AccountController {
         }
     }
 
-    public BorrowingAccount createBorrowingAccount(User user, String name, BigDecimal amount,
-                                                   String note, boolean includeInAssets,
-                                                   boolean selectable, Account toAccount,
+    public BorrowingAccount createBorrowingAccount(User user, String name, BigDecimal amount, String note,
+                                                   boolean includeInAssets, boolean selectable, Account toAccount,
                                                    LocalDate date, Ledger ledger) {
         try{
             LocalDate transactionDate = date != null ? date : LocalDate.now();
@@ -150,7 +152,6 @@ public class AccountController {
                     user,
                     transactionDate);
             accountDAO.createBorrowingAccount(borrowingAccount); //insert borrowing account to db
-            //user.getAccounts().add(borrowingAccount);
 
             String description = toAccount != null
                     ? borrowingAccount.getName() + " to " + toAccount.getName()
@@ -163,13 +164,9 @@ public class AccountController {
                     amount,
                     ledger);
             transactionDAO.insert(tx); //insert transaction to db
-            //borrowingAccount.getTransactions().add(tx);
-
-            //ledger.getTransactions().add(tx);
 
             if (toAccount != null) {
                 toAccount.credit(amount);
-                //toAccount.getTransactions().add(tx);
                 accountDAO.update(toAccount); //update balance in db
             }
 
@@ -194,7 +191,6 @@ public class AccountController {
                     user,
                     transactionDate);
             accountDAO.createLendingAccount(lendingAccount); //insert lending account to db
-            //user.getAccounts().add(lendingAccount);
 
             String description = fromAccount != null
                     ? fromAccount.getName() + " to " + lendingAccount.getName()
@@ -207,15 +203,9 @@ public class AccountController {
                     amount,
                     ledger);
             transactionDAO.insert(tx); //insert transaction to db
-            //lendingAccount.getIncomingTransactions().add(tx);
-            //lendingAccount.getTransactions().add(tx);
-
-            //ledger.getTransactions().add(tx);
 
             if (fromAccount != null) {
                 fromAccount.debit(amount);
-                //fromAccount.getTransactions().add(tx);
-                //fromAccount.getOutgoingTransactions().add(tx);
                 accountDAO.update(fromAccount); //update balance in db
             }
 
@@ -232,11 +222,6 @@ public class AccountController {
 
             if (deleteTransactions) {
                 for (Transaction tx : transactions) {
-                    //LedgerCategory category = tx.getCategory();
-
-                    /*if (category != null) {
-                        category.getTransactions().remove(tx);
-                    }*/
                     transactionDAO.delete(tx);
                 }
             } else {
@@ -253,8 +238,6 @@ public class AccountController {
                 }
             }
 
-            //User owner = account.getOwner();
-            //owner.getAccounts().remove(account);
             return accountDAO.deleteAccount(account);
         } catch (SQLException e) {
             System.err.println("SQL Exception during deleteAccount: " + e.getMessage());
@@ -412,16 +395,10 @@ public class AccountController {
                 return false;
             }
 
-            if (fromAccount != null) {
-                if (fromAccount.getOwner() != creditAccount.getOwner()) {
-                    return false;
-                }
-            }
-
             if (amount == null) {
                 return false;
             }
-            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            if (amount.compareTo(BigDecimal.ZERO) < 0) {
                 return false;
             }
             if (amount.compareTo(((CreditAccount) creditAccount).getCurrentDebt()) > 0) {
@@ -435,19 +412,12 @@ public class AccountController {
                     amount,
                     ledger);
             transactionDAO.insert(tx);
-            ((CreditAccount) creditAccount).repayDebt(tx);
-
+            ((CreditAccount) creditAccount).repayDebt(amount);
 
             if (fromAccount != null) {
                 fromAccount.debit(amount);
-                //fromAccount.getTransactions().add(tx);
-                //fromAccount.getOutgoingTransactions().add(tx);
                 accountDAO.update(fromAccount); //update from account balance in db
             }
-
-            /*if (ledger != null) {
-                ledger.getTransactions().add(tx);
-            }*/
             return accountDAO.update(creditAccount); //update credit account balance and current debt in db
         }catch (SQLException e){
             System.err.println("SQL Exception during repayDebt: " + e.getMessage());
@@ -462,20 +432,6 @@ public class AccountController {
                 return false;
             }
 
-            if (fromAccount != null) {
-                if (fromAccount.getOwner() != loanAccount.getOwner()) {
-                    return false;
-                }
-            }
-
-
-            User user = loanAccount.getOwner();
-            if (ledger != null) {
-                if (ledger.getOwner().getId() != user.getId()) {
-                    return false;
-                }
-            }
-
             BigDecimal repayAmount = loanAccount.getMonthlyRepayment(loanAccount.getRepaidPeriods() + 1);
             Transaction tx = new Transfer(LocalDate.now(),
                     "Loan Repayment",
@@ -485,18 +441,13 @@ public class AccountController {
                     ledger);
             transactionDAO.insert(tx); //insert transaction to db
 
-            loanAccount.repayLoan(tx); //reduce remaining amount and increase repaid period
+            loanAccount.repayLoan(); //reduce remaining amount and increase repaid period
 
             if (fromAccount != null) {
                 fromAccount.debit(repayAmount); //reduce from account balance
-                //fromAccount.getTransactions().add(tx);
-                //fromAccount.getOutgoingTransactions().add(tx);
                 accountDAO.update(fromAccount); //update from account balance in db
             }
 
-            /*if (ledger != null) {
-                ledger.getTransactions().add(tx);
-            }*/
             return accountDAO.update(loanAccount); //update loan account remaining amount in db
         }catch (SQLException e){
             System.err.println("SQL Exception during repayLoan: " + e.getMessage());
@@ -511,17 +462,8 @@ public class AccountController {
                 return false;
             }
 
-            User user = borrowingAccount.getOwner();
-            if (fromAccount != null && fromAccount.getOwner().getId() != user.getId()) {
-                return false;
-            }
             if (amount.compareTo(borrowingAccount.getRemainingAmount()) > 0) {
                 return false;
-            }
-            if (ledger != null) {
-                if (ledger.getOwner().getId() != user.getId()) {
-                    return false;
-                }
             }
 
             Transaction tx = new Transfer(LocalDate.now(),
@@ -531,18 +473,13 @@ public class AccountController {
                     amount,
                     ledger);
             transactionDAO.insert(tx); //insert transaction to db
-            borrowingAccount.repay(tx, amount); //reduce remaining amount, update status and add incoming transaction
+            borrowingAccount.repay(amount); //reduce remaining amount, update status and add incoming transaction
 
             if (fromAccount != null) {
                 fromAccount.debit(amount);
-                //fromAccount.getTransactions().add(tx);
-                //fromAccount.getOutgoingTransactions().add(tx);
                 accountDAO.update(fromAccount); //update to account balance in db
             }
 
-            /*if (ledger != null) {
-                ledger.getTransactions().add(tx);
-            }*/
             return accountDAO.update(borrowingAccount); //update borrowing account borrowing amount in db
         }catch (SQLException e){
             System.err.println("SQL Exception during payBorrowing: " + e.getMessage());
@@ -557,11 +494,6 @@ public class AccountController {
                 return false;
             }
 
-            User user = lendingAccount.getOwner();
-            if (toAccount != null && toAccount.getOwner().getId() != user.getId()) {
-                return false;
-            }
-
             Transaction tx = new Transfer(LocalDate.now(),
                     "Receive Lending",
                     toAccount,
@@ -569,18 +501,13 @@ public class AccountController {
                     amount,
                     ledger);
             transactionDAO.insert(tx); //insert transaction to db
-            lendingAccount.receiveRepayment(tx, amount); //increase lending amount, update status and add outgoing transaction
+            lendingAccount.receiveRepayment(amount); //increase lending amount, update status and add outgoing transaction
 
             if (toAccount != null) {
                 toAccount.credit(amount);
-                //toAccount.getTransactions().add(tx);
-                //toAccount.getIncomingTransactions().add(tx);
                 accountDAO.update(toAccount); //update from account balance in db
             }
 
-            /*if (ledger != null) {
-                ledger.getTransactions().add(tx);
-            }*/
             return accountDAO.update(lendingAccount); //update lending account lending amount in db
         }catch (SQLException e){
             System.err.println("SQL Exception during receiveLending: " + e.getMessage());
