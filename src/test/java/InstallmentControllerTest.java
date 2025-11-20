@@ -26,6 +26,7 @@ public class InstallmentControllerTest {
 
     private CreditAccount account;
     private LedgerCategory category;
+    private Ledger testLedger;
 
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
@@ -67,7 +68,7 @@ public class InstallmentControllerTest {
                 10, 25);
 
         // Create a test ledger for the user
-        Ledger testLedger = ledgerController.createLedger("Test Ledger", testUser);
+        testLedger = ledgerController.createLedger("Test Ledger", testUser);
 
         List<LedgerCategory> testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
 
@@ -113,15 +114,11 @@ public class InstallmentControllerTest {
     //create
     @Test
     public void testCreateInstallment_IncludedInCurrentDebt() throws SQLException {
-        Installment plan = installmentController.createInstallment(
-                account,
-                "Test Installment Plan",
-                BigDecimal.valueOf(120.00),
-                12,
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
-                Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(),
-                category, true);
+                Installment.Strategy.EVENLY_SPLIT, LocalDate.now(), //repaid periods =1
+                category, true, testLedger);
         assertNotNull(plan);
         assertNotNull(installmentDAO.getById(plan.getId()));
 
@@ -143,19 +140,16 @@ public class InstallmentControllerTest {
         assertEquals(1, installmentDAO.getByAccountId(account.getId()).size());
         assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).getFirst().getId());
         assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
+        assertEquals(1, transactionDAO.getByCategoryId(category.getId()).size());
+        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
     }
 
     @Test
     public void testCreateInstallment_NotIncludedInCurrentDebt() throws SQLException {
-        Installment plan = installmentController.createInstallment(
-                account,
-                "Test Installment Plan",
-                BigDecimal.valueOf(120.00),
-                12,
-                BigDecimal.valueOf(5.00), // fee rate
-                Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(),
-                category, false);
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12,
+                BigDecimal.valueOf(5.00), // interest
+                Installment.Strategy.EVENLY_SPLIT, LocalDate.now(), category, false, testLedger);
         assertNotNull(plan);
         assertNotNull(installmentDAO.getById(plan.getId()));
 
@@ -183,15 +177,10 @@ public class InstallmentControllerTest {
     @Test
     public void testCreateInstallment_WithPastRepaymentStartDate() throws SQLException {
         LocalDate startDate = LocalDate.now().minusMonths(3); // 3 months ago
-        Installment plan = installmentController.createInstallment(
-                account,
-                "Test Installment Plan",
-                BigDecimal.valueOf(120.00),
-                12,
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
-                Installment.Strategy.EVENLY_SPLIT,
-                startDate,
-                category, true);
+                Installment.Strategy.EVENLY_SPLIT, startDate, category, true, testLedger);
         // total repayment = 120 + 5% = 126
         // remaining amount = 126 - (126/12 * 3) = 94.5
         // repaid amount = 126/12 *3 = 31.5
@@ -227,15 +216,10 @@ public class InstallmentControllerTest {
     @Test
     public void testCreateInstallment_WithFutureRepaymentStartDate() throws SQLException {
         LocalDate startDate = LocalDate.now().plusMonths(2); // 2 months later
-        Installment plan = installmentController.createInstallment(
-                account,
-                "Test Installment Plan",
-                BigDecimal.valueOf(120.00),
-                12,
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
-                Installment.Strategy.EVENLY_SPLIT,
-                startDate,
-                category, true);
+                Installment.Strategy.EVENLY_SPLIT, startDate, category, true, testLedger);
         assertNotNull(plan);
         assertEquals(0, plan.getPaidPeriods());
 
@@ -262,15 +246,12 @@ public class InstallmentControllerTest {
     //delete
     @Test
     public void testDeleteInstallment_Success() throws SQLException {
-        Installment plan = installmentController.createInstallment(
-                account,
-                "Test Installment Plan",
-                BigDecimal.valueOf(120.00),
-                12,
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
                 Installment.Strategy.EVENLY_SPLIT,
                 LocalDate.now(), //repaid periods =0
-                category, true);
+                category, true, testLedger);
 
         boolean deleted = installmentController.deleteInstallment(plan);
         assertTrue(deleted);
@@ -280,15 +261,12 @@ public class InstallmentControllerTest {
 
     @Test
     public void testDeleteInstallment_WithPaidPeriods_Success() throws SQLException {
-        Installment plan = installmentController.createInstallment(
-                account,
-                "Test Installment Plan",
-                BigDecimal.valueOf(120.00),
-                12,
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
                 Installment.Strategy.EVENLY_SPLIT,
                 LocalDate.now().minusMonths(3), // 3 months ago
-                category, true);
+                category, true, testLedger);
         installmentController.payInstallment(plan); //pay once
         //total repayment = 120 + 5% = 126
         //remaining amount = 126 - (126/12 * 4) = 84.0
@@ -309,15 +287,10 @@ public class InstallmentControllerTest {
     //test pay installment
     @Test
     public void testPayInstallment_Success() throws SQLException {
-        Installment plan = installmentController.createInstallment(
-                account,
-                "Test Installment Plan",
-                BigDecimal.valueOf(120.00),
-                12,
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
-                Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(),
-                category, true);
+                Installment.Strategy.EVENLY_SPLIT, LocalDate.now(), category, true, testLedger);
 
         boolean paid = installmentController.payInstallment(plan);
         assertTrue(paid);
@@ -338,15 +311,10 @@ public class InstallmentControllerTest {
 
     @Test
     public void testPayInstallment_FullFlow() throws SQLException {
-        Installment plan = installmentController.createInstallment(
-                account,
-                "Test Installment Plan",
-                BigDecimal.valueOf(120.00),
-                12,
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
-                Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(),
-                category, true);
+                Installment.Strategy.EVENLY_SPLIT, LocalDate.now(), category, true, testLedger);
 
         for (int i = 2; i <= 12; i++) {
             boolean paid = installmentController.payInstallment(plan);
@@ -369,15 +337,11 @@ public class InstallmentControllerTest {
     //test pay installment when all periods paid
     @Test
     public void testPayInstallment_AllPeriodsPaid_Failure() throws SQLException {
-        Installment plan = installmentController.createInstallment(
-                account,
-                "Test Installment Plan",
-                BigDecimal.valueOf(120.00),
-                12,
-                BigDecimal.valueOf(5.00), // interest
+        Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
+                BigDecimal.valueOf(120.00), 12, BigDecimal.valueOf(5.00), // interest
                 Installment.Strategy.EVENLY_SPLIT,
                 LocalDate.now().minusMonths(12), // 12 months ago
-                category, true);
+                category, true, testLedger);
         //all periods already paid
         //total repayment = 120 + 5% = 126
         //remaining amount = 0
@@ -405,9 +369,7 @@ public class InstallmentControllerTest {
     public void testEditInstallment_Success() throws SQLException {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12, BigDecimal.valueOf(5.00), // interest
-                Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(),
-                category, true);
+                Installment.Strategy.EVENLY_SPLIT, LocalDate.now(), category, true, testLedger);
         //remaining amount = 126 -10.5=115.5
         //balance of account =1000-10.5=989.5
         //current debt =20 +115.5=135.5
@@ -430,7 +392,7 @@ public class InstallmentControllerTest {
                 BigDecimal.valueOf(120.00), 12, BigDecimal.valueOf(5.00), // interest
                 Installment.Strategy.EVENLY_SPLIT,
                 LocalDate.now(),
-                category, false);
+                category, false, testLedger);
         //remaining amount = 126 -10.5=115.5
         //balance of account =1000-10.5=989.5
         //current debt =20
