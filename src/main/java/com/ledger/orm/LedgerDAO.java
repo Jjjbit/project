@@ -55,8 +55,6 @@ public class LedgerDAO {
 
     }
 
-    //not set owner
-    //set transactions and categories
     @SuppressWarnings("SqlResolve")
     public Ledger getById(Long id) throws SQLException {
         String sql = "SELECT id, name, user_id FROM ledgers WHERE id = ?";
@@ -73,7 +71,6 @@ public class LedgerDAO {
         }
         return null;
     }
-
 
     @SuppressWarnings("SqlResolve")
     public Ledger getByNameAndOwnerId(String name, Long ownerId) throws SQLException {
