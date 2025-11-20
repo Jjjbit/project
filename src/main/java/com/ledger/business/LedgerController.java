@@ -42,15 +42,8 @@ public class LedgerController {
 
             Ledger ledger = new Ledger(name, owner);
             ledgerDAO.insert(ledger); //insert to db
-            //owner.getLedgers().add(ledger); //add to user
 
-            //List<Category> categoryTree = categoryDAO.getCategoryTree(); //get full tree
             List<Category> templateCategories = new ArrayList<>(categoryDAO.getCategoriesNullParent()); //get only parents
-            /*for (Category cat : categoryTree) {
-                if (cat.getParent() == null) {
-                    templateCategories.add(cat);
-                }
-            }*/
 
             List<LedgerCategory> allCategories = new ArrayList<>();
             for (Category template : templateCategories) {
@@ -58,12 +51,9 @@ public class LedgerController {
                 allCategories.addAll(categoriesFromTemplate);
             }
 
-            //ledger.getCategories().addAll(allCategories);
-
             //create Budget for ledger level for each Period
             for (Budget.Period period : Budget.Period.values()) {
                 Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, ledger);
-                //ledger.getBudgets().add(ledgerBudget);
                 budgetDAO.insert(ledgerBudget);
             }
 
@@ -72,7 +62,6 @@ public class LedgerController {
                 if (cat.getType() == CategoryType.EXPENSE) {
                     for (Budget.Period period : Budget.Period.values()) {
                         Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, ledger);
-                        //cat.getBudgets().add(categoryBudget);
                         budgetDAO.insert(categoryBudget);
                     }
                 }
@@ -88,6 +77,7 @@ public class LedgerController {
     private List<LedgerCategory> copyCategoryTree(Category template, Ledger ledger) {
         try {
             List<LedgerCategory> result = new ArrayList<>();
+
             LedgerCategory copy = new LedgerCategory();
             copy.setName(template.getName());
             copy.setType(template.getType());
@@ -99,7 +89,6 @@ public class LedgerController {
                 List<LedgerCategory> childCopies = copyCategoryTree(childTemplate, ledger);
                 for (LedgerCategory childCopy : childCopies) {
                     childCopy.setParent(copy);
-                    //copy.getChildren().add(childCopy);
                     ledgerCategoryDAO.update(childCopy);
                 }
                 result.addAll(childCopies);
@@ -174,24 +163,17 @@ public class LedgerController {
         }
     }
 
-    public Ledger copyLedger(Ledger original) {
+    public Ledger copyLedger(Ledger original, User user) {
         if(original == null){
             return null;
         }
 
         try {
             String newName = original.getName() + " Copy";
-            Ledger copy = new Ledger(newName, original.getOwner());
+            Ledger copy = new Ledger(newName, user);
             ledgerDAO.insert(copy); // insert to db
-            //original.getOwner().getLedgers().add(copy);
 
-            //List<LedgerCategory> tree = ledgerCategoryDAO.getTreeByLedgerId(original.getId());
             List<LedgerCategory> parents = new ArrayList<>(ledgerCategoryDAO.getCategoriesNullParent(original.getId()));
-            /*for (LedgerCategory cat : tree) {
-                if (cat.getParent() == null) {
-                    parents.add(cat);
-                }
-            }*/
 
             List<LedgerCategory> categoryCopies = new ArrayList<>();
             for (LedgerCategory originalCat : parents) {
@@ -254,7 +236,7 @@ public class LedgerController {
         }
     }
 
-    public boolean renameLedger(Ledger ledger, String newName) {
+    public boolean renameLedger(Ledger ledger, String newName, User user) {
         if(ledger == null){
             return false;
         }
@@ -262,7 +244,7 @@ public class LedgerController {
             return false;
         }
         try {
-            Ledger existingLedger = ledgerDAO.getByNameAndOwnerId(newName, ledger.getOwner().getId());
+            Ledger existingLedger = ledgerDAO.getByNameAndOwnerId(newName, user.getId());
             if (existingLedger != null && existingLedger.getId() != ledger.getId()) {
                 return false;
             }
