@@ -31,7 +31,6 @@ public class LoanController {
             BorrowingAccount borrowingAccount = new BorrowingAccount(name, amount, note, includeInAssets, selectable,
                     user, transactionDate);
             accountDAO.createBorrowingAccount(borrowingAccount); //insert borrowing account to db
-            //user.getAccounts().add(borrowingAccount);
 
             String description = toAccount != null
                     ? borrowingAccount.getName() + " to " + toAccount.getName()
@@ -44,13 +43,9 @@ public class LoanController {
                     amount,
                     ledger);
             transactionDAO.insert(tx); //insert transaction to db
-            //borrowingAccount.getTransactions().add(tx);
-
-            //ledger.getTransactions().add(tx);
 
             if (toAccount != null) {
                 toAccount.credit(amount);
-                //toAccount.getTransactions().add(tx);
                 accountDAO.update(toAccount); //update balance in db
             }
 
@@ -80,7 +75,6 @@ public class LoanController {
                     user,
                     transactionDate);
             accountDAO.createLendingAccount(lendingAccount); //insert lending account to db
-            //user.getAccounts().add(lendingAccount);
 
             String description = fromAccount != null
                     ? fromAccount.getName() + " to " + lendingAccount.getName()
@@ -93,13 +87,9 @@ public class LoanController {
                     amount,
                     ledger);
             transactionDAO.insert(tx); //insert transaction to db
-            //lendingAccount.getTransactions().add(tx);
-
-            //ledger.getTransactions().add(tx);
 
             if (fromAccount != null) {
                 fromAccount.debit(amount);
-                //fromAccount.getTransactions().add(tx);
                 accountDAO.update(fromAccount); //update balance in db
             }
 
@@ -165,23 +155,8 @@ public class LoanController {
                 return false;
             }
 
-            User user = borrowingAccount.getOwner();
-            /*if (fromAccount != null && !fromAccount.getOwner().getId().equals(user.getId())) {
-                return false;
-            }*/
-            if (fromAccount != null && fromAccount.getOwner().getId() != user.getId()) {
-                return false;
-            }
             if (amount.compareTo(borrowingAccount.getRemainingAmount()) > 0) {
                 return false;
-            }
-            if (ledger != null) {
-                /*if (!ledger.getOwner().getId().equals(user.getId())) {
-                    return false;
-                }*/
-                if (ledger.getOwner().getId() != user.getId()) {
-                    return false;
-                }
             }
 
             Transaction tx = new Transfer(LocalDate.now(),
@@ -191,17 +166,13 @@ public class LoanController {
                     amount,
                     ledger);
             transactionDAO.insert(tx); //insert transaction to db
-            borrowingAccount.repay(tx, amount); //reduce remaining amount, update status and add incoming transaction
+            borrowingAccount.repay(amount); //reduce remaining amount, update status and add incoming transaction
 
             if (fromAccount != null) {
                 fromAccount.debit(amount);
-                //fromAccount.getTransactions().add(tx);
                 accountDAO.update(fromAccount); //update to account balance in db
             }
 
-            /*if (ledger != null) {
-                ledger.getTransactions().add(tx);
-            }*/
             return accountDAO.update(borrowingAccount); //update borrowing account borrowing amount in db
         }catch (SQLException e){
             System.err.println("SQL Exception during payBorrowing: " + e.getMessage());
@@ -217,13 +188,6 @@ public class LoanController {
                 return false;
             }
 
-            User user = lendingAccount.getOwner();
-            /*if (toAccount != null && !toAccount.getOwner().getId().equals(user.getId())) {
-                return false;
-            }*/
-            if (toAccount != null && toAccount.getOwner().getId() != user.getId()) {
-                return false;
-            }
 
             Transaction tx = new Transfer(LocalDate.now(),
                     "Receive Lending",
@@ -232,17 +196,13 @@ public class LoanController {
                     amount,
                     ledger);
             transactionDAO.insert(tx); //insert transaction to db
-            lendingAccount.receiveRepayment(tx, amount); //increase lending amount, update status and add outgoing transaction
+            lendingAccount.receiveRepayment(amount); //increase lending amount, update status and add outgoing transaction
 
             if (toAccount != null) {
                 toAccount.credit(amount);
-                //toAccount.getTransactions().add(tx);
                 accountDAO.update(toAccount); //update from account balance in db
             }
 
-            /*if (ledger != null) {
-                ledger.getTransactions().add(tx);
-            }*/
             return accountDAO.update(lendingAccount); //update lending account lending amount in db
         }catch (SQLException e){
             System.err.println("SQL Exception during receiveLending: " + e.getMessage());
@@ -262,12 +222,6 @@ public class LoanController {
                 for (Transaction tx : transactions) {
                     Account fromAcc = tx.getFromAccount();
                     Account toAcc = tx.getToAccount();
-                    /*if(fromAcc != null && fromAcc.getId().equals(account.getId())) {
-                        tx.setFromAccount(null);
-                    }
-                    if(toAcc != null && toAcc.getId().equals(account.getId())) {
-                        tx.setToAccount(null);
-                    }*/
                     if(fromAcc != null && fromAcc.getId() == account.getId()) {
                         tx.setFromAccount(null);
                     }
@@ -277,9 +231,6 @@ public class LoanController {
                     transactionDAO.update(tx);
                 }
             }
-
-            //User owner = account.getOwner();
-            //owner.getAccounts().remove(account);
             return accountDAO.deleteAccount(account);
         } catch (SQLException e) {
             System.err.println("SQL Exception during deleteAccount: " + e.getMessage());
