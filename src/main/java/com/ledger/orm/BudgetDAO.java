@@ -105,7 +105,7 @@ public class BudgetDAO {
     public Budget getBudgetByLedgerId(Long ledgerId, Budget.Period p) throws SQLException {
         String sql = "SELECT id, amount, period, category_id, start_date, end_date " +
                 "FROM budgets " +
-                "WHERE ledger_id = ? AND period = ?";
+                "WHERE category_id IS NULL AND ledger_id = ? AND period = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, ledgerId);
             stmt.setString(2, p.name());
