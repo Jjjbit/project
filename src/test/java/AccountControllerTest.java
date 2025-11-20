@@ -39,6 +39,7 @@ public class AccountControllerTest {
         connection=ConnectionManager.getConnection();
         readResetScript();
         runSchemaScript();
+        readDataScript();
 
         UserDAO userDAO = new UserDAO(connection);
         accountDAO = new AccountDAO(connection);
@@ -69,6 +70,10 @@ public class AccountControllerTest {
 
     private void readResetScript() {
         executeSqlFile("src/test/resources/reset.sql");
+    }
+
+    private void readDataScript() {
+        executeSqlFile("src/test/resources/data.sql");
     }
 
     private void executeSqlFile(String filePath) {

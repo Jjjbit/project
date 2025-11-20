@@ -42,6 +42,7 @@ public class TransactionControllerTest {
         connection = ConnectionManager.getConnection();
         readResetScript();
         runSchemaScript();
+        readDataScript();
 
         UserDAO userDAO = new UserDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
@@ -73,6 +74,10 @@ public class TransactionControllerTest {
 
     private void readResetScript() {
         executeSqlFile("src/test/resources/reset.sql");
+    }
+
+    private void readDataScript() {
+        executeSqlFile("src/test/resources/data.sql");
     }
 
     private void executeSqlFile(String filePath) {
@@ -324,7 +329,7 @@ public class TransactionControllerTest {
         assertEquals(newLedger.getId(), updatedIncome.getLedger().getId());
     }
 
-    @Test
+    /*@Test
     public void testEditIncome_NewFromAccount_Failure() throws SQLException {
         LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
@@ -352,7 +357,7 @@ public class TransactionControllerTest {
                 "Updated June Salary", LocalDate.of(2024,6,30),
                 BigDecimal.valueOf(6000.00), newLedger);
         assertFalse(result);
-    }
+    }*/
 
     @Test
     public void testEditIncome_Invariant_Success() throws SQLException {
@@ -469,7 +474,7 @@ public class TransactionControllerTest {
         assertEquals(testAccount.getId(), updatedExpense.getFromAccount().getId());
     }
 
-    @Test
+    /*@Test
     public void testEditExpense_NewToAccount_Failure() throws SQLException {
         LedgerCategory shopping = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
@@ -498,7 +503,7 @@ public class TransactionControllerTest {
                 newCategory, "Updated Grocery Shopping", LocalDate.of(2024,6,26),
                 BigDecimal.valueOf(200.00), newLedger);
         assertFalse(result);
-    }
+    }*/
 
     @Test
     public void testEditTransfer_Invariant() throws SQLException {

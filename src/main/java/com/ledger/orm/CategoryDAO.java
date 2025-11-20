@@ -69,7 +69,6 @@ public class CategoryDAO {
 
         for (Category category : categories) {
             List<Category> children = getCategoriesByParentId(category.getId());
-            //category.getChildren().addAll(children);
             rootCategories.add(category);
             for (Category child : children) {
                 child.setParent(category);
