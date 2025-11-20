@@ -248,7 +248,7 @@ public class TransactionCLI {
         LedgerCategory newCategory = null;
         Account newToAccount = null;
         Account newFromAccount = null;
-
+        boolean updated = false;
 
         //edit from/to account or category based on transaction type
         if (selectedTransaction instanceof Income) {
@@ -267,6 +267,8 @@ public class TransactionCLI {
                 System.out.println("\nSelect a new account:");
                 newToAccount = selectAccount();
             }
+            updated = transactionController.updateIncome((Income) selectedTransaction, newToAccount,
+                    newCategory, note, date, amount, newLedger);
 
         } else if (selectedTransaction instanceof Expense) {
             System.out.println("Current category: " + selectedTransaction.getCategory().getName());
@@ -284,6 +286,8 @@ public class TransactionCLI {
                 System.out.println("\nSelect a new account:");
                 newFromAccount = selectAccount();
             }
+            updated = transactionController.updateExpense((Expense) selectedTransaction, newFromAccount,
+                    newCategory, note, date, amount, newLedger);
 
         } else if (selectedTransaction instanceof Transfer) {
             System.out.println("Current FROM account: " + selectedTransaction.getFromAccount().getName());
@@ -301,11 +305,13 @@ public class TransactionCLI {
                 System.out.println("\nSelect a new TO account:");
                 newToAccount = selectAccount();
             }
+            updated = transactionController.updateTransfer((Transfer) selectedTransaction, newFromAccount,
+                    newToAccount, note, date, amount, newLedger);
         }
 
         //update transaction
-        boolean updated = transactionController.updateTransaction(selectedTransaction, newFromAccount, newToAccount,
-                newCategory, note, date, amount, newLedger);
+        /*boolean updated = transactionController.updateTransaction(selectedTransaction, newFromAccount, newToAccount,
+                newCategory, note, date, amount, newLedger);*/
 
         if(!updated){
             System.out.println("Failed to update transaction.");
