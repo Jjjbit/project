@@ -85,8 +85,9 @@ public class MainCLI {
         System.out.println("5. Lending Management");
         System.out.println("6. Borrowing Management");
         System.out.println("7. Category Management");
-        System.out.println("8. User Profile");
-        System.out.println("9. Logout");
+        System.out.println("8. Installment Management");
+        System.out.println("9. User Profile");
+        System.out.println("10. Logout");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -119,11 +120,15 @@ public class MainCLI {
             case "7":
                 showCategoryMenu();
                 break;
-            case "8" :
+            case "8":
+                // installment management menu
+                showInstallmentMenu();
+                break;
+            case "9" :
                 // user profile menu
                 showUserMenu();
                 break;
-            case "9":
+            case "10":
                 // logout
                 userCLI.logout();
                 showWelcomeMenu();
@@ -145,7 +150,8 @@ public class MainCLI {
         System.out.println("7. Pay Debt of Credit Card");
         System.out.println("8. Pay Loan");
         System.out.println("9. Show Account's Summary");
-        System.out.println("10. Back to Main Menu");
+        System.out.println("10. Transaction Management");
+        System.out.println("11. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -180,6 +186,10 @@ public class MainCLI {
                 accountCLI.viewAccountSummary();
                 break;
             case "10":
+                // go to transaction management menu
+                showTransactionMenu();
+                break;
+            case "11":
                 // go back to main menu
                 showMainMenu();
                 break;
@@ -236,7 +246,8 @@ public class MainCLI {
         System.out.println("5. Copy Ledger");
         System.out.println("6. Delete Ledger");
         System.out.println("7. Show Categories Tree");
-        System.out.println("8. Back to Main Menu");
+        System.out.println("8. Transaction Management");
+        System.out.println("9. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -264,6 +275,10 @@ public class MainCLI {
                 ledgerCLI.showCategoryTree();
                 break;
             case "8":
+                // go to transaction management menu
+                showTransactionMenu();
+                break;
+            case "9":
                 // go back to main menu
                 showMainMenu();
                 break;
