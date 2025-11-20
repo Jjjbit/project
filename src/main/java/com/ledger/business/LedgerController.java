@@ -119,26 +119,22 @@ public class LedgerController {
                     case INCOME:
                         if (to != null) {
                             to.debit(tx.getAmount()); //modifica bilancio account
-                            //tx.setToAccount(null); //rimuove riferimento a account in tx
                             accountDAO.update(to); //update balance in db
                         }
                         break;
                     case EXPENSE:
                         if (from != null) {
                             from.credit(tx.getAmount());
-                            //tx.setFromAccount(null);
                             accountDAO.update(from);
                         }
                         break;
                     case TRANSFER:
                         if (from != null) {
                             from.credit(tx.getAmount());
-                            //tx.setFromAccount(null);
                             accountDAO.update(from);
                         }
                         if (to != null) {
                             to.debit(tx.getAmount());
-                            //tx.setToAccount(null);
                             accountDAO.update(to);
                         }
                         break;
