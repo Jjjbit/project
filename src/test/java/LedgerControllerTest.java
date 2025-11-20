@@ -234,7 +234,7 @@ public class LedgerControllerTest {
         Ledger originalLedger = ledgerController.createLedger("Original Ledger", testUser);
         assertNotNull(originalLedger);
 
-        Ledger copiedLedger = ledgerController.copyLedger(originalLedger);
+        Ledger copiedLedger = ledgerController.copyLedger(originalLedger, testUser);
         assertNotNull(copiedLedger);
 
         Ledger fetchedCopiedLedger = ledgerDAO.getById(copiedLedger.getId());
@@ -301,7 +301,7 @@ public class LedgerControllerTest {
         Ledger ledger = ledgerController.createLedger("Ledger To Rename", testUser);
         assertNotNull(ledger);
 
-        boolean renamed = ledgerController.renameLedger(ledger, "Renamed Ledger");
+        boolean renamed = ledgerController.renameLedger(ledger, "Renamed Ledger", testUser);
         assertTrue(renamed);
         Ledger updatedLedger = ledgerDAO.getById(ledger.getId());
         assertEquals("Renamed Ledger", updatedLedger.getName());
@@ -314,7 +314,7 @@ public class LedgerControllerTest {
         Ledger ledger2 = ledgerController.createLedger("Ledger Two", testUser);
         assertNotNull(ledger2);
 
-        boolean renamed = ledgerController.renameLedger(ledger2, "Ledger One");
+        boolean renamed = ledgerController.renameLedger(ledger2, "Ledger One", testUser);
         assertFalse(renamed);
     }
 
@@ -323,7 +323,7 @@ public class LedgerControllerTest {
         Ledger ledger = ledgerController.createLedger("Ledger Same Name", testUser);
         assertNotNull(ledger);
 
-        boolean renamed = ledgerController.renameLedger(ledger, "Ledger Same Name");
+        boolean renamed = ledgerController.renameLedger(ledger, "Ledger Same Name", testUser);
         assertTrue(renamed);
     }
 
@@ -332,7 +332,7 @@ public class LedgerControllerTest {
         Ledger ledger = ledgerController.createLedger("Ledger Null Name", testUser);
         assertNotNull(ledger);
 
-        boolean renamed = ledgerController.renameLedger(ledger, "");
+        boolean renamed = ledgerController.renameLedger(ledger, "", testUser);
         assertFalse(renamed);
     }
 }
