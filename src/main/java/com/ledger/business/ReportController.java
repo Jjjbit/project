@@ -281,27 +281,17 @@ public class ReportController {
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 return totalExpenses.compareTo(budget.getAmount()) > 0;
             } else { //budget is a category-level budget
-                if (budget.getCategory().getLedger().getId() != ledger.getId()) {
-                    return false;
-                }
-
                 LedgerCategory category= budget.getCategory();
                 List<Transaction> transactions = new ArrayList<>(transactionDAO.getByCategoryId(category.getId()).stream()
-                        //.filter(t -> t.getType() == TransactionType.EXPENSE)
                         .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
                         .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
-                        //.filter(t -> t.getCategory() != null)
-                        //.filter(t -> t.getCategory().getId().equals(budget.getCategory().getId()))
                         .toList());
 
                 List<LedgerCategory> childCategories = ledgerCategoryDAO.getCategoriesByParentId(category.getId());
                 for (LedgerCategory childCategory : childCategories) {
                     transactions.addAll(transactionDAO.getByCategoryId(childCategory.getId()).stream()
-                            //.filter(t -> t.getType() == TransactionType.EXPENSE)
                             .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
                             .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
-                            //.filter(t -> t.getCategory() != null)
-                            //.filter(t -> t.getCategory().getId().equals(childCategory.getId()))
                             .toList());
                 }
                 BigDecimal totalCategoryBudget = transactions.stream()
