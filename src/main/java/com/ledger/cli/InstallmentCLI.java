@@ -29,9 +29,7 @@ public class InstallmentCLI {
     }
 
     public void createInstallment() {
-
         System.out.println("\n=== Create Installment ===");
-
 
         //select credit account
         System.out.println("Select credit card account for the installment:");
@@ -52,8 +50,8 @@ public class InstallmentCLI {
 
         // input interest
         System.out.print("Enter interest (optional, press Enter for 0): ");
-        String feeRateInput = scanner.nextLine().trim();
-        BigDecimal feeRate = feeRateInput.isEmpty() ? BigDecimal.ZERO : new BigDecimal(feeRateInput);
+        String interestInput = scanner.nextLine().trim();
+        BigDecimal interest = interestInput.isEmpty() ? BigDecimal.ZERO : new BigDecimal(interestInput);
 
         // select strategy
         Installment.Strategy strategy = selectStrategy();
@@ -72,20 +70,20 @@ public class InstallmentCLI {
         if(ledger==null) return;
 
         //select category
+        System.out.println("Select category for the installment:");
         LedgerCategory category = inputCategory(ledger);
         if(category==null) return;
 
-        Installment plan = installmentController.createInstallment(
-                creditAccount, name, totalAmount, totalPeriods, feeRate,
-                strategy, repaymentStartDate, category, includeInCurrentDebt);
+        Installment plan = installmentController.createInstallment(creditAccount, name, totalAmount, totalPeriods,
+                interest, strategy, repaymentStartDate, category, includeInCurrentDebt, ledger);
 
-        System.out.println(" ✓ Installment created successfully!");
-        System.out.println("\n Total amount: " + plan.getTotalAmount());
-        System.out.println("\n Total with fee: " + plan.getTotalPayment());
-        System.out.println("\n Remaining amount: " + plan.getRemainingAmount());
+        System.out.println("Installment created successfully!");
+        System.out.println("\nTotal amount: " + plan.getTotalAmount());
+        System.out.println("Total with interest: " + plan.getTotalPayment());
+        System.out.println("Remaining amount: " + plan.getRemainingAmount());
         int repaidPeriods = plan.getPaidPeriods();
-        System.out.println("\n Repaid periods: " + repaidPeriods + "/" + plan.getTotalPeriods());
-        System.out.println("\n Next month: " + plan.getMonthlyPayment(repaidPeriods + 1));
+        System.out.println("Repaid periods: " + repaidPeriods + "/" + plan.getTotalPeriods());
+        System.out.println("Next month: " + plan.getMonthlyPayment(repaidPeriods + 1));
     }
 
     public void viewInstallments() {
@@ -279,10 +277,10 @@ public class InstallmentCLI {
 
         for (int i = 0; i < creditAccounts.size(); i++) {
             CreditAccount account = creditAccounts.get(i);
-            System.out.println((i + 1) + ". " + account.getName() + "balance:" + account.getBalance() +
-                    " Credit Limit: " + account.getCreditLimit() + ", Current debt: " + account.getCurrentDebt() );
+            System.out.println((i + 1) + ". " + account.getName() + " - balance:" + account.getBalance() +
+                    ", Credit Limit: " + account.getCreditLimit() + ", Current debt: " + account.getCurrentDebt() );
         }
-        System.out.print("Enter choice: ");
+        System.out.print("Enter number of credit card: ");
 
 
         int choice = Integer.parseInt(scanner.nextLine().trim()) - 1;
@@ -317,18 +315,13 @@ public class InstallmentCLI {
     private LocalDate inputRepaymentDate() {
         System.out.print("Enter repayment start date (YYYY-MM-DD): ");
         String dateInput = scanner.nextLine().trim();
-
-        try {
-            LocalDate date = LocalDate.parse(dateInput);
-            if (date.isBefore(LocalDate.now())) {
-                System.out.println("Repayment date cannot be in the past!");
-                return inputRepaymentDate();
-            }
+        LocalDate date;
+        if(dateInput.isEmpty()){
+            date=LocalDate.now();
             return date;
-        } catch (Exception e) {
-            System.out.println("Invalid date format! Please use YYYY-MM-DD.");
-            return inputRepaymentDate();
         }
+        date = LocalDate.parse(dateInput);
+        return date;
     }
 
     private Ledger selectLedger() {
@@ -343,19 +336,14 @@ public class InstallmentCLI {
             Ledger ledger = ledgers.get(i);
             System.out.println((i + 1) + ". " + ledger.getName());
         }
-        System.out.print("Enter choice: ");
+        System.out.print("Enter number of ledger: ");
 
-        try {
-            int choice = Integer.parseInt(scanner.nextLine().trim()) - 1;
-            if (choice < 0 || choice >= ledgers.size()) {
-                System.out.println("Invalid choice!");
-                return selectLedger();
-            }
-            return ledgers.get(choice);
-        } catch (Exception e) {
-            System.out.println("Invalid input!");
+        int choice = Integer.parseInt(scanner.nextLine().trim()) ;
+        if (choice < 1 || choice >ledgers.size()) {
+            System.out.println("Invalid choice!");
             return selectLedger();
         }
+        return ledgers.get(choice -1 );
     }
 
     private LedgerCategory inputCategory(Ledger ledger) {
@@ -368,7 +356,8 @@ public class InstallmentCLI {
 
         // filter only expense parent categories
         List<LedgerCategory> parentCategories = categories.stream()
-                .filter(cat -> cat.getParent() == null && cat.getType() == CategoryType.EXPENSE)
+                .filter(cat -> cat.getType() == CategoryType.EXPENSE)
+                .filter(cat -> cat.getParent() == null)
                 .toList();
 
         // display parent categories
@@ -378,7 +367,7 @@ public class InstallmentCLI {
 
             // display subcategories
             List<LedgerCategory> subCategories = categories.stream()
-                    .filter(cat -> parent.getId() == cat.getParent().getId())
+                    .filter(cat -> cat.getParent() != null && cat.getParent().getId() == parent.getId())
                     .toList();
             if (!subCategories.isEmpty()) {
                 for (int j = 0; j < subCategories.size(); j++) {
