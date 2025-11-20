@@ -132,7 +132,6 @@ public class LedgerCategoryDAO {
 
         for (LedgerCategory category : categories) {
             List<LedgerCategory> children = getCategoriesByParentId(category.getId());
-            //category.setChildren(children);
             allCategories.add(category);
             for (LedgerCategory child : children) {
                 child.setParent(category);
