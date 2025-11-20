@@ -55,15 +55,15 @@ public class UserCLI {
 
         User user = userController.login(username, password);
         if (user == null) {
-            System.out.println("✗ Login failed: Invalid username or password");
+            System.out.println(" ! Login failed: Invalid username or password");
             return;
         }
-        System.out.println("✓ Login successful! Welcome back, " + user.getUsername());
+        System.out.println("Login successful! Welcome back, " + user.getUsername());
     }
 
     public void logout() {
         userController.logout();
-        System.out.println("✓ Logged out successfully!");
+        System.out.println("Logged out successfully!");
     }
 
     public void showCurrentUser() {
