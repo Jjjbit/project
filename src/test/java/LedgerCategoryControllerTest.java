@@ -22,12 +22,10 @@ public class LedgerCategoryControllerTest {
     private Connection connection;
 
     private Ledger testLedger;
-    private User testUser;
     private Account account;
     private List<LedgerCategory> testCategories;
 
     private LedgerCategoryController ledgerCategoryController;
-    private LedgerController ledgerController;
     private TransactionController transactionController;
 
     private LedgerCategoryDAO ledgerCategoryDAO;
@@ -50,13 +48,13 @@ public class LedgerCategoryControllerTest {
         AccountDAO accountDAO = new AccountDAO(connection);
 
         UserController userController = new UserController(userDAO);
-        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
+        LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
         AccountController accountController = new AccountController(accountDAO, transactionDAO);
 
         userController.register("test user", "password123");
-        testUser = userController.login("test user", "password123");
+        User testUser = userController.login("test user", "password123");
 
         testLedger=ledgerController.createLedger("Test Ledger", testUser);
 
