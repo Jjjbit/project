@@ -56,12 +56,8 @@ public class TransactionController {
         );
         try {
             transactionDAO.insert(incomeTransaction);
-            //category.getTransactions().add(incomeTransaction);
             toAccount.credit(amount);
-            //toAccount.getTransactions().add(incomeTransaction);
             accountDAO.update(toAccount); //update balance in database
-
-            //ledger.getTransactions().add(incomeTransaction);
 
             return incomeTransaction;
         } catch (SQLException e) {
@@ -99,12 +95,8 @@ public class TransactionController {
         );
         try {
             transactionDAO.insert(expenseTransaction);
-            //category.getTransactions().add(expenseTransaction);
             fromAccount.debit(amount);
-            //fromAccount.getTransactions().add(expenseTransaction);
             accountDAO.update(fromAccount); //update balance in database
-
-            //ledger.getTransactions().add(expenseTransaction);
 
             return expenseTransaction;
         } catch (SQLException e) {
@@ -142,7 +134,6 @@ public class TransactionController {
 
             if (fromAccount != null) {
                 fromAccount.debit(amount);
-                //fromAccount.getTransactions().add(transferTransaction);
                 accountDAO.update(fromAccount);
             }
             if (toAccount != null) {
@@ -150,9 +141,6 @@ public class TransactionController {
                 //toAccount.getTransactions().add(transferTransaction);
                 accountDAO.update(toAccount);
             }
-            /*if (ledger != null) {
-                ledger.getTransactions().add(transferTransaction);
-            }*/
             return transferTransaction;
         } catch (SQLException e) {
             System.err.println("Error creating transfer transaction: " + e.getMessage());
@@ -167,41 +155,28 @@ public class TransactionController {
 
         Account fromAccount = tx.getFromAccount();
         Account toAccount = tx.getToAccount();
-        //LedgerCategory category = tx.getCategory();
-        //Ledger ledger = tx.getLedger();
 
         try {
             if (tx instanceof Income) {
                 if (toAccount != null) {
                     toAccount.debit(tx.getAmount());
-                    //toAccount.getTransactions().remove(tx);
                     accountDAO.update(toAccount);
                 }
             } else if (tx instanceof Expense) {
                 if (fromAccount != null) {
                     fromAccount.credit(tx.getAmount());
-                    //fromAccount.getTransactions().remove(tx);
                     accountDAO.update(fromAccount);
                 }
             } else if (tx instanceof Transfer) {
                 if (fromAccount != null) {
                     fromAccount.credit(tx.getAmount());
-                    //fromAccount.getTransactions().remove(tx);
                     accountDAO.update(fromAccount);
                 }
                 if (toAccount != null) {
                     toAccount.debit(tx.getAmount());
-                    //toAccount.getTransactions().remove(tx);
                     accountDAO.update(toAccount);
                 }
             }
-
-            /*if (category != null) {
-                category.getTransactions().remove(tx);
-            }*/
-            /*if (ledger != null) {
-                ledger.getTransactions().remove(tx);
-            }*/
 
             return transactionDAO.delete(tx);
         } catch (SQLException e) {
@@ -413,8 +388,6 @@ public class TransactionController {
         Ledger oldLedger = income.getLedger();
 
         if (ledger != null && ledger.getId() != oldLedger.getId()) {
-            //oldLedger.getTransactions().remove(income);
-            //ledger.getTransactions().add(income);
             income.setLedger(ledger);
         }
 
@@ -422,8 +395,7 @@ public class TransactionController {
             if (category.getType() != CategoryType.INCOME) {
                 return false;
             }
-            //oldCategory.getTransactions().remove(income);
-            //category.getTransactions().add(income);
+
             income.setCategory(category);
         }
 
@@ -443,7 +415,6 @@ public class TransactionController {
 
             //apply new account
             toAccount.credit(amount != null ? amount : oldAmount);
-            //toAccount.getTransactions().add(income);
             income.setToAccount(toAccount);
             try {
                 accountDAO.update(toAccount);
@@ -480,8 +451,6 @@ public class TransactionController {
         Ledger oldLedger = expense.getLedger();
 
         if (ledger != null && ledger.getId() != oldLedger.getId()) {
-            //oldLedger.getTransactions().remove(expense);
-            //ledger.getTransactions().add(expense);
             expense.setLedger(ledger);
         }
 
@@ -509,7 +478,6 @@ public class TransactionController {
 
             //apply new account
             fromAccount.debit(amount != null ? amount : oldAmount);
-            //fromAccount.getTransactions().add(expense);
             expense.setFromAccount(fromAccount);
             try {
                 accountDAO.update(fromAccount);

@@ -37,9 +37,9 @@ public class AccountDAO {
 
             ResultSet rs = stmt.getGeneratedKeys();
             if (rs.next()) {
-                Long accountId = rs.getLong(1);
-                account.setId(accountId);
+                account.setId(rs.getLong(1));
             }
+
             //insert into basic_account table
             String basicSql = "INSERT INTO basic_account (id) VALUES (?)";
             try (PreparedStatement basicStmt = connection.prepareStatement(basicSql)) {

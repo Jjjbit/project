@@ -65,8 +65,7 @@ public class TransactionDAO {
             // get generated transaction ID
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
-                    Long transactionId = rs.getLong(1);
-                    transaction.setId(transactionId);
+                    transaction.setId(rs.getLong(1));
                     return true;
                 }
             }
