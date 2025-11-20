@@ -38,7 +38,7 @@ public class Main {
             LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
             TransactionController transactionController = new TransactionController(transactionDAO, accountDAO, ledgerDAO);
             InstallmentController installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
-            LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, ledgerDAO, transactionDAO, budgetDAO);
+            LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
             BudgetController budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO, transactionDAO);
             ReportController reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO, installmentDAO, ledgerCategoryDAO);
 

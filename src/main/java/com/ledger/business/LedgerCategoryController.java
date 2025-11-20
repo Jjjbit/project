@@ -3,7 +3,6 @@ package com.ledger.business;
 import com.ledger.domain.*;
 import com.ledger.orm.BudgetDAO;
 import com.ledger.orm.LedgerCategoryDAO;
-import com.ledger.orm.LedgerDAO;
 import com.ledger.orm.TransactionDAO;
 
 import java.math.BigDecimal;
@@ -12,17 +11,14 @@ import java.util.List;
 
 public class LedgerCategoryController {
     private final LedgerCategoryDAO ledgerCategoryDAO;
-    private final LedgerDAO ledgerDAO;
     private final TransactionDAO transactionDAO;
     private final BudgetDAO budgetDAO;
 
     public LedgerCategoryController(LedgerCategoryDAO ledgerCategoryDAO,
-                                    LedgerDAO ledgerDAO,
                                     TransactionDAO transactionDAO, BudgetDAO budgetDAO) {
         this.budgetDAO = budgetDAO;
         this.transactionDAO = transactionDAO;
         this.ledgerCategoryDAO = ledgerCategoryDAO;
-        this.ledgerDAO = ledgerDAO;
     }
 
     public LedgerCategory createCategory(String name, Ledger ledger, CategoryType type) {
