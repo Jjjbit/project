@@ -474,70 +474,6 @@ public class TransactionControllerTest {
         assertEquals(testAccount.getId(), updatedExpense.getFromAccount().getId());
     }
 
-    /*@Test
-    public void testEditExpense_NewToAccount_Failure() throws SQLException {
-        LedgerCategory shopping = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Shopping"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(shopping);
-
-        Expense expense=transactionController.createExpense(testLedger, testAccount, shopping,
-                "Grocery Shopping", LocalDate.of(2024,6,25),
-                BigDecimal.valueOf(150.00));
-
-        Account newToAccount = accountController.createBasicAccount("New To Account", BigDecimal.valueOf(500.00),
-                AccountType.CASH, AccountCategory.FUNDS, testUser, "New To Account Notes",
-                true, true);
-
-        Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
-        List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedgerId(newLedger.getId());
-
-        LedgerCategory newCategory = newLedgerCategories.stream()
-                .filter(cat -> cat.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(newCategory);
-
-        boolean result=transactionController.updateTransaction(expense, null, newToAccount,
-                newCategory, "Updated Grocery Shopping", LocalDate.of(2024,6,26),
-                BigDecimal.valueOf(200.00), newLedger);
-        assertFalse(result);
-    }*/
-
-    @Test
-    public void testEditTransfer_Invariant() throws SQLException {
-        BasicAccount toAccount = accountController.createBasicAccount("Savings Account",
-                BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS,
-                testUser, "Savings Account Notes", true, true);
-
-        Transfer transfer = transactionController.createTransfer(testLedger, testAccount,
-                toAccount, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00));
-
-        boolean result = transactionController.updateTransfer(transfer, null, null,
-                null, null, null, null);
-        assertTrue(result);
-
-        //verify account balances unchanged
-        BasicAccount updatedFromAccount = (BasicAccount) accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(800.00)));
-
-        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
-
-        BasicAccount updatedToAccount = (BasicAccount) accountDAO.getAccountById(toAccount.getId());
-        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(700.00)));
-
-        Transaction updatedTransfer = transactionDAO.getById(transfer.getId());
-        assertEquals("Transfer to Savings", updatedTransfer.getNote());
-        assertEquals(0, updatedTransfer.getAmount().compareTo(BigDecimal.valueOf(200.00)));
-        assertEquals(LocalDate.of(2024, 6, 20), updatedTransfer.getDate());
-        assertEquals(testAccount.getId(), updatedTransfer.getFromAccount().getId());
-        assertEquals(toAccount.getId(), updatedTransfer.getToAccount().getId());
-        assertEquals(testLedger.getId(), updatedTransfer.getLedger().getId());
-    }
-
     @Test
     public void testEditTransfer_Success() throws SQLException {
         BasicAccount toAccount = accountController.createBasicAccount("Savings Account",
@@ -571,5 +507,9 @@ public class TransactionControllerTest {
         assertEquals(newLedger.getId(), updatedTransfer.getLedger().getId());
     }
 
+    //test edit transfer invariant
+    //test edit transfer: old note is not null and new note is null
+    //test edit transfer: old fromAccount is null and new fromAccount is not null
+    //test edit transfer: old fromAccount is not null and new fromAccount is null
 }
 
