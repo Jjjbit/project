@@ -255,21 +255,21 @@ public class TransactionDAO {
     // set account, category objects
     private Transaction mapResultSetToTransaction(ResultSet rs) throws SQLException {
         Transaction transaction;
-        String dtype = rs.getString("dtype");
+        String dtype = rs.getString("dtype").toUpperCase();
 
         // based on dtype, create appropriate subclass instance
         switch (dtype) {
-            case "Transfer":
+            case "TRANSFER":
                 transaction = new Transfer();
                 break;
-            case "Expense":
+            case "EXPENSE":
                 transaction = new Expense();
                 break;
-            case "Income":
+            case "INCOME":
                 transaction = new Income();
                 break;
             default:
-                transaction = new Transaction() {};
+                throw new SQLException("Unknown transaction type: " + dtype);
         }
 
         // set common fields
