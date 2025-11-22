@@ -17,7 +17,7 @@ public class LedgerCategoryDAO {
 
     @SuppressWarnings("SqlResolve")
     public LedgerCategory getById(Long id) throws SQLException {
-        String sql = "SELECT id, name, type FROM ledger_categories WHERE id = ?";
+        String sql = "SELECT id, name, type, ledger_id FROM ledger_categories WHERE id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, id);
@@ -27,6 +27,10 @@ public class LedgerCategoryDAO {
                 category.setId(rs.getLong("id"));
                 category.setName(rs.getString("name"));
                 category.setType(CategoryType.valueOf(rs.getString("type")));
+
+                LedgerDAO ledgerDAO = new LedgerDAO(connection);
+                Ledger ledger = ledgerDAO.getById(rs.getLong("ledger_id"));
+                category.setLedger(ledger);
                 return category;
             }
             return null;
@@ -99,6 +103,10 @@ public class LedgerCategoryDAO {
                 category.setName(rs.getString("name"));
                 category.setType(CategoryType.valueOf(rs.getString("type")));
                 category.setParent(null);
+
+                LedgerDAO ledgerDAO = new LedgerDAO(connection);
+                Ledger ledger = ledgerDAO.getById(rs.getLong("ledger_id"));
+                category.setLedger(ledger);
                 categories.add(category);
             }
         }
@@ -109,7 +117,7 @@ public class LedgerCategoryDAO {
     public List<LedgerCategory> getCategoriesByParentId(Long parentId) throws SQLException {
         List<LedgerCategory> categories = new ArrayList<>();
 
-        String sql = "SELECT id, name, parent_id, type FROM ledger_categories WHERE parent_id = ? ORDER BY id";
+        String sql = "SELECT id, name, parent_id, type, ledger_id FROM ledger_categories WHERE parent_id = ? ORDER BY id";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, parentId);
@@ -119,6 +127,11 @@ public class LedgerCategoryDAO {
                     category.setId(rs.getLong("id"));
                     category.setName(rs.getString("name"));
                     category.setType(CategoryType.valueOf(rs.getString("type")));
+
+                    LedgerDAO ledgerDAO = new LedgerDAO(connection);
+                    Ledger ledger = ledgerDAO.getById(rs.getLong("ledger_id"));
+                    category.setLedger(ledger);
+
                     categories.add(category);
                 }
             }
