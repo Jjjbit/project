@@ -30,18 +30,10 @@ public class TransactionCLI {
         //select ledger
         System.out.println("\nSelect a ledger to add income transaction:");
         Ledger selectedLedger = selectLedger(userController.getCurrentUser());
-        if (selectedLedger == null) {
-            System.out.println("No ledger selected. Returning to main menu.");
-            return;
-        }
 
         //select account
         System.out.println("\nSelect an account:");
         Account selectedAccount = selectAccount();
-        if (selectedAccount == null) {
-            System.out.println("No account selected. Returning to main menu.");
-            return;
-        }
 
         //select category
         System.out.println("\nSelect a category:");
@@ -65,8 +57,10 @@ public class TransactionCLI {
             System.out.println("Failed to create income transaction.");
             return;
         }
-        System.out.println("Income transaction created successfully: " + incomeTransaction);
-
+        System.out.println("Income transaction created successfully: " + "-Type: " + incomeTransaction.getType()
+                + ", Amount" + incomeTransaction.getAmount() + ", Category: " + incomeTransaction.getCategory().getName() + ", To Account:" + incomeTransaction.getToAccount().getName()
+                + ", Date: " + incomeTransaction.getDate()
+                + ", Note: " + (incomeTransaction.getNote() != null ? incomeTransaction.getNote() : "No note"));
     }
 
     public void addExpense(){
@@ -75,18 +69,11 @@ public class TransactionCLI {
         //select ledger
         System.out.println("\nSelect a ledger to add expense transaction:");
         Ledger selectedLedger = selectLedger(userController.getCurrentUser());
-        if (selectedLedger == null) {
-            System.out.println("No ledger selected. Returning to main menu.");
-            return;
-        }
 
         //select account
         System.out.println("\nSelect an account:");
         Account selectedAccount = selectAccount();
-        if (selectedAccount == null) {
-            System.out.println("No account selected. Returning to main menu.");
-            return;
-        }
+
 
         //select category
         System.out.println("\nSelect a category:");
@@ -110,7 +97,11 @@ public class TransactionCLI {
             System.out.println("Failed to create expense transaction.");
             return;
         }
-        System.out.println("Expense transaction created successfully: " + expenseTransaction);
+        System.out.println("Expense transaction created successfully: " + "-Type: " + expenseTransaction.getType()
+                + ", Amount: " + expenseTransaction.getAmount() + ", Category: " + expenseTransaction.getCategory().getName()
+                + ", From Account: " + expenseTransaction.getFromAccount().getName()
+                + ", Date: " + expenseTransaction.getDate()
+                + ", Note: " + (expenseTransaction.getNote() != null ? expenseTransaction.getNote() : "No note"));
     }
 
     public void addTransfer(){
@@ -119,24 +110,71 @@ public class TransactionCLI {
         //select ledger
         System.out.println("\nSelect a ledger to add transfer transaction:");
         Ledger selectedLedger = selectLedger(userController.getCurrentUser());
-        if (selectedLedger == null) {
-            System.out.println("No ledger selected. Returning to main menu.");
+
+        //get selectable accounts
+        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+                .filter(Account::getSelectable)
+                .toList();
+
+        if(accounts.isEmpty()){
+            System.out.println("At least two selectable accounts are required to perform a transfer.");
+            return;
+        }
+        //select from account
+        System.out.println("\nSelect the FROM account: ");
+        Account fromAccount;
+        for (int i = 0; i < accounts.size(); i++) {
+            Account account = accounts.get(i);
+            System.out.println((i + 1) + ". " + "Name: " + account.getName() + ", Balance: " + account.getBalance());
+        }
+        System.out.println("0. FROM account is external");
+        System.out.print("Enter the number of the account: ");
+        String input = scanner.nextLine().trim();
+        int choice = Integer.parseInt(input);
+        if(choice == 0) {
+            fromAccount = null;
+        } else if(choice < 0 || choice > accounts.size()) {
+            System.out.println("Invalid choice.");
+            return;
+        }else{
+            fromAccount = accounts.get(choice - 1);
+        }
+
+        //select to account
+        System.out.println("\nSelect the TO account: ");
+        Account toAccount;
+        for (int i = 0; i < accounts.size(); i++) {
+            Account account = accounts.get(i);
+            System.out.println((i + 1) + ". " + "Name: " + account.getName() + ", Balance: " + account.getBalance());
+        }
+        System.out.println("0. TO account is external");
+        System.out.print("Enter the number of the account: ");
+        input = scanner.nextLine().trim();
+        choice = Integer.parseInt(input);
+        if(choice == 0) {
+            toAccount = null;
+        } else if(choice < 0 || choice > accounts.size()) {
+            System.out.println("Invalid choice.");
+            return;
+        }else{
+            toAccount = accounts.get(choice - 1);
+        }
+
+        if (fromAccount == null && toAccount == null) {
+            System.out.println("At least one account must be selected for a transfer.");
             return;
         }
 
-        //select from account
-        System.out.println("\nSelect the FROM account:");
-        Account fromAccount = selectAccount();
-
-        //select to account
-        System.out.println("\nSelect the TO account:");
-        Account toAccount = selectAccount();
+        if (fromAccount != null && toAccount != null && fromAccount.getId() == (toAccount.getId())) {
+            System.out.println("From and To accounts cannot be the same.");
+            return;
+        }
 
         //add note
         String note = inputNote();
 
         //add amount
-        System.out.print("Enter the amount for the transaction: ");
+        System.out.print("Enter the amount for the transfer: ");
         BigDecimal amount = inputAmount();
 
         //add date
@@ -146,17 +184,22 @@ public class TransactionCLI {
         //create transaction
         Transfer transferTransaction = transactionController.createTransfer(selectedLedger, fromAccount,
                 toAccount, note, date, amount);
+
         if(transferTransaction==null){
             System.out.println("Failed to create transfer transaction.");
             return;
         }
-        System.out.println("Transfer transaction created successfully: " + transferTransaction);
+
+        System.out.println("Transfer transaction created successfully: " + "-Type: "+transferTransaction.getType()
+                + ", Amount: " + transferTransaction.getAmount() + ", From Account: " + (transferTransaction.getFromAccount()!=null ? transferTransaction.getFromAccount().getName() : "External")
+                + ", To Account: " + (transferTransaction.getToAccount() != null ? transferTransaction.getToAccount().getName() : "External") + ", Date: " + transferTransaction.getDate()
+                + ", Note: " + (transferTransaction.getNote() != null ? transferTransaction.getNote() : "No note"));
     }
 
     public void deleteTransaction(){
         System.out.println("\n === Delete Transaction ===");
 
-        System.out.println("\nSelect a ledger to delete transaction from:");
+        System.out.println("Select a ledger to delete transaction from:");
         Ledger selectedLedger = selectLedger(userController.getCurrentUser());
         if(selectedLedger==null){
             System.out.println("No ledger selected. Returning to main menu.");
@@ -169,23 +212,26 @@ public class TransactionCLI {
             System.out.println("No transactions found in the selected ledger.");
             return;
         }
-        System.out.println("\nSelect a transaction to delete:");
+        System.out.println("Select a transaction to delete:");
         Transaction selectedTransaction = selectTransaction(transactions);
+        if(selectedTransaction==null){
+            System.out.println("No transaction selected. Returning to main menu.");
+            return;
+        }
 
         boolean deleted = transactionController.deleteTransaction(selectedTransaction);
         if(!deleted){
             System.out.println("Failed to delete transaction.");
             return;
         }
-        System.out.println("Failed to delete transaction.");
+        System.out.println("Successfully deleted. Transaction info: " + showTransactionInfo(selectedTransaction));
 
     }
 
     public void editTransaction(){
         System.out.println("\n === Edit Transaction ===");
 
-        System.out.println("\nSelect a ledger to edit transaction from:");
-
+        System.out.println("Select a ledger to edit transaction from: ");
         //select ledger
         Ledger selectedLedger = selectLedger(userController.getCurrentUser());
         if(selectedLedger==null){
@@ -200,23 +246,29 @@ public class TransactionCLI {
             return;
         }
 
-        System.out.println("\nSelect a transaction to edit:");
+        System.out.println("Select a transaction to edit:");
         Transaction selectedTransaction = selectTransaction(transactions);
+        if(selectedTransaction==null){
+            System.out.println("No transaction selected. Returning to main menu.");
+            return;
+        }
 
         //edit note
-        System.out.println("Current note: " + selectedTransaction.getNote());
-        System.out.println("Do you want to edit the note ? (y/n): ");
+        System.out.println("Current note: " + (selectedTransaction.getNote() != null ? selectedTransaction.getNote() : "No note"));
+        System.out.print("Do you want to edit the note ? (y/n): ");
         String confirm = scanner.nextLine().trim().toLowerCase();
-        String note=null;
+        String note;
         if(confirm.equals("y") || confirm.equals("yes")){
             //edit note
             note = inputNote();
+        }else{
+            note = selectedTransaction.getNote(); //keep the same
         }
 
 
         //edit amount
         System.out.println("Current amount: " + selectedTransaction.getAmount());
-        System.out.println("Do you want to edit the amount ? (y/n): ");
+        System.out.print("Do you want to edit the amount ? (y/n): ");
         confirm = scanner.nextLine().trim().toLowerCase();
         BigDecimal amount=null;
         if(confirm.equals("y") || confirm.equals("yes")){
@@ -227,7 +279,7 @@ public class TransactionCLI {
 
         //edit date
         System.out.println("Current transaction date: " + selectedTransaction.getDate());
-        System.out.println("Do you want to edit the date ? (y/n): ");
+        System.out.print("Do you want to edit the date ? (y/n): ");
         confirm = scanner.nextLine().trim().toLowerCase();
         LocalDate date=null;
         if(confirm.equals("y") || confirm.equals("yes")){
@@ -238,7 +290,7 @@ public class TransactionCLI {
 
         //edit ledger
         System.out.println("Current ledger: " + selectedTransaction.getLedger().getName());
-        System.out.println("Do you want to edit the ledger ? (y/n): ");
+        System.out.print("Do you want to edit the ledger ? (y/n): ");
         confirm = scanner.nextLine().trim().toLowerCase();
         Ledger newLedger=null;
         if(confirm.equals("y") || confirm.equals("yes")){
@@ -251,84 +303,204 @@ public class TransactionCLI {
         boolean updated = false;
 
         //edit from/to account or category based on transaction type
-        if (selectedTransaction instanceof Income) {
-            System.out.println("Current category: " +  selectedTransaction.getCategory().getName());
-            System.out.println("Do you want to edit the category ? (y/n): ");
-            confirm = scanner.nextLine().trim().toLowerCase();
-            if(confirm.equals("y") || confirm.equals("yes")){
-                System.out.println("\nSelect a new category:");
-                newCategory = selectCategory(newLedger, CategoryType.INCOME);
-            }
+        switch(selectedTransaction.getType()){
+            case INCOME -> {
+                System.out.println("Current category: " + selectedTransaction.getCategory().getName());
+                System.out.print("Do you want to edit the category ? (y/n): ");
+                confirm = scanner.nextLine().trim().toLowerCase();
+                if (confirm.equals("y") || confirm.equals("yes")) {
+                    System.out.println("Select a new category:");
+                    newCategory = selectCategory(selectedLedger, CategoryType.INCOME);
+                }
 
-            System.out.println("Current account: " + selectedTransaction.getToAccount().getName());
-            System.out.println("Do you want to edit the account ? (y/n): ");
-            confirm = scanner.nextLine().trim().toLowerCase();
-            if(confirm.equals("y") || confirm.equals("yes")){
-                System.out.println("\nSelect a new account:");
-                newToAccount = selectAccount();
+                System.out.println("Current account: " + selectedTransaction.getToAccount().getName());
+                System.out.print("Do you want to edit the account ? (y/n): ");
+                confirm = scanner.nextLine().trim().toLowerCase();
+                if (confirm.equals("y") || confirm.equals("yes")) {
+                    System.out.println("Select a new account:");
+                    newToAccount = selectAccount();
+                }
+                updated = transactionController.updateIncome((Income) selectedTransaction, newToAccount,
+                        newCategory, note, date, amount, newLedger);
             }
-            updated = transactionController.updateIncome((Income) selectedTransaction, newToAccount,
-                    newCategory, note, date, amount, newLedger);
+            case EXPENSE -> {
+                System.out.println("Current category: " + selectedTransaction.getCategory().getName());
+                System.out.print("Do you want to edit the category ? (y/n): ");
+                confirm = scanner.nextLine().trim().toLowerCase();
+                if (confirm.equals("y") || confirm.equals("yes")) {
+                    System.out.println("Select a new category:");
+                    newCategory = selectCategory(selectedLedger, CategoryType.EXPENSE);
+                }
 
-        } else if (selectedTransaction instanceof Expense) {
-            System.out.println("Current category: " + selectedTransaction.getCategory().getName());
-            System.out.println("Do you want to edit the category ? (y/n): ");
-            confirm = scanner.nextLine().trim().toLowerCase();
-            if(confirm.equals("y") || confirm.equals("yes")) {
-                System.out.println("\nSelect a new category:");
-                newCategory = selectCategory(selectedLedger, CategoryType.EXPENSE);
+                System.out.println("Current account: " + selectedTransaction.getFromAccount().getName());
+                System.out.print("Do you want to edit the account ? (y/n): ");
+                confirm = scanner.nextLine().trim().toLowerCase();
+                if (confirm.equals("y") || confirm.equals("yes")) {
+                    System.out.println("Select a new account:");
+                    newFromAccount = selectAccount();
+                }
+                updated = transactionController.updateExpense((Expense) selectedTransaction, newFromAccount,
+                        newCategory, note, date, amount, newLedger);
             }
+            case TRANSFER -> {
+                List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+                        .filter(Account::getSelectable)
+                        .toList();
+                if (accounts.isEmpty()) {
+                    System.out.println("At least two selectable accounts are required to perform a transfer.");
+                    return;
+                }
 
-            System.out.println("Current account: " + selectedTransaction.getFromAccount().getName());
-            System.out.println("Do you want to edit the account ? (y/n): ");
-            confirm = scanner.nextLine().trim().toLowerCase();
-            if(confirm.equals("y") || confirm.equals("yes")){
-                System.out.println("\nSelect a new account:");
-                newFromAccount = selectAccount();
-            }
-            updated = transactionController.updateExpense((Expense) selectedTransaction, newFromAccount,
-                    newCategory, note, date, amount, newLedger);
+                System.out.println("Current FROM account: " + (selectedTransaction.getFromAccount() != null ? selectedTransaction.getFromAccount().getName() : "External"));
+                System.out.print("Do you want to edit the FROM account ? (y/n): ");
+                confirm = scanner.nextLine().trim().toLowerCase();
+                if (confirm.equals("y") || confirm.equals("yes")) {
+                    System.out.println("Select a new FROM account:");
+                    for (int i = 0; i < accounts.size(); i++) {
+                        Account account = accounts.get(i);
+                        System.out.println((i + 1) + ". " + "Name: " + account.getName() + ", Balance: " + account.getBalance());
+                    }
+                    System.out.println("0. new FROM account is external");
+                    System.out.print("Enter the number of the account: ");
+                    String input = scanner.nextLine().trim();
+                    int choice = Integer.parseInt(input);
+                    if (choice == 0) {
+                        newFromAccount = null;
+                    } else if (choice > 0 && choice <= accounts.size()) {
+                        newFromAccount = accounts.get(choice - 1);
+                    } else {
+                        System.out.println("Invalid choice: number out of range.");
+                        return;
+                    }
+                }else{
+                    newFromAccount = selectedTransaction.getFromAccount(); //keep the same
+                }
 
-        } else if (selectedTransaction instanceof Transfer) {
-            System.out.println("Current FROM account: " + selectedTransaction.getFromAccount().getName());
-            System.out.println("Do you want to edit the FROM account ? (y/n): ");
-            confirm = scanner.nextLine().trim().toLowerCase();
-            if (confirm.equals("y") || confirm.equals("yes")) {
-                System.out.println("\nSelect a new FROM account:");
-                newFromAccount = selectAccount();
-            }
+                System.out.println("Current TO account: " + (selectedTransaction.getToAccount() != null ? selectedTransaction.getToAccount().getName() : "External"));
+                System.out.print("Do you want to edit the TO account ? (y/n): ");
+                confirm = scanner.nextLine().trim().toLowerCase();
+                if (confirm.equals("y") || confirm.equals("yes")) {
+                    System.out.println("Select a new TO account:");
+                    for (int i = 0; i < accounts.size(); i++) {
+                        Account account = accounts.get(i);
+                        System.out.println((i + 1) + ". " + "Name: " + account.getName() + ", Balance: " + account.getBalance());
+                    }
+                    System.out.println("0. new TO account is external");
+                    System.out.print("Enter the number of the account: ");
+                    String input = scanner.nextLine().trim();
+                    int choice = Integer.parseInt(input);
+                    if(choice == 0) {
+                        newToAccount = null;
+                    } else if(choice < 0 || choice > accounts.size()) {
+                        System.out.println("Invalid choice.");
+                        return;
+                    }else{
+                        newToAccount = accounts.get(choice - 1);
+                    }
+                }else{
+                    newToAccount = selectedTransaction.getToAccount();
+                }
 
-            System.out.println("Current TO account: " + selectedTransaction.getToAccount().getName());
-            System.out.println("Do you want to edit the TO account ? (y/n): ");
-            confirm = scanner.nextLine().trim().toLowerCase();
-            if (confirm.equals("y") || confirm.equals("yes")){
-                System.out.println("\nSelect a new TO account:");
-                newToAccount = selectAccount();
+                if (newFromAccount == null && newToAccount == null) {
+                    System.out.println("At least one account must be selected for a transfer.");
+                    return;
+                }
+                if (newFromAccount != null && newToAccount != null && newFromAccount.getId() == (newToAccount.getId())) {
+                    System.out.println("From and To accounts cannot be the same.");
+                    return;
+                }
+
+                updated = transactionController.updateTransfer((Transfer) selectedTransaction, newFromAccount,
+                        newToAccount, note, date, amount, newLedger);
             }
-            updated = transactionController.updateTransfer((Transfer) selectedTransaction, newFromAccount,
-                    newToAccount, note, date, amount, newLedger);
         }
 
         //update transaction
-        /*boolean updated = transactionController.updateTransaction(selectedTransaction, newFromAccount, newToAccount,
-                newCategory, note, date, amount, newLedger);*/
-
         if(!updated){
             System.out.println("Failed to update transaction.");
             return;
         }
-        System.out.println("Transaction updated successfully: " + selectedTransaction);
+        System.out.println("Transaction updated successfully: " + showTransactionInfo(selectedTransaction));
     }
 
     //helper methods
+    private String showTransactionInfo(Transaction tx){
+        StringBuilder info = new StringBuilder();
+
+        info.append(String.format("-Type: %s, Amount: %s, Date: %s",
+                tx.getType(),
+                tx.getAmount(),
+                tx.getDate()));
+
+        if (tx.getCategory() != null) {
+            info.append(", Category: ").append(tx.getCategory().getName());
+        }
+
+        if (tx.getType().toString().equals("TRANSFER")) {
+            if (tx.getFromAccount() != null) {
+                info.append(", FROM: ").append(tx.getFromAccount().getName());
+            }
+            if (tx.getToAccount() != null) {
+                info.append(", TO: ").append(tx.getToAccount().getName());
+            }
+        } else {
+            if (tx.getFromAccount() != null) {
+                info.append(", From: ").append(tx.getFromAccount().getName());
+            } else if (tx.getToAccount() != null) {
+                info.append(", To: ").append(tx.getToAccount().getName());
+            }
+        }
+
+        if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+            info.append(", Note: ").append(tx.getNote());
+        }
+
+        return info.toString();
+    }
     private Transaction selectTransaction(List<Transaction> transactions){
         for(int i=0; i<transactions.size(); i++){
             Transaction tx = transactions.get(i);
-            System.out.println("Transaction " + (i + 1) + ". " + tx);
+            StringBuilder info = new StringBuilder();
+
+            info.append(String.format("%d. Type: %s, Amount: %s, Date: %s",
+                    (i + 1),
+                    tx.getType(),
+                    tx.getAmount(),
+                    tx.getDate()));
+
+            if (tx.getCategory() != null) {
+                info.append(", Category: ").append(tx.getCategory().getName());
+            }
+
+            if (tx.getType().toString().equals("TRANSFER")) {
+                if (tx.getFromAccount() != null) {
+                    info.append(", FROM: ").append(tx.getFromAccount().getName());
+                }
+                if (tx.getToAccount() != null) {
+                    info.append(", TO: ").append(tx.getToAccount().getName());
+                }
+            } else {
+                if (tx.getFromAccount() != null) {
+                    info.append(", From: ").append(tx.getFromAccount().getName());
+                } else if (tx.getToAccount() != null) {
+                    info.append(", To: ").append(tx.getToAccount().getName());
+                }
+            }
+
+            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info.append(", Note: ").append(tx.getNote());
+            }
+
+            System.out.println(info);
         }
-        System.out.print("Enter the number of the transaction to delete: ");
+
+        System.out.println("0. Cancel");
+        System.out.print("Enter the number of the transaction: ");
         String input = scanner.nextLine().trim();
         int choice = Integer.parseInt(input);
+        if(choice == 0) {
+            return null;
+        }
         if(choice < 1 || choice > transactions.size()) {
             System.out.println("Invalid choice.");
             return selectTransaction(transactions);
@@ -346,7 +518,7 @@ public class TransactionCLI {
 
         for (int i = 0; i < ledgers.size(); i++) {
             Ledger ledger = ledgers.get(i);
-            System.out.println("Ledger " + (i + 1) + ". "+ "Name: " + ledger.getName());
+            System.out.println((i + 1) + ". "+ "Name: " + ledger.getName());
         }
         System.out.print("Enter the number of the ledger: ");
         String input = scanner.nextLine().trim();
@@ -367,7 +539,6 @@ public class TransactionCLI {
 
         List<Account> accountsSelectable = accounts.stream()
                 .filter(Account::getSelectable)
-                .filter(account -> account instanceof BasicAccount || account instanceof CreditAccount)
                 .toList();
 
         if (accountsSelectable.isEmpty()) {
@@ -377,11 +548,11 @@ public class TransactionCLI {
 
         for (int i = 0; i < accountsSelectable.size(); i++) {
             Account account = accountsSelectable.get(i);
-            System.out.println("Account " + (i + 1) + ". " + "Name: " + account.getName() + ", Balance: " + account.getBalance());
+            System.out.println((i + 1) + ". " + "Name: " + account.getName() + ", Balance: " + account.getBalance());
         }
         System.out.print("Enter the number of the account: ");
-        //String input = scanner.nextLine().trim();
-        int choice = scanner.nextInt();
+        String input = scanner.nextLine().trim();
+        int choice = Integer.parseInt(input);
         if (choice < 1 || choice > accountsSelectable.size()) {
             System.out.println("Invalid choice.");
             return selectAccount();
@@ -454,6 +625,7 @@ public class TransactionCLI {
         } else {
             //select parent category
             int parentIndex = Integer.parseInt(input) - 1;
+
             if (parentIndex < 0 || parentIndex >= parentCategories.size()) {
                 System.out.println("Invalid choice!");
                 return selectCategory(ledger, type);
@@ -468,7 +640,7 @@ public class TransactionCLI {
         return note.isEmpty() ? null : note;
     }
     private BigDecimal inputAmount(){
-        String input = System.console().readLine();
+        String input = scanner.nextLine().trim();
         BigDecimal amount = new BigDecimal(input);
         if(amount.compareTo(BigDecimal.ZERO) <= 0) {
             System.out.println("Amount must be greater than zero.");
