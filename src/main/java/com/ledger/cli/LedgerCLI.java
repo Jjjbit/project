@@ -92,9 +92,9 @@ public class LedgerCLI {
 
 
         //display income and expense
-        System.out.println("\nLedger Name: " + selectedLedger.getName());
-        System.out.println("Total Income: " + reportController.getTotalIncomeByLedger(selectedLedger, startDate, endDate));
-        System.out.println("Total Expense: " + reportController.getTotalExpenseByLedger(selectedLedger, startDate, endDate));
+        System.out.println("Ledger Name: " + selectedLedger.getName() + ", from " + startDate + " to " + endDate);
+        System.out.print("Total Income: " + reportController.getTotalIncomeByLedger(selectedLedger, startDate, endDate)
+                + ", Total Expense: " + reportController.getTotalExpenseByLedger(selectedLedger, startDate, endDate));
 
         //show transaction
         List<Transaction> transactions = reportController.getTransactionsByLedgerInRangeDate(
@@ -103,23 +103,39 @@ public class LedgerCLI {
             System.out.println("No transactions found for the selected period.");
             return;
         }
-        System.out.println("Transactions for Ledger: " + selectedLedger.getName());
+        System.out.println("\nTransactions for Ledger: " + selectedLedger.getName());
+        int count = 0;
         for (Transaction tx : transactions) {
-            String info = "Transaction ID: " + tx.getId()
-                    + ", Date: " + tx.getDate()
-                    + ", Amount: " + tx.getAmount()
-                    + ", Type: " + tx.getType();
+            count++;
+            StringBuilder info = new StringBuilder();
 
-            if(tx.getCategory() != null) {
-                info += ", Category: " + tx.getCategory().getName();
+            info.append(String.format("%d. Type: %s, Amount: %s, Date: %s",
+                    count,
+                    tx.getType(),
+                    tx.getAmount(),
+                    tx.getDate()));
+
+            if (tx.getCategory() != null) {
+                info.append(", Category: ").append(tx.getCategory().getName());
             }
-            if (tx.getToAccount() != null) {
-                info += ", To Account: " + tx.getToAccount().getName();
-            } else if (tx.getFromAccount() != null) {
-                info += ", From Account: " + tx.getFromAccount().getName();
+
+            if (tx instanceof Transfer) {
+                if (tx.getFromAccount() != null) {
+                    info.append(", FROM: ").append(tx.getFromAccount().getName());
+                }
+                if (tx.getToAccount() != null) {
+                    info.append(", TO: ").append(tx.getToAccount().getName());
+                }
+            } else {
+                if (tx.getFromAccount() != null) {
+                    info.append(", From: ").append(tx.getFromAccount().getName());
+                } else if (tx.getToAccount() != null) {
+                    info.append(", To: ").append(tx.getToAccount().getName());
+                }
             }
-            if(tx.getNote() != null && !tx.getNote().isEmpty()) {
-                info += ", Note: " + tx.getNote();
+
+            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info.append(", Note: ").append(tx.getNote());
             }
 
             System.out.println(info);
@@ -140,6 +156,10 @@ public class LedgerCLI {
         System.out.println("\nCurrent name: " + selectedLedger.getName());
         System.out.print("Enter new name for the ledger (leave blank to keep current): ");
         String newName = scanner.nextLine().trim();
+        if(newName.isEmpty()) {
+            System.out.println("Ledger name unchanged.");
+            return;
+        }
 
         boolean updated = ledgerController.renameLedger(selectedLedger, newName, userController.getCurrentUser());
         if(!updated) {

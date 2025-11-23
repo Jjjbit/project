@@ -46,7 +46,7 @@ public class LedgerCategoryCLI {
         }
 
         //enter category type
-        System.out.print("Enter the type of the new category (INCOME/EXPENSE): ");
+        System.out.println("Enter the type of the new category: ");
         String categoryTypeInput = selectCategoryType();
 
         //create category
@@ -58,6 +58,7 @@ public class LedgerCategoryCLI {
             return;
         }
         System.out.println("Category '" + category.getName() + "' added successfully to ledger '" + selectedLedger.getName() + "'.");
+        printCategoryTree(selectedLedger);
     }
 
     public void addSubCategory() {
@@ -72,7 +73,7 @@ public class LedgerCategoryCLI {
         }
 
         //select category type
-        System.out.print("Enter the type of the parent category (INCOME/EXPENSE): ");
+        System.out.println("Enter the type of the parent category: ");
         String categoryTypeInput = selectCategoryType();
         CategoryType categoryType = categoryTypeInput.equalsIgnoreCase("INCOME") ?
                 CategoryType.INCOME : CategoryType.EXPENSE;
@@ -98,6 +99,7 @@ public class LedgerCategoryCLI {
         }
         System.out.println("Sub-category '" + subCategory.getName() + "' added successfully under category '"
                 + parentCategory.getName() + "' in ledger '" + selectedLedger.getName() + "'.");
+        printCategoryTree(selectedLedger);
 
     }
 
@@ -113,7 +115,7 @@ public class LedgerCategoryCLI {
         }
 
         //select category type
-        System.out.print("Enter the type of the category to rename (INCOME/EXPENSE): ");
+        System.out.println("Enter the type of the category to rename (INCOME/EXPENSE): ");
         String categoryTypeInput = selectCategoryType();
         CategoryType categoryType = categoryTypeInput.equalsIgnoreCase("INCOME") ?
                 CategoryType.INCOME : CategoryType.EXPENSE;
@@ -128,6 +130,10 @@ public class LedgerCategoryCLI {
         //enter new name
         System.out.print("Enter the new name for the category '" + categoryToRename.getName() + "': ");
         String newName = scanner.nextLine().trim();
+        if(newName.isEmpty()){
+            System.out.println("Category name cannot be empty.");
+            return;
+        }
 
         //rename category
         boolean success = ledgerCategoryController.renameCategory(categoryToRename, newName, selectedLedger);
@@ -136,8 +142,7 @@ public class LedgerCategoryCLI {
             return;
         }
         System.out.println("Category renamed successfully to '" + newName + "'.");
-
-
+        printCategoryTree(selectedLedger);
     }
 
     public void deleteCategory() {
@@ -152,21 +157,14 @@ public class LedgerCategoryCLI {
             return;
         }
 
-        //select category type
-        /*System.out.print("Enter the type of the category to delete (INCOME/EXPENSE): ");
-        String categoryTypeInput = selectCategoryType();
-        CategoryType categoryType = categoryTypeInput.equalsIgnoreCase("INCOME") ?
-                CategoryType.INCOME : CategoryType.EXPENSE;*/
 
         //select category
-        List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
-                //.filter(cat -> cat.getType() == categoryType)
-                .toList();
+        List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
         System.out.println("Select a category to delete:");
         LedgerCategory categoryToDelete = selectCategoryWithTree(allCategories);
 
         //select if delete transactions
-        System.out.print("Are you sure you want to delete the category '" + categoryToDelete.getName() + "'? (yes/no): ");
+        System.out.print("Are you sure you want to delete all transactions relative to category '" + categoryToDelete.getName() + "'? (y/n): ");
         String confirmation = scanner.nextLine().trim();
         if (confirmation.equalsIgnoreCase("yes") || confirmation.equalsIgnoreCase("y")) {
             //delete category and delete transactions
@@ -190,7 +188,7 @@ public class LedgerCategoryCLI {
             }
         }
         System.out.println("Category '" + categoryToDelete.getName() + "' deleted successfully.");
-
+        printCategoryTree(selectedLedger);
     }
 
     public void promoteSubCategory() {
@@ -205,15 +203,14 @@ public class LedgerCategoryCLI {
         }
 
         //select category type
-        System.out.print("Enter the type of the sub-category to promote (INCOME/EXPENSE): ");
+        System.out.println("Enter the type of the sub-category to promote: ");
         String categoryTypeInput = selectCategoryType();
         CategoryType categoryType = categoryTypeInput.equalsIgnoreCase("INCOME") ?
                 CategoryType.INCOME : CategoryType.EXPENSE;
 
         //select sub-category
         List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
-                .filter(cat -> cat.getType() == categoryType
-                        && cat.getParent() != null)
+                .filter(cat -> cat.getType() == categoryType && cat.getParent() != null)
                 .toList();
         System.out.println("Select a sub-category to promote:");
         LedgerCategory subCategoryToPromote = selectCategory(allCategories);
@@ -243,7 +240,7 @@ public class LedgerCategoryCLI {
         }
 
         //select category type
-        System.out.print("Enter the type of the category to demote (INCOME/EXPENSE): ");
+        System.out.println("Enter the type of the category to demote: ");
         String categoryTypeInput = selectCategoryType();
         CategoryType categoryType = categoryTypeInput.equalsIgnoreCase("INCOME") ?
                 CategoryType.INCOME : CategoryType.EXPENSE;
@@ -324,7 +321,7 @@ public class LedgerCategoryCLI {
         List<LedgerCategory> incomeRoots = updatedCategories.stream()
                 .filter(cat -> cat.getParent() == null && cat.getType() == CategoryType.INCOME)
                 .toList();
-        System.out.println("Category Tree after update");
+        System.out.println("Category Tree for Ledger: " + selectedLedger.getName());
         System.out.println("Expense categories: ");
         for (LedgerCategory category : expenseRoots) {
             System.out.println(" Category: " + category.getName());
@@ -347,12 +344,19 @@ public class LedgerCategoryCLI {
         }
     }
     private String selectCategoryType() {
-        String categoryTypeInput = scanner.nextLine().trim();
-       if(!categoryTypeInput.equalsIgnoreCase("INCOME") &&
-               !categoryTypeInput.equalsIgnoreCase("EXPENSE")) {
-           System.out.println("Invalid category type. Please enter INCOME or EXPENSE.");
-           return selectCategoryType();
-       }
+        System.out.println("1. INCOME");
+        System.out.println("2. EXPENSE");
+        System.out.print("Enter choice (1 or 2): ");
+        String input = scanner.nextLine().trim();
+        String categoryTypeInput;
+        if (input.equals("1")) {
+            categoryTypeInput = "INCOME";
+        } else if (input.equals("2")) {
+            categoryTypeInput = "EXPENSE";
+        } else {
+            System.out.println("Invalid choice.");
+            return selectCategoryType();
+        }
          return categoryTypeInput;
     }
     private Ledger selectLedger(User user) {
@@ -364,7 +368,7 @@ public class LedgerCategoryCLI {
         }
         for (int i = 0; i < ledgers.size(); i++) {
             Ledger ledger = ledgers.get(i);
-            System.out.println("Ledger " + (i + 1) + ". "+ "Name: " + ledger.getName());
+            System.out.println((i + 1) + ". "+ "Name: " + ledger.getName());
         }
         System.out.print("Enter the number of the ledger: ");
         String input = scanner.nextLine().trim();
@@ -410,7 +414,7 @@ public class LedgerCategoryCLI {
                 return selectCategoryWithTree(categories);
             }
 
-            LedgerCategory parentCategory = categories.get(parentIndex);
+            LedgerCategory parentCategory = rootCategories.get(parentIndex);
             List<LedgerCategory> subCategories = categories.stream()
                     .filter(cat -> cat.getParent() != null && cat.getParent().getId() == parentCategory.getId())
                     .toList();
@@ -422,11 +426,12 @@ public class LedgerCategoryCLI {
         } else {
             //first-level category selected
             int choice = Integer.parseInt(input);
-            if(choice < 1 || choice > categories.size()) {
+
+            if(choice < 1 || choice > rootCategories.size()) {
                 System.out.println("Invalid choice.");
                 return selectCategoryWithTree(categories);
             }
-            return categories.get(choice - 1);
+            return rootCategories.get(choice - 1);
         }
     }
 
