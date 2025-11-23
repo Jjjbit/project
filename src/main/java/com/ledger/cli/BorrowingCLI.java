@@ -205,7 +205,7 @@ public class BorrowingCLI {
             return;
         }
         System.out.println("Borrowing edited successfully.");
-        showBorrowingDetails(borrowingToEdit);
+        showAllBorrowings();
     }
 
     public void deleteBorrowing() {
@@ -348,7 +348,7 @@ public class BorrowingCLI {
             return;
         }
         System.out.println("Borrowing payment made successfully.");
-        showBorrowingDetails(borrowingToPay);
+        showAllBorrowings();
     }
 
     private void showBorrowingDetails(BorrowingAccount borrowing) {

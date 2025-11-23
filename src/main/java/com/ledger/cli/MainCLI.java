@@ -142,16 +142,15 @@ public class MainCLI {
     private void showAccountMenu()  {
         System.out.println("\n=== Account Management ===");
         System.out.println("1. Create Account");
-        System.out.println("2. View Accounts"); //show all accounts
-        System.out.println("3. Update Account");
+        System.out.println("2. View All Accounts"); //show all accounts
+        System.out.println("3. Edit Account");
         System.out.println("4. Delete Account");
         System.out.println("5. Hide Account");
-        System.out.println("6. Installments Management");
-        System.out.println("7. Pay Debt of Credit Card");
-        System.out.println("8. Pay Loan");
-        System.out.println("9. Show Account's Summary");
-        System.out.println("10. Transaction Management");
-        System.out.println("11. Back to Main Menu");
+        System.out.println("6. Pay Debt of Credit Card");
+        System.out.println("7. Pay Loan");
+        System.out.println("8. Show Account's Summary");
+        System.out.println("9. Installments Management");
+        System.out.println("10. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -173,23 +172,19 @@ public class MainCLI {
                 accountCLI.hideAccount();
                 break;
             case "6":
-                showInstallmentMenu();
-                break;
-            case "7":
                 accountCLI.payDebt();
                 break;
-            case "8":
+            case "7":
                 accountCLI.payLoan();
+                break;
+            case "8":
+                accountCLI.viewAccountSummary();
                 break;
             case "9":
                 // go back to main menu
-                accountCLI.viewAccountSummary();
+                showInstallmentMenu();
                 break;
             case "10":
-                // go to transaction management menu
-                showTransactionMenu();
-                break;
-            case "11":
                 // go back to main menu
                 showMainMenu();
                 break;
@@ -439,8 +434,8 @@ public class MainCLI {
     private void showLendingMenu() {
         System.out.println("\n=== Lending Management ===");
         System.out.println("1. Create Lending Record");
-        System.out.println("2. View ALl Lending Records");
-        System.out.println("3. Update Lending Record");
+        System.out.println("2. View All Lending Records");
+        System.out.println("3. Edit Lending Record");
         System.out.println("4. Delete Lending Record");
         System.out.println("5. Receive Lending Payment");
         System.out.println("6. Back to Main Menu");

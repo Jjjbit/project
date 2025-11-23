@@ -37,43 +37,47 @@ public class LendingCLI {
         }
 
         System.out.print("Enter lending amount: ");
-        BigDecimal amountInput = scanner.nextBigDecimal();
+        String amountStr = scanner.nextLine().trim();
+        if(amountStr.isEmpty()) {
+            System.out.println("Lending amount cannot be empty.");
+            return;
+        }
+        BigDecimal amountInput = new BigDecimal(amountStr);
+
+        boolean includedInNetWorth = inputIncludedInNetWorth();
+        boolean selectable = inputSelectable();
 
         System.out.print("Enter borrowing date (YYYY-MM-DD) or leave blank for today: ");
         LocalDate lendingDate = inputLendingDate();
-
-        boolean includedInNetWorth = inputIncludedInNetWorth();
-
-        boolean selectable = inputSelectable();
 
         System.out.print("Enter note (optional): ");
         String note = inputNote();
 
         //enter from account option can be added later
-        System.out.print("Do you want to specify a 'from account'? (y/n): ");
-        String fromAccountChoice = scanner.nextLine().trim().toLowerCase();
-        Account fromAccount = null;
-        if(fromAccountChoice.equals("y") || fromAccountChoice.equals("yes")) {
-            List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
-                    .filter(account -> !(account instanceof LoanAccount))
-                    .toList();
-            if (accounts.isEmpty()) {
-                System.out.println("No available accounts to select.");
-                return;
-            }
-            System.out.println("\n Select an account to lend from:");
-            for (int i = 0; i < accounts.size(); i++) {
-                System.out.println((i + 1) + ". " + accounts.get(i).getName());
-            }
-            System.out.print("Enter the number of the account: ");
-            int accountIndex = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
-            if (accountIndex < 1 || accountIndex > accounts.size()) {
-                System.out.println("Invalid account selection.");
-                return;
-            }
+        System.out.println("Select an account to lend from: ");
+        Account fromAccount;
+        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+                .filter(Account::getSelectable)
+                .toList();
+
+        for (int i = 0; i < accounts.size(); i++) {
+            System.out.println((i + 1) + ". " + accounts.get(i).getName());
+        }
+        System.out.println("0. From account is external");
+        System.out.print("Enter the number of the account: ");
+
+        String accountInput = scanner.nextLine().trim();
+        int accountIndex = Integer.parseInt(accountInput);
+
+        if (accountIndex == 0) {
+            fromAccount = null;
+        }else if (accountIndex < 0 || accountIndex > accounts.size()) {
+            System.out.println("Invalid account selection.");
+            return;
+        }else{
             fromAccount = accounts.get(accountIndex - 1);
         }
+
         // Further implementation to create lending using the collected inputs
         LendingAccount lendingAccount = accountController.createLendingAccount(userController.getCurrentUser(),
                 name, amountInput, note, includedInNetWorth, selectable, fromAccount, lendingDate, selectedLedger);
@@ -83,7 +87,7 @@ public class LendingCLI {
         }
 
         System.out.println("Lending account created successfully.");
-
+        showAllLendings();
     }
 
     public void showAllLendings() {
@@ -95,30 +99,39 @@ public class LendingCLI {
             return;
         }
         for (LendingAccount lending : lendings) {
-            System.out.println("Lending ID: " + lending.getId() +
-                    ", Name: " + lending.getName() +
-                    ", Amount Lent: " + lending.getBalance() +
-                    ", Lending Date: " + lending.getDate() +
-                    ", Included in Net Worth: " + lending.getIncludedInNetAsset() +
-                    ", Selectable: " + !lending.getHidden() +
-                    (lending.getNotes() != null ? ", Note: " + lending.getNotes() : ""));
+            System.out.println(" Name: " + lending.getName() +
+                    " | Remaining Amount: " + lending.getBalance() +
+                    " | Included in Net Worth: " + (lending.getIncludedInNetAsset() ? "Yes" : "No") +
+                    " | Selectable: " + (lending.getSelectable() ? "Yes" : "No") +
+                    " | Status: " + (lending.getIsEnded() ? "Ended" : "Active") +
+                    " | Lending Date: " + lending.getDate() +
+                    (lending.getNotes() != null ? " | Note: " + lending.getNotes() : " | No note"));
         }
     }
 
     public void editLending() {
         System.out.println("\n === Editing a lending ===");
 
-        System.out.println("Select the lending to edit:");
+        System.out.println("\nSelect the lending to edit:");
         List<LendingAccount> userLendings = reportController.getActiveLendingAccounts(userController.getCurrentUser());
 
         for(int i=0;i<userLendings.size();i++){
             LendingAccount lending=userLendings.get(i);
             System.out.println((i+1) + ". " + "Name: " + lending.getName() +
-                    ", Amount Lent: " + lending.getBalance());
+                    " | Remaining Amount: " + lending.getBalance() +
+                    " | Included in Net Worth: " + (lending.getIncludedInNetAsset() ? "Yes" : "No") +
+                    " | Selectable: " + (lending.getSelectable() ? "Yes" : "No") +
+                    " | Status: " + (lending.getIsEnded() ? "Ended" : "Active") +
+                        " | Lending Date: " + lending.getDate() +
+                    (lending.getNotes() != null ? " | Note: " + lending.getNotes() : " | No note"));
         }
+
         System.out.println("0. Cancel");
         System.out.print("Select a lending by number: ");
-        int lendingIndex =scanner.nextInt() - 1;
+
+        String lendingInput = scanner.nextLine().trim();
+        int lendingIndex = Integer.parseInt(lendingInput) - 1;
+
         if(lendingIndex == -1) {
             System.out.println("Lending editing cancelled.");
             return;
@@ -131,84 +144,74 @@ public class LendingCLI {
         LendingAccount lendingToEdit = userLendings.get(lendingIndex);
 
         //new name
-        System.out.print("Current name" + lendingToEdit.getName() );
-        System.out.print("Do you want to change the name? (y/n): ");
-        String changeNameChoice = scanner.nextLine().trim().toLowerCase();
+        System.out.println("Current name: " + lendingToEdit.getName() );
+        System.out.print("Enter new name (press Enter to skip): ");
+        String newNameInput = scanner.nextLine().trim();
         String newName = null;
-        if(changeNameChoice.equals("y") || changeNameChoice.equals("yes")) {
-            System.out.print("Enter new name: ");
-            newName = inputName();
+        if (!newNameInput.isEmpty()) {
+            newName = newNameInput;
         }
 
         //new balance
-        System.out.print("Current amount lent: " + lendingToEdit.getBalance());
-        System.out.print("Do you want to change the amount lent? (y/n): ");
-        String changeBalanceChoice = scanner.nextLine().trim().toLowerCase();
+        System.out.println("Current amount lent: " + lendingToEdit.getBalance());
+        System.out.print("Enter new amount (press Enter to skip): ");
+        String newAmountInput = scanner.nextLine().trim();
         BigDecimal newBalance = null;
-        if(changeBalanceChoice.equals("y") || changeBalanceChoice.equals("yes")) {
-            System.out.print("Enter new amount lent: ");
-            newBalance = scanner.nextBigDecimal();
+        if (!newAmountInput.isEmpty()) {
+            newBalance = new BigDecimal(newAmountInput);
         }
 
         //new notes
-        System.out.print("Current note: " + (lendingToEdit.getNotes() != null ? lendingToEdit.getNotes() : "No note"));
-        System.out.print("Do you want to change the note? (y/n): ");
-        String changeNoteChoice = scanner.nextLine().trim().toLowerCase();
+        System.out.println("Current note: " + (lendingToEdit.getNotes() != null ? lendingToEdit.getNotes() : "No note"));
+        System.out.print("Enter new note (press Enter to skip): ");
+        String newNoteInput = scanner.nextLine().trim();
         String newNotes = null;
-        if(changeNoteChoice.equals("y") || changeNoteChoice.equals("yes")) {
-            System.out.print("Enter new note (leave blank to remove): ");
-            newNotes = inputNote();
+        if (!newNoteInput.isEmpty()) {
+            newNotes = newNoteInput;
         }
 
         //included in net worth
-        System.out.print("Currently included in net worth calculation: " + lendingToEdit.getIncludedInNetAsset());
-        System.out.print("Do you want to change this setting? (y/n): ");
-        String changeIncludedChoice = scanner.nextLine().trim().toLowerCase();
+        System.out.println("Currently included in net worth calculation: " + (lendingToEdit.getIncludedInNetAsset() ? "Yes" : "No"));
+        System.out.print("(press Enter to skip) include in net worth? (y/n): ");
+        String changeInclusionInput = scanner.nextLine().trim().toLowerCase();
         Boolean newIncludedInNetAsset = null;
-        if(changeIncludedChoice.equals("y") || changeIncludedChoice.equals("yes")) {
-            newIncludedInNetAsset = inputIncludedInNetWorth();
+        if (changeInclusionInput.equals("y") || changeInclusionInput.equals("yes")) {
+            newIncludedInNetAsset = true;
+        } else if (changeInclusionInput.equals("n") || changeInclusionInput.equals("no")) {
+            newIncludedInNetAsset = false;
         }
 
         //selectable
-        System.out.print("Currently selectable: " + !lendingToEdit.getHidden());
-        System.out.print("Do you want to change this setting? (y/n): ");
-        String changeSelectableChoice = scanner.nextLine().trim().toLowerCase();
+        System.out.println("Currently selectable status: " + (lendingToEdit.getSelectable() ? "Yes" : "No"));
+        System.out.print("(press Enter to skip) selectable? (y/n): ");
+        String changeSelectableInput = scanner.nextLine().trim().toLowerCase();
         Boolean newSelectable = null;
-        if(changeSelectableChoice.equals("y") || changeSelectableChoice.equals("yes")) {
-            newSelectable = inputSelectable();
+        if (changeSelectableInput.equals("y") || changeSelectableInput.equals("yes")) {
+            newSelectable = true;
+        } else if (changeSelectableInput.equals("n") || changeSelectableInput.equals("no")) {
+            newSelectable = false;
         }
 
         //is ended
-        System.out.print("Currently ended: " + lendingToEdit.getIsEnded());
-        System.out.print("Do you want to change this setting? (y/n): ");
-        String changeIsEndedChoice = scanner.nextLine().trim().toLowerCase();
+        System.out.println("Currently ended status: " + lendingToEdit.getIsEnded());
+        System.out.print("(press Enter to skip) is ended? (y/n): ");
+        String changeIsEndedInput = scanner.nextLine().trim().toLowerCase();
         Boolean newIsEnded = null;
-        if(changeIsEndedChoice.equals("y") || changeIsEndedChoice.equals("yes")) {
-            System.out.print("Is the lending ended? (y/n): ");
-            String endedInput = scanner.nextLine().trim().toLowerCase();
-            if(endedInput.equals("y") || endedInput.equals("yes")) {
-                newIsEnded = true;
-            } else if(endedInput.equals("n") || endedInput.equals("no")) {
-                newIsEnded = false;
-            } else {
-                System.out.println("Invalid input for ended status. Skipping change.");
-            }
+        if (changeIsEndedInput.equals("y") || changeIsEndedInput.equals("yes")) {
+            newIsEnded = true;
+        } else if (changeIsEndedInput.equals("n") || changeIsEndedInput.equals("no")) {
+            newIsEnded = false;
         }
 
-        boolean success = accountController.editLendingAccount(
-                lendingToEdit,
-                newName,
-                newBalance,
-                newNotes,
-                newIncludedInNetAsset,
-                newSelectable,
-                newIsEnded
-        );
+        boolean success = accountController.editLendingAccount(lendingToEdit, newName, newBalance,
+                newNotes, newIncludedInNetAsset, newSelectable, newIsEnded);
+
         if(!success) {
             System.out.println("Failed to edit lending account.");
             return;
         }
         System.out.println("Lending account edited successfully.");
+        showAllLendings();
     }
 
     public void deleteLending() {
@@ -220,11 +223,19 @@ public class LendingCLI {
         for(int i=0;i<userLendings.size();i++){
             LendingAccount lending=userLendings.get(i);
             System.out.println((i+1) + ". " + "Name: " + lending.getName() +
-                    ", Amount Lent: " + lending.getBalance());
+                    " | Remaining Amount: " + lending.getBalance() +
+                    " | Included in Net Worth: " + (lending.getIncludedInNetAsset() ? "Yes" : "No") +
+                    " | Selectable: " + (lending.getSelectable() ? "Yes" : "No") +
+                    " | Status: " + (lending.getIsEnded() ? "Ended" : "Active") +
+                    " | Lending Date: " + lending.getDate() +
+                    (lending.getNotes() != null ? " | Note: " + lending.getNotes() : " | No note"));
         }
 
         System.out.print("Select a lending by number: ");
+
         int lendingIndex =scanner.nextInt() - 1;
+        scanner.nextLine(); // Consume newline
+
         if(lendingIndex == -1) {
             System.out.println("Lending deletion cancelled.");
             return;
@@ -237,19 +248,19 @@ public class LendingCLI {
         LendingAccount lendingToDelete = userLendings.get(lendingIndex);
 
         //delete transactions associated with the lending account first
-        System.out.println("Do you want to delete all transactions associated with this lending account? (y/n): ");
+        System.out.print("Do you want to delete all transactions associated with this lending account? (y/n): ");
         String deleteTransactionsChoice = scanner.nextLine().trim().toLowerCase();
-        boolean deleteTransactions = false;
-        if(deleteTransactionsChoice.equals("y") || deleteTransactionsChoice.equals("yes")) {
-            deleteTransactions = true;
-        }
+
+        boolean deleteTransactions = deleteTransactionsChoice.equals("y") || deleteTransactionsChoice.equals("yes");
 
         boolean success = accountController.deleteAccount(lendingToDelete, deleteTransactions);
+
         if(!success) {
             System.out.println("Failed to delete lending account.");
             return;
         }
         System.out.println("Lending account deleted successfully.");
+        showAllLendings();
     }
 
     public void receiveLendingPayment() {
@@ -261,11 +272,19 @@ public class LendingCLI {
         for(int i=0;i<userLendings.size();i++){
             LendingAccount lending=userLendings.get(i);
             System.out.println((i+1) + ". " + "Name: " + lending.getName() +
-                    ", Amount Lent: " + lending.getBalance());
+                    " | Remaining Amount: " + lending.getBalance() +
+                    " | Included in Net Worth: " + (lending.getIncludedInNetAsset() ? "Yes" : "No") +
+                    " | Selectable: " + (lending.getSelectable() ? "Yes" : "No") +
+                    " | Status: " + (lending.getIsEnded() ? "Ended" : "Active") +
+                    " | Lending Date: " + lending.getDate() +
+                    (lending.getNotes() != null ? " | Note: " + lending.getNotes() : " | No note"));
         }
 
         System.out.print("Select a lending by number: ");
-        int lendingIndex =scanner.nextInt() - 1;
+
+        String lendingInput = scanner.nextLine().trim();
+        int lendingIndex = Integer.parseInt(lendingInput) - 1;
+
         if(lendingIndex == -1) {
             System.out.println("Lending payment cancelled.");
             return;
@@ -278,27 +297,40 @@ public class LendingCLI {
         LendingAccount lendingToReceivePayment = userLendings.get(lendingIndex);
 
         System.out.print("Enter payment amount: ");
-        BigDecimal paymentAmount = scanner.nextBigDecimal();
+        String paymentAmountStr = scanner.nextLine().trim();
+        if(paymentAmountStr.isEmpty()) {
+            System.out.println("Payment amount cannot be empty.");
+            return;
+        }
+        BigDecimal paymentAmount = new BigDecimal(paymentAmountStr);
 
         //select to account option can be added later
-        System.out.print("Do you want to specify a 'to account'? (y/n):");
+        System.out.print("Do you want to  select an account to receive payment? (y/n):");
         String toAccountChoice = scanner.nextLine().trim().toLowerCase();
         Account toAccount = null;
         if(toAccountChoice.equals("y") || toAccountChoice.equals("yes")) {
             List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
-                    .filter(account -> !(account instanceof LoanAccount))
+                    .filter(Account::getSelectable)
                     .toList();
             if (accounts.isEmpty()) {
                 System.out.println("No available accounts to select.");
                 return;
             }
-            System.out.println("\n Select an account to receive payment into:");
+
+            System.out.println("Select an account to receive payment into:");
+            System.out.println("0. Cancel");
             for (int i = 0; i < accounts.size(); i++) {
                 System.out.println((i + 1) + ". " + accounts.get(i).getName());
             }
             System.out.print("Enter the number of the account: ");
-            int accountIndex = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
+
+            String accountInput = scanner.nextLine().trim();
+            int accountIndex = Integer.parseInt(accountInput);
+
+            if(accountIndex == 0) {
+                System.out.println("Lending payment cancelled.");
+                return;
+            }
             if (accountIndex < 1 || accountIndex > accounts.size()) {
                 System.out.println("Invalid account selection.");
                 return;
@@ -307,28 +339,32 @@ public class LendingCLI {
         }
 
         //select ledger option can be added later
-        System.out.print("Do you want to specify a 'ledger'? (y/n):");
-        String ledgerChoice = scanner.nextLine().trim().toLowerCase();
-        Ledger ledger = null;
-        if(ledgerChoice.equals("y") || ledgerChoice.equals("yes")) {
-            List<Ledger> ledgers = reportController.getLedgerByUser(userController.getCurrentUser());
-            if (ledgers.isEmpty()) {
-                System.out.println("No available ledgers to select.");
-                return;
-            }
-            System.out.println("\n Select a ledger for the payment:");
-            for (int i = 0; i < ledgers.size(); i++) {
-                System.out.println((i + 1) + ". " + ledgers.get(i).getName());
-            }
-            System.out.print("Enter the number of the ledger: ");
-            int ledgerIndex = scanner.nextInt();
-            scanner.nextLine(); // Consume newline
-            if (ledgerIndex < 1 || ledgerIndex > ledgers.size()) {
-                System.out.println("Invalid ledger selection.");
-                return;
-            }
-            ledger = ledgers.get(ledgerIndex - 1);
+        System.out.println("Select a ledger to associate with this receiving:");
+        List<Ledger> ledgers = reportController.getLedgerByUser(userController.getCurrentUser());
+        if (ledgers.isEmpty()) {
+            System.out.println("No available ledgers to select.");
+            return;
         }
+
+        for (int i = 0; i < ledgers.size(); i++) {
+            System.out.println((i + 1) + ". " + ledgers.get(i).getName());
+        }
+        System.out.println("0. Cancel");
+        System.out.print("Enter the number of the ledger: ");
+
+        String ledgerInput = scanner.nextLine().trim();
+        int ledgerIndex = Integer.parseInt(ledgerInput);
+
+        if(ledgerIndex == 0) {
+            System.out.println("Lending payment cancelled.");
+            return;
+        }
+        if (ledgerIndex < 1 || ledgerIndex > ledgers.size()) {
+            System.out.println("Invalid ledger selection.");
+            return;
+        }
+        Ledger ledger = ledgers.get(ledgerIndex - 1);
+
 
         boolean success = accountController.receiveLending(lendingToReceivePayment, paymentAmount,
                  toAccount, ledger);
@@ -338,6 +374,7 @@ public class LendingCLI {
             return;
         }
         System.out.println("Lending payment received successfully.");
+        showAllLendings();
     }
 
 
@@ -373,7 +410,12 @@ public class LendingCLI {
     }
 
     private String inputName() {
-        return scanner.nextLine().trim();
+        String name= scanner.nextLine().trim();
+        if(name.isEmpty()) {
+            System.out.println("Name cannot be empty. Please enter a valid name.");
+            return inputName();
+        }
+        return name;
     }
 
     private LocalDate inputLendingDate() {
@@ -399,7 +441,7 @@ public class LendingCLI {
 
         for (int i = 0; i < ledgers.size(); i++) {
             Ledger ledger = ledgers.get(i);
-            System.out.println("Ledger " + (i + 1) + ". "+ "Name: " + ledger.getName());
+            System.out.println( (i + 1) + ". "+ "Name: " + ledger.getName());
         }
         System.out.print("Enter the number of the ledger: ");
         String input = scanner.nextLine().trim();

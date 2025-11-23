@@ -84,12 +84,12 @@ public class UserCLI {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         System.out.println("\n=== Current User ===");
-        System.out.println("\nUsername: " + user.getUsername());
-        System.out.println("\nNet Worth: " + netWorth);
-        System.out.println("\nTotal Worth: " + totalAssets);
-        System.out.println("\nTotal Liabilities: " + totalLiabilities);
-        System.out.println("\nTotal Borrowing: " + totalBorrowing);
-        System.out.println("\nTotal Lending: " + totalLending);
+        System.out.print("\nUsername: " + user.getUsername());
+        System.out.print("Net Worth: " + netWorth);
+        System.out.print("Total Worth: " + totalAssets);
+        System.out.print("Total Liabilities: " + totalLiabilities);
+        System.out.print("Total Borrowing: " + totalBorrowing);
+        System.out.print("Total Lending: " + totalLending);
     }
 
 
