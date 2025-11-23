@@ -164,7 +164,7 @@ public class LedgerCategoryCLI {
         LedgerCategory categoryToDelete = selectCategoryWithTree(allCategories);
 
         //select if delete transactions
-        System.out.print("Are you sure you want to delete all transactions relative to category '" + categoryToDelete.getName() + "'? (y/n): ");
+        System.out.print("Are you sure you want to delete this category and all its associated transactions '" + categoryToDelete.getName() + "'? (y/n): ");
         String confirmation = scanner.nextLine().trim();
         if (confirmation.equalsIgnoreCase("yes") || confirmation.equalsIgnoreCase("y")) {
             //delete category and delete transactions
