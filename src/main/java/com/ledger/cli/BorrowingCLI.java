@@ -43,10 +43,6 @@ public class BorrowingCLI {
         System.out.print("Enter borrowing name: ");
         String nameInput = inputName();
 
-        //enter note
-        System.out.print("Enter borrowing note (optional): ");
-        String noteInput = inputNote();
-
         //enter
         boolean includedInNetWorth = inputIncludedInNetWorth();
         boolean selectable = inputSelectable();
@@ -54,6 +50,10 @@ public class BorrowingCLI {
         //enter date
         System.out.print("Enter borrowing date (YYYY-MM-DD) or leave blank for today: ");
         LocalDate dateInput = inputBorrowingDate();
+
+        //enter note
+        System.out.print("Enter borrowing note (optional): ");
+        String noteInput = inputNote();
 
         //select to account
         System.out.println("Select an account that receives this borrowing:");
@@ -64,7 +64,7 @@ public class BorrowingCLI {
         for(int i=0;i<accounts.size();i++) {
             System.out.println((i+1)+". "+accounts.get(i).getName());
         }
-        System.out.println("0. To account is external (no account)");
+        System.out.println("0. To account is external");
         System.out.print("Enter the number corresponding to the account: ");
         String accountInput = scanner.nextLine().trim();
         int accountIndex = Integer.parseInt(accountInput) ;
@@ -86,7 +86,7 @@ public class BorrowingCLI {
             return;
         }
         System.out.println("Borrowing added successfully.");
-        showBorrowingDetails(borrowingAccount);
+        showAllBorrowings();
     }
 
     public void showAllBorrowings() {
@@ -352,12 +352,13 @@ public class BorrowingCLI {
     }
 
     private void showBorrowingDetails(BorrowingAccount borrowing) {
-        System.out.print("Name: " + borrowing.getName() + " | Total Borrowing Amount: " + borrowing.getBorrowingAmount()
-        + " | Remaining Amount: " + borrowing.getRemainingAmount()
-        + " | Notes: " + (borrowing.getNotes() == null ? "No note" : borrowing.getNotes())
-        + " | Included in Net Worth: " + (borrowing.getIncludedInNetAsset() ? "Yes" : "No")
-        + " | Selectable: " + (borrowing.getSelectable() ? "Yes" : "No")
-        + " | Status: " + (borrowing.getIsEnded() ? "Ended" : "Active"));
+        System.out.print("Name: " + borrowing.getName()
+                + " | Total Borrowing Amount: " + borrowing.getBorrowingAmount()
+                + " | Remaining Amount: " + borrowing.getRemainingAmount()
+                + " | Included in Net Worth: " + (borrowing.getIncludedInNetAsset() ? "Yes" : "No")
+                + " | Selectable: " + (borrowing.getSelectable() ? "Yes" : "No")
+                + " | Status: " + (borrowing.getIsEnded() ? "Ended" : "Active")
+                + " | Notes: " + (borrowing.getNotes() == null ? "No note" : borrowing.getNotes()));
     }
 
     //input helpers
