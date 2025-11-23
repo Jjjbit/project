@@ -13,14 +13,14 @@ public class LoanAccount extends Account {
         INTEREST_BEFORE_PRINCIPAL
     }
 
-    private int totalPeriods=0;
-    private int repaidPeriods= 0;
+    private int totalPeriods;
+    private int repaidPeriods;
     private BigDecimal annualInterestRate;
     private BigDecimal loanAmount;
     private LocalDate repaymentDay;
     private RepaymentType repaymentType;
     private BigDecimal remainingAmount;
-    protected boolean isEnded = false;
+    protected boolean isEnded;
 
     public LoanAccount() {}
     public LoanAccount(
@@ -116,11 +116,9 @@ public class LoanAccount extends Account {
                 .divide(BigDecimal.valueOf(12), 10, RoundingMode.HALF_UP); // convert annual rate to monthly rate
     }
 
-    public void repayLoan(Transaction tx){ //pay one period
+    public void repayLoan(){ //pay one period
         this.repaidPeriods = this.repaidPeriods + 1;
         this.remainingAmount= remainingAmount.subtract(getMonthlyRepayment(repaidPeriods)).setScale(2, RoundingMode.HALF_UP);
-        //incomingTransactions.add(tx);
-        transactions.add(tx);
         checkAndUpdateStatus();
     }
 
@@ -172,8 +170,7 @@ public class LoanAccount extends Account {
                 //monthly payment is fixed
                 BigDecimal totalInterest = loanAmount.multiply(monthlyRate).multiply(BigDecimal.valueOf(totalPeriods));
                 BigDecimal totalrepayment = loanAmount.add(totalInterest);
-                BigDecimal fixedPayment = totalrepayment.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP);
-                return fixedPayment; // For EQUAL_PRINCIPAL_AND_INTEREST, the monthly payment is fixed
+                return totalrepayment.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP); // For EQUAL_PRINCIPAL_AND_INTEREST, the monthly payment is fixed
 
             case INTEREST_BEFORE_PRINCIPAL:
                 BigDecimal monthlyInterest = loanAmount.multiply(monthlyRate).setScale(2, RoundingMode.HALF_UP);

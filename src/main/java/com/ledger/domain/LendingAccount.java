@@ -5,7 +5,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 
 public class LendingAccount extends Account {
-    private boolean isEnded = false; //indica se il borrowing è stato completamente rimborsato
+    private boolean isEnded; //indica se il borrowing è stato completamente rimborsato
     private LocalDate date;
 
     public LendingAccount() {}
@@ -32,15 +32,16 @@ public class LendingAccount extends Account {
     public LocalDate getDate() {
         return date;
     }
-    public void receiveRepayment(Transaction tx, BigDecimal amount){
+
+    public void receiveRepayment(BigDecimal amount){
         balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-        transactions.add(tx);
-        //outgoingTransactions.add(tx);
+        //transactions.add(tx);
         checkAndUpdateStatus();
     }
 
     public void checkAndUpdateStatus() {
         if(balance.compareTo(BigDecimal.ZERO) <= 0) {
+            balance=BigDecimal.ZERO;
             this.isEnded = true;
         } else {
             this.isEnded = false;
