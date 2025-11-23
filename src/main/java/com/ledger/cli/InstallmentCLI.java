@@ -64,7 +64,6 @@ public class InstallmentCLI {
         String includeInput = scanner.nextLine().trim().toLowerCase();
         boolean includeInCurrentDebt = includeInput.isEmpty() || includeInput.equals("y") || includeInput.equals("yes");
 
-
         //select ledger
         Ledger ledger= selectLedger();
         if(ledger==null) return;
@@ -78,12 +77,7 @@ public class InstallmentCLI {
                 interest, strategy, repaymentStartDate, category, includeInCurrentDebt, ledger);
 
         System.out.println("Installment created successfully!");
-        System.out.println("\nTotal amount: " + plan.getTotalAmount());
-        System.out.println("Total with interest: " + plan.getTotalPayment());
-        System.out.println("Remaining amount: " + plan.getRemainingAmount());
-        int repaidPeriods = plan.getPaidPeriods();
-        System.out.println("Repaid periods: " + repaidPeriods + "/" + plan.getTotalPeriods());
-        System.out.println("Next month: " + plan.getMonthlyPayment(repaidPeriods + 1));
+        System.out.println(formatInstallment(plan));
     }
 
     public void viewInstallments() {
@@ -112,7 +106,6 @@ public class InstallmentCLI {
     }
 
     public void payInstallment() {
-
         System.out.println("\n=== Make Installment Payment ===");
 
         //select credit account
@@ -150,19 +143,16 @@ public class InstallmentCLI {
         String confirm = scanner.nextLine().trim().toLowerCase();
 
         if (confirm.equals("y") || confirm.equals("yes")) {
-            boolean success= installmentController.payInstallment(selectedPlan);
+            boolean success= installmentController.payInstallment(selectedPlan, creditAccount, userController.getCurrentUser());
             if(!success){
                 System.out.println("✗ Payment failed!");
                 return;
             }
             System.out.println("✓ Payment completed successfully!");
-            System.out.println("  Remaining periods: " + (selectedPlan.getTotalPeriods() - selectedPlan.getPaidPeriods()));
-            System.out.println("  Remaining amount: " + selectedPlan.getRemainingAmount());
+            System.out.println(formatInstallment(selectedPlan));
         } else {
             System.out.println("Payment cancelled.");
         }
-
-
     }
 
     public void deleteInstallment() {
@@ -201,7 +191,7 @@ public class InstallmentCLI {
         String confirm = scanner.nextLine().trim().toLowerCase();
 
         if (confirm.equals("y") || confirm.equals("yes")) {
-            boolean success= installmentController.deleteInstallment(selectedPlan);
+            boolean success= installmentController.deleteInstallment(selectedPlan, creditAccount, userController.getCurrentUser());
             if(!success){
                 System.out.println("✗ Deletion failed!");
                 return;
@@ -215,10 +205,9 @@ public class InstallmentCLI {
     }
 
     public void editInstallmentPlan() {
-
         System.out.println("\n=== Edit Installment===");
 
-        System.out.println("Select credit card account:");
+        System.out.println("\nSelect credit card account: ");
         CreditAccount creditAccount = selectCreditCardAccount();
         if (creditAccount == null) return;
 
@@ -232,8 +221,10 @@ public class InstallmentCLI {
             Installment plan = plans.get(i);
             System.out.println((i + 1) + ". " + formatInstallment(plan));
         }
+        System.out.println("0. Cancel");
         System.out.print("Enter choice: ");
-        int choice = Integer.parseInt(scanner.nextLine().trim()) - 1;
+        int choice = Integer.parseInt(scanner.nextLine().trim()) ;
+        if(choice==0) return;
         if (choice < 0 || choice >= plans.size()) {
             System.out.println("Invalid choice!");
             return;
@@ -245,18 +236,20 @@ public class InstallmentCLI {
         } else {
             System.out.print("The installment is currently excluded from current debts. Do you want to include it? (y/n): ");
         }
-        String input = scanner.nextLine().trim().toLowerCase();
+        String input = scanner.nextLine().trim().toLowerCase(); //input is null meaning no change
         Boolean includeInCurrentDebt = null;
         if (input.equals("y") || input.equals("yes")) {
             includeInCurrentDebt = !selectedPlan.isIncludedInCurrentDebts();
         }
 
-        boolean success= installmentController.editInstallment(selectedPlan, includeInCurrentDebt);
+        boolean success= installmentController.editInstallment(selectedPlan, includeInCurrentDebt, userController.getCurrentUser(), creditAccount);
         if(!success) {
             System.out.println("Edit failed!");
             return;
         }
         System.out.println("Installment edited successfully!");
+        System.out.println(formatInstallment(selectedPlan));
+        System.out.println("Update Credit Card current debt: " + creditAccount.getCurrentDebt());
     }
 
 
@@ -277,7 +270,7 @@ public class InstallmentCLI {
 
         for (int i = 0; i < creditAccounts.size(); i++) {
             CreditAccount account = creditAccounts.get(i);
-            System.out.println((i + 1) + ". " + account.getName() + " - balance:" + account.getBalance() +
+            System.out.println((i + 1) + ". " + account.getName() + " - balance: " + account.getBalance() +
                     ", Credit Limit: " + account.getCreditLimit() + ", Current debt: " + account.getCurrentDebt() );
         }
         System.out.print("Enter number of credit card: ");
@@ -414,22 +407,23 @@ public class InstallmentCLI {
 
     private String formatInstallment(Installment plan) {
         return String.format(
-                "Total to pay: %s | Paid amount: %s |Periods: %d/%d | Next month: %s | Remaining: %s",
+                "Total to pay: %s | Paid amount: %s |Periods: %d/%d | Next month: %s | Remaining: %s | include in current debt: %s | Strategy: %s",
                 plan.getTotalPayment(),
                 plan.getTotalPayment().subtract(plan.getRemainingAmount()).setScale(2, RoundingMode.HALF_UP),
                 plan.getPaidPeriods(),
                 plan.getTotalPeriods(),
                 plan.getMonthlyPayment(plan.getPaidPeriods() + 1),
-                plan.getRemainingAmount()
+                plan.getRemainingAmount(),
+                plan.isIncludedInCurrentDebts() ? "Yes" : "No",
+                formatStrategy(plan.getStrategy())
         );
     }
 
     private String formatStrategy(Installment.Strategy strategy) {
-        switch (strategy) {
-            case EVENLY_SPLIT: return "Evenly Split";
-            case UPFRONT: return "Upfront";
-            case FINAL: return "Final";
-            default: return strategy.name();
-        }
+        return switch (strategy) {
+            case EVENLY_SPLIT -> "Evenly Split";
+            case UPFRONT      -> "Upfront";
+            case FINAL        -> "Final";
+        };
     }
 }
