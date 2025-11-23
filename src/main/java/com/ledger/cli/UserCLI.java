@@ -85,11 +85,11 @@ public class UserCLI {
 
         System.out.println("\n=== Current User ===");
         System.out.print("\nUsername: " + user.getUsername());
-        System.out.print("Net Worth: " + netWorth);
-        System.out.print("Total Worth: " + totalAssets);
-        System.out.print("Total Liabilities: " + totalLiabilities);
-        System.out.print("Total Borrowing: " + totalBorrowing);
-        System.out.print("Total Lending: " + totalLending);
+        System.out.print(" | Net Worth: " + netWorth);
+        System.out.print(" | Total Worth: " + totalAssets);
+        System.out.print(" | Total Liabilities: " + totalLiabilities);
+        System.out.print(" | Total Borrowing: " + totalBorrowing);
+        System.out.print(" | Total Lending: " + totalLending);
     }
 
 
