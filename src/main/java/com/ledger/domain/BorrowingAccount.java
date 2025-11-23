@@ -5,7 +5,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 
 public class BorrowingAccount extends Account{
-    private boolean isEnded =false; //indica se il borrowing è stato completamente rimborsato
+    private boolean isEnded; //indica se il borrowing è stato completamente rimborsato
     private LocalDate date;
     private BigDecimal borrowingAmount;
     private BigDecimal remainingAmount;
@@ -57,15 +57,15 @@ public class BorrowingAccount extends Account{
         this.borrowingAmount = this.borrowingAmount.add(amount).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public void repay(Transaction tx, BigDecimal amount){
-        this.remainingAmount = this.remainingAmount.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-        transactions.add(tx);
-        //incomingTransactions.add(tx);
+    public void repay(BigDecimal amount){
+        credit(amount);
+        //this.remainingAmount = this.remainingAmount.subtract(amount).setScale(2, RoundingMode.HALF_UP);
         checkAndUpdateStatus();
     }
 
     public void checkAndUpdateStatus() {
-        if(balance.compareTo(BigDecimal.ZERO) <= 0) {
+        if(remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            this.remainingAmount=BigDecimal.ZERO;
             this.isEnded = true;
         } else {
             this.isEnded = false;

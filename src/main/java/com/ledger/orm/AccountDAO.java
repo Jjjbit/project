@@ -543,8 +543,6 @@ public class AccountDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean deleteAccount(Account account) throws SQLException {
-        connection.setAutoCommit(false); // Start transaction
-
         String sql = "DELETE FROM accounts WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, account.getId());

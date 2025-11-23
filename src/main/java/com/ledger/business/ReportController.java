@@ -102,7 +102,6 @@ public class ReportController {
                     .filter(account -> account instanceof BorrowingAccount)
                     .map(account -> (BorrowingAccount) account)
                     .filter(account -> !account.getHidden())
-                    .filter(account -> !account.getIsEnded())
                     .toList();
         }catch (SQLException e){
             System.err.println("SQL Exception in getAccountByOwnerId: " + e.getMessage());
@@ -117,7 +116,6 @@ public class ReportController {
                 .filter(account -> account instanceof LendingAccount)
                 .map(account -> (LendingAccount) account)
                 .filter(account-> !account.getHidden())
-                .filter(account -> !account.getIsEnded())
                 .toList();
 
         }catch (SQLException e){
@@ -136,6 +134,7 @@ public class ReportController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal totalLending = getActiveLendingAccounts(user).stream()
                     .filter(Account::getIncludedInNetAsset)
+                    .filter(account -> !account.getIsEnded())
                     .map(LendingAccount::getBalance)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             return totalAssets.add(totalLending);
@@ -159,6 +158,7 @@ public class ReportController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal totalBorrowing = getActiveBorrowingAccounts(user).stream()
                     .filter(Account::getIncludedInNetAsset)
+                    .filter(account -> !account.getIsEnded())
                     .map(BorrowingAccount::getRemainingAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal totalInstallmentDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
