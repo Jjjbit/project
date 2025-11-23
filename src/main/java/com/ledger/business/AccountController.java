@@ -255,7 +255,7 @@ public class AccountController {
 
             if (name != null) account.setName(name);
             if (balance != null) account.setBalance(balance);
-            if (notes != null) account.setNotes(notes);
+            account.setNotes(notes);
             if (includedInNetAsset != null) account.setIncludedInNetAsset(includedInNetAsset);
             if (selectable != null) account.setSelectable(selectable);
 
@@ -277,7 +277,7 @@ public class AccountController {
 
             if (name != null) account.setName(name);
             if (balance != null) account.setBalance(balance);
-            if (notes != null) account.setNotes(notes);
+            account.setNotes(notes);
             if (includedInNetAsset != null) account.setIncludedInNetAsset(includedInNetAsset);
             if (selectable != null) account.setSelectable(selectable);
             if (creditLimit != null) ((CreditAccount) account).setCreditLimit(creditLimit);
@@ -302,7 +302,7 @@ public class AccountController {
             }
 
             if (name != null) account.setName(name);
-            if (notes != null) account.setNotes(notes);
+            account.setNotes(notes);
             if (includedInNetAsset != null) account.setIncludedInNetAsset(includedInNetAsset);
             if (totalPeriods != null){
                 if(totalPeriods > 480){ //max 40 years

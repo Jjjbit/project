@@ -104,12 +104,29 @@ public class AccountCLI {
     public void updateAccount() {
         System.out.println("\n=== Update Account ===");
 
-        System.out.println("Select the account to update:");
-        Account accountToUpdate = selectAccount(); //select BasicAccount, LoanAccount, CreditAccount
-        if (accountToUpdate == null) {
-            System.out.println("Account selection cancelled.");
+        System.out.println("\nSelect the account to update:");
+        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser());
+        if (accounts.isEmpty()) {
+            System.out.println("No accounts found.");
             return;
         }
+        for( int i=0; i< accounts.size(); i++) {
+            Account account = accounts.get(i);
+            System.out.println((i+1) + ". " + account.getName() + " (" + account.getType() +")");
+        }
+        System.out.println("0. return");
+        System.out.print("Enter number: ");
+        String inputAccount = scanner.nextLine().trim();
+        int choice = Integer.parseInt(inputAccount);
+        if( choice ==0) {
+            System.out.println("Account update cancelled.");
+            return;
+        }
+        if( choice <1 || choice > accounts.size()) {
+            System.out.println("Invalid choice!");
+            return;
+        }
+        Account accountToUpdate = accounts.get(choice -1);
 
         //rename account
         System.out.print("Current name: " + accountToUpdate.getName() + ". Enter new name (press Enter to skip): ");
@@ -152,88 +169,134 @@ public class AccountCLI {
         }
 
         //update note
-        String notePrompt = accountToUpdate.getNotes() != null ? "Current note: " + accountToUpdate.getNotes() : "No current note. ";
+        String notePrompt = accountToUpdate.getNotes() != null ? "Current note: " + accountToUpdate.getNotes() : "No current note.";
+        System.out.print(notePrompt + " Do you want to update the note? (y/n): ");
+        String newNoteInput = scanner.nextLine().trim().toLowerCase();
         String newNote;
-        System.out.print(notePrompt + "(press Enter to skip) Enter new note: ");
-        String inputNote = scanner.nextLine().trim();
-        if( inputNote.isEmpty()) {
-            newNote = null;
-        }else {
-            newNote = inputNote;
+        if( newNoteInput.equals("y") || newNoteInput.equals("yes")) {
+            System.out.print("Enter new note (or press Enter to clear): ");
+            String noteContent = scanner.nextLine().trim();
+            if (noteContent.isEmpty()) {
+                newNote = null;
+            } else {
+                newNote = noteContent;
+            }
+        } else {
+            newNote = accountToUpdate.getNotes();
         }
 
         //update based on account type
         switch (accountToUpdate) {
             case BasicAccount basic -> {
-                boolean success = accountController.editBasicAccount(
-                        basic,
-                        newName,
-                        newBalance,
-                        newNote,
-                        newIncludedInNetWorth,
-                        newSelectable);
+                boolean success = accountController.editBasicAccount(basic, newName,
+                        newBalance, newNote, newIncludedInNetWorth, newSelectable);
+
                 if (!success) {
-                    System.out.println("✗ Failed to update account: " + basic.getName());
+                    System.out.println("Failed to update account: " + basic.getName());
                     return;
                 }
-                System.out.println("✓ Account updated successfully: " + basic.getName());
+                System.out.println("Account updated successfully: " + basic.getName());
             }
 
             case CreditAccount credit -> {
                 System.out.print("Current credit limit: " + credit.getCreditLimit());
-                System.out.print("\nEnter new credit limit (or press Enter to skip): ");
+                System.out.print(". Enter new credit limit (or press Enter to skip): ");
                 String inputCreditLimit = scanner.nextLine().trim();
                 BigDecimal newCreditLimit = inputCreditLimit.isEmpty() ? null : new BigDecimal(inputCreditLimit);
                 if (newCreditLimit != null && newCreditLimit.compareTo(BigDecimal.ZERO) < 0) newCreditLimit = null;
 
                 System.out.print("Current debt: " + credit.getCurrentDebt());
-                System.out.print("\nEnter new current debt (or press Enter to skip: ");
+                System.out.print(". Enter new current debt (or press Enter to skip): ");
                 String inputCurrentDebt = scanner.nextLine().trim();
                 BigDecimal newCurrentDebt = inputCurrentDebt.isEmpty() ? null : new BigDecimal(inputCurrentDebt);
                 if (newCurrentDebt != null && newCurrentDebt.compareTo(BigDecimal.ZERO) < 0) newCurrentDebt = null;
 
-                Integer newBillDate = inputOptionalInteger("Enter new bill day (1-31, optional, press Enter to skip): ", 1, 31);
-                Integer newDueDate = inputOptionalInteger("Enter new due day (1-31, optional, press Enter to skip): ", 1, 31);
+                System.out.print("Current bill day: " + credit.getBillDay());
+                Integer newBillDate = inputOptionalInteger(" Enter new bill day (0-31, press Enter to skip): ", 0, 31);
+
+                System.out.print("Current due day: " + credit.getDueDay());
+                Integer newDueDate = inputOptionalInteger(" Enter new due day (0-31,  press Enter to skip): ", 0, 31);
 
                 boolean success = accountController.editCreditAccount(credit, newName,
                         newBalance, newNote, newIncludedInNetWorth, newSelectable,
-                        newCreditLimit, newCurrentDebt,
-                        newBillDate,
-                        newDueDate);
+                        newCreditLimit, newCurrentDebt, newBillDate, newDueDate);
 
                 if (!success) {
-                    System.out.println("✗ Failed to update account: " + credit.getName());
+                    System.out.println("Failed to update account: " + credit.getName());
                     return;
                 }
-                System.out.println("✓ Account updated successfully. ");
-                showAllAccounts();
+                System.out.println("Account updated successfully. ");
             }
 
             case LoanAccount loan -> {
-                Integer newTotalPeriods = Integer.parseInt(scanner.nextLine().trim());
-                Integer newRepaidPeriods = Integer.parseInt(scanner.nextLine().trim());
-                BigDecimal newAnnualInterestRate = new BigDecimal(scanner.nextLine().trim());
-                BigDecimal newLoanAmount = new BigDecimal(scanner.nextLine().trim());
-                LocalDate newRepaymentDate = inputRepaymentDate();
-                LoanAccount.RepaymentType newRepaymentType = selectRepaymentType();
+                System.out.print("Current loan amount: " + loan.getLoanAmount());
+                System.out.print(". Enter new loan amount (press Enter to skip): ");
+                String inputLoanAmount = scanner.nextLine().trim();
+                BigDecimal newLoanAmount =null;
+                if (!inputLoanAmount.isEmpty()) {
+                    newLoanAmount = new BigDecimal(inputLoanAmount);
+                }
 
-                boolean success = accountController.editLoanAccount(
-                        loan,
-                        newName,
-                        newNote,
-                        newIncludedInNetWorth,
-                        newTotalPeriods,
-                        newRepaidPeriods,
-                        newAnnualInterestRate,
-                        newLoanAmount,
-                        newRepaymentDate,
-                        newRepaymentType
-                );
+                System.out.print("Current total periods: " + loan.getTotalPeriods());
+                System.out.print(". Enter new total periods (press Enter to skip): ");
+                String inputTotalPeriods = scanner.nextLine().trim();
+                Integer newTotalPeriods = null;
+                if (!inputTotalPeriods.isEmpty()) {
+                    newTotalPeriods = Integer.parseInt(inputTotalPeriods);
+                }
+
+                System.out.print("Current repaid periods: " + loan.getRepaidPeriods());
+                System.out.print(". Enter new repaid periods (press Enter to skip): ");
+                String inputRepaidPeriods = scanner.nextLine().trim();
+                Integer newRepaidPeriods = null;
+                if (!inputRepaidPeriods.isEmpty()) {
+                    newRepaidPeriods = Integer.parseInt(inputRepaidPeriods);
+                }
+
+                System.out.print("Current annual interest rate: " + loan.getAnnualInterestRate() + "%");
+                System.out.print(". Enter new annual interest rate % (press Enter to skip): ");
+                String inputInterestRate = scanner.nextLine().trim();
+                BigDecimal newAnnualInterestRate = null;
+                if (!inputInterestRate.isEmpty()) {
+                    newAnnualInterestRate = new BigDecimal(inputInterestRate);
+                }
+
+                System.out.print("Current repayment date: " + loan.getRepaymentDay());
+                System.out.print(". Enter new repayment date (YYYY-MM-DD) (press Enter to skip): ");
+                LocalDate newRepaymentDate = inputRepaymentDate();
+
+                System.out.print("Current repayment type: " + formatRepaymentType(loan.getRepaymentType()));
+                System.out.println(". Select new repayment type: ");
+                LoanAccount.RepaymentType newRepaymentType;
+                LoanAccount.RepaymentType[] types = LoanAccount.RepaymentType.values();
+                for (int i = 0; i < types.length; i++) {
+                    System.out.println((i + 1) + ". " + formatRepaymentType(types[i]));
+                }
+                System.out.println("0. skip");
+                System.out.print("Enter number: ");
+
+                choice = scanner.nextInt();
+                scanner.nextLine(); // consume newline
+
+                if (choice == 0) {
+                    newRepaymentType = null;
+                }else if (choice < 0 || choice > types.length) {
+                    System.out.println("Invalid choice!");
+                    return ;
+                }else{
+                    newRepaymentType = types[choice - 1];
+                }
+
+                boolean success = accountController.editLoanAccount(loan, newName, newNote,
+                        newIncludedInNetWorth, newTotalPeriods, newRepaidPeriods,
+                        newAnnualInterestRate, newLoanAmount, newRepaymentDate,
+                        newRepaymentType);
+
                 if (!success) {
-                    System.out.println("✗ Failed to update account: " + loan.getName());
+                    System.out.println("Failed to update account: " + loan.getName());
                     return;
                 }
-                System.out.println("✓ Account updated successfully: " + loan.getName());
+                System.out.println("Account updated successfully: " + loan.getName());
             }
 
             default -> System.out.println("Unknown account type.");
@@ -244,12 +307,31 @@ public class AccountCLI {
         System.out.println("\n=== Delete Account ===");
 
         //select account to delete
-        System.out.println("Select the account to delete:");
-        Account accountToDelete = selectAccount(); //select visible BasicAccount, LoanAccount, CreditAccount
-        if( accountToDelete == null) {
-            System.out.println("Account selection cancelled.");
+        System.out.println("\nSelect the account to delete:");
+        Account accountToDelete;
+        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser());
+        if (accounts.isEmpty()) {
+            System.out.println("No accounts found.");
             return;
         }
+        for( int i=0; i< accounts.size(); i++) {
+            Account account = accounts.get(i);
+            System.out.println((i+1) + ". " + account.getName() + " (" + account.getType() +")");
+        }
+        System.out.println("0. Return");
+        System.out.print("Enter number: ");
+
+        String inputAccount = scanner.nextLine().trim();
+        int choice = Integer.parseInt(inputAccount);
+        if( choice ==0) {
+            System.out.println("Account deletion cancelled.");
+            return;
+        }
+        if( choice <1 || choice > accounts.size()) {
+            System.out.println("Invalid choice!");
+            return;
+        }
+        accountToDelete = accounts.get(choice -1);
 
         //select if delete transactions linked to this account
         System.out.print("Also delete all transactions linked to this account? (y/n): ");
@@ -263,30 +345,54 @@ public class AccountCLI {
             System.out.println("Please enter 'y' for yes or 'n' for no.");
             return;
         }
+
         boolean success = accountController.deleteAccount(accountToDelete, deleteTransactions);
+
         if (!success) {
-            System.out.println("✗ Failed to delete account: " + accountToDelete.getName());
+            System.out.println("Failed to delete account: " + accountToDelete.getName());
             return;
         }
-        System.out.println("✓ Account deleted successfully: " + accountToDelete.getName());
+        System.out.println("Account deleted successfully: " + accountToDelete.getName());
     }
 
     public void hideAccount(){
         System.out.println("\n=== Hide Account ===");
 
         //select account to hide
-        Account accountToHide = selectAccount(); //select visible BasicAccount, LoanAccount, CreditAccount
-        if( accountToHide == null) {
-            System.out.println("Account selection cancelled.");
+        System.out.println("\nSelect the account to hide:");
+        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser());
+        if (accounts.isEmpty()) {
+            System.out.println("No accounts found.");
+            return;
+        }
+        for( int i=0; i< accounts.size(); i++) {
+            Account account = accounts.get(i);
+            System.out.println((i+1) + ". " + account.getName() + " (" + account.getType() +")");
+        }
+        System.out.println("0. Return");
+        System.out.print("Enter number: ");
+
+        String inputAccount = scanner.nextLine().trim();
+        int choice = Integer.parseInt(inputAccount);
+
+        if( choice ==0) {
+            System.out.println("Account hide cancelled.");
+            return;
+        }
+        if( choice <1 || choice > accounts.size()) {
+            System.out.println("Invalid choice!");
             return;
         }
 
+        Account accountToHide = accounts.get(choice -1);
+
         boolean success = accountController.hideAccount(accountToHide);
+
         if (!success) {
-            System.out.println("✗ Failed to hide account: " + accountToHide.getName());
+            System.out.println("Failed to hide account: " + accountToHide.getName());
             return;
         }
-        System.out.println("✓ Account hidden successfully: " + accountToHide.getName());
+        System.out.println("Account hidden successfully: " + accountToHide.getName());
 
     }
 
@@ -334,12 +440,8 @@ public class AccountCLI {
         scanner.nextLine(); // consume newline
 
         //select from account
-        System.out.print("Do you want to select the from account? (y/n): ");
-        String input = scanner.nextLine().trim().toLowerCase();
-        Account fromAccount = null;
-        if (input.equals("y") || input.equals("yes")) {
-            fromAccount = getSelectableAccount();
-        }
+        System.out.println("Select the account to pay debt from:");
+        Account fromAccount = getSelectableAccount();
 
         //select ledger
         System.out.println("Select the ledger for this payment:");
@@ -392,13 +494,7 @@ public class AccountCLI {
 
         LoanAccount accountToPayLoan = (LoanAccount) loanAccounts.get(loanChoice - 1);
 
-        System.out.print("Do you want to select the from account? (y/n): ");
-        input = scanner.nextLine().trim().toLowerCase();
-        Account fromAccount = null;
-        if (input.equals("y") || input.equals("yes")) {
-            System.out.println("Select the account to pay loan from:");
-            fromAccount = getSelectableAccount();
-        }
+        Account fromAccount = getSelectableAccount();
 
         //select ledger
         System.out.println("Select the ledger for this payment:");
@@ -623,20 +719,19 @@ public class AccountCLI {
             return null;
         }
 
-        try {
-            int value = Integer.parseInt(input);
-            if (value < min || value > max) {
-                System.out.println("Value must be between " + min + " and " + max + ".");
-                return inputOptionalInteger(prompt, min, max);
-            }
-            return value;
-        } catch (Exception e) {
-            System.out.println("Invalid number! Please enter a valid integer.");
+        int value = Integer.parseInt(input);
+        if (value < min || value > max) {
+            System.out.println("Value must be between " + min + " and " + max + ".");
             return inputOptionalInteger(prompt, min, max);
         }
+        return value;
     }
+
     private LocalDate inputRepaymentDate() {
         String dateInput = scanner.nextLine().trim();
+        if( dateInput.isEmpty()) {
+            return LocalDate.now();
+        }
         return LocalDate.parse(dateInput);
     }
 
@@ -654,7 +749,7 @@ public class AccountCLI {
             Account account = userAccounts.get(i);
             System.out.println((i + 1) + ". " + account.getName() + " (" + account.getType() + ")");
         }
-        System.out.println("0. Cancel");
+        System.out.println("0. From Account is external");
         System.out.print("Enter choice: ");
 
         String input = scanner.nextLine().trim();
@@ -681,7 +776,7 @@ public class AccountCLI {
             Account account = userAccounts.get(i);
             System.out.println((i + 1) + ". " + account.getName() + " (" + account.getType() + ")");
         }
-        System.out.println("0. skip");
+        System.out.println("0. Account is external");
         System.out.print("Enter choice: ");
 
         String input = scanner.nextLine().trim();
@@ -697,7 +792,6 @@ public class AccountCLI {
     }
 
     private LoanAccount.RepaymentType selectRepaymentType() {
-        System.out.println("\nSelect repayment type:");
         LoanAccount.RepaymentType[] types = LoanAccount.RepaymentType.values();
         for (int i = 0; i < types.length; i++) {
             System.out.println((i + 1) + ". " + formatRepaymentType(types[i]));
@@ -705,22 +799,16 @@ public class AccountCLI {
         System.out.println("0. skip");
         System.out.print("Enter number: ");
 
-        try {
-            int choice = scanner.nextInt();
-            scanner.nextLine(); // consume newline
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // consume newline
 
-            if (choice == 0) return null;
-            if (choice < 0 || choice > types.length) {
-                System.out.println("Invalid choice!");
-                return selectRepaymentType();
-            }
-
-            return types[choice - 1];
-        } catch (Exception e) {
-            scanner.nextLine(); // clear invalid input
-            System.out.println("Invalid input! Please enter a number.");
+        if (choice == 0) return null;
+        if (choice < 0 || choice > types.length) {
+            System.out.println("Invalid choice!");
             return selectRepaymentType();
         }
+
+        return types[choice - 1];
     }
 
     private CreditAccount createCreditCardAccount(String name, BigDecimal balance,
@@ -783,7 +871,7 @@ public class AccountCLI {
         String repaidInput = scanner.nextLine().trim();
         int repaidPeriods = repaidInput.isEmpty() ? 0 : Integer.parseInt(repaidInput);
 
-        System.out.println("Select the account to receive the loan amount: (optional, press Enter to skip) ");
+        System.out.println("Select the account to receive the loan amount: (optional) ");
         Account receivingAccount = selectAccount(); //receiving account can be null
 
         System.out.print("necessary enter repayment date (YYYY-MM-DD): ");
