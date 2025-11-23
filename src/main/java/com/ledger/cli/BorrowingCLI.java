@@ -52,7 +52,7 @@ public class BorrowingCLI {
         boolean selectable = inputSelectable();
 
         //enter date
-        System.out.print("Enter borrowing date (YYYY-MM-DD): ");
+        System.out.print("Enter borrowing date (YYYY-MM-DD) or leave blank for today: ");
         LocalDate dateInput = inputBorrowingDate();
 
         //select to account
