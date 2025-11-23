@@ -351,16 +351,6 @@ public class BorrowingCLI {
         showAllBorrowings();
     }
 
-    private void showBorrowingDetails(BorrowingAccount borrowing) {
-        System.out.print("Name: " + borrowing.getName()
-                + " | Total Borrowing Amount: " + borrowing.getBorrowingAmount()
-                + " | Remaining Amount: " + borrowing.getRemainingAmount()
-                + " | Included in Net Worth: " + (borrowing.getIncludedInNetAsset() ? "Yes" : "No")
-                + " | Selectable: " + (borrowing.getSelectable() ? "Yes" : "No")
-                + " | Status: " + (borrowing.getIsEnded() ? "Ended" : "Active")
-                + " | Notes: " + (borrowing.getNotes() == null ? "No note" : borrowing.getNotes()));
-    }
-
     //input helpers
     private boolean inputIncludedInNetWorth() {
         System.out.print("Include in net worth calculation? (y/n): ");
