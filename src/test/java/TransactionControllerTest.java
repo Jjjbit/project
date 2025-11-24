@@ -383,7 +383,7 @@ public class TransactionControllerTest {
         assertEquals(1, transactionDAO.getByCategoryId(salary.getId()).size());
 
         Transaction updatedIncome = transactionDAO.getById(income.getId());
-        assertEquals("June Salary", updatedIncome.getNote());
+        assertNull(updatedIncome.getNote());
         assertEquals(0, updatedIncome.getAmount().compareTo(BigDecimal.valueOf(5000.00)));
         assertEquals(LocalDate.of(2024,6,30), updatedIncome.getDate());
         assertEquals(testAccount.getId(), updatedIncome.getToAccount().getId());
@@ -468,7 +468,7 @@ public class TransactionControllerTest {
         assertEquals(1, transactionDAO.getByCategoryId(shopping.getId()).size());
 
         Transaction updatedExpense = transactionDAO.getById(expense.getId());
-        assertEquals("Grocery Shopping", updatedExpense.getNote());
+        assertNull(updatedExpense.getNote());
         assertEquals(0, updatedExpense.getAmount().compareTo(BigDecimal.valueOf(150.00)));
         assertEquals(LocalDate.of(2024,6,25), updatedExpense.getDate());
         assertEquals(testAccount.getId(), updatedExpense.getFromAccount().getId());

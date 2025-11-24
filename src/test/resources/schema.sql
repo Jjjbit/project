@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS installment (
     category_id BIGINT NOT NULL,
     included_in_current_debt BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (linked_account_id) REFERENCES credit_account(id) ON DELETE CASCADE,
-    FOREIGN KEY (category_id) REFERENCES ledger_categories(id) ON DELETE CASCADE
+    FOREIGN KEY (category_id) REFERENCES ledger_categories(id)
 );
 
 
@@ -127,8 +127,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     transaction_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ledger_id) REFERENCES ledgers(id) ON DELETE CASCADE,
-    FOREIGN KEY (from_account_id) REFERENCES accounts(id),
-    FOREIGN KEY (to_account_id) REFERENCES accounts(id),
+    FOREIGN KEY (from_account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+    FOREIGN KEY (to_account_id) REFERENCES accounts(id) ON DELETE SET NULL,
     FOREIGN KEY (category_id) REFERENCES ledger_categories(id)
 );
 
