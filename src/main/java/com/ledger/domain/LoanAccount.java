@@ -41,7 +41,7 @@ public class LoanAccount extends Account {
         this.loanAmount = loanAmount;
         this.repaymentDay = repaymentDate;
         this.repaymentType = repaymentType;
-        this.remainingAmount= calculateRemainingAmountWithRepaidPeriods();
+        this.remainingAmount= calculateRemainingAmount();
     }
 
     public void setTotalPeriods(int totalPeriods) {
@@ -115,7 +115,7 @@ public class LoanAccount extends Account {
         checkAndUpdateStatus();
     }
 
-    public BigDecimal calculateRemainingAmountWithRepaidPeriods() { //dipende da repaidPeriods
+    public BigDecimal calculateRemainingAmount() { //dipende da repaidPeriods
         if (loanAmount == null || totalPeriods == 0) {
             return BigDecimal.ZERO;
         }
