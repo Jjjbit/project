@@ -100,6 +100,12 @@ public class AccountController {
                                          BigDecimal loanAmount, Account receivingAccount, LocalDate repaymentDate,
                                          LoanAccount.RepaymentType repaymentType, Ledger ledger) {
         try {
+            if(totalPeriods <=0 || totalPeriods > 480){ //max 40 years
+                return null;
+            }
+            if(repaidPeriods > totalPeriods){
+                return null;
+            }
             if(ledger == null){
                 return null;
             }
@@ -305,7 +311,7 @@ public class AccountController {
             account.setNotes(notes);
             if (includedInNetAsset != null) account.setIncludedInNetAsset(includedInNetAsset);
             if (totalPeriods != null){
-                if(totalPeriods > 480){ //max 40 years
+                if(totalPeriods<=0 || totalPeriods > 480){ //max 40 years
                     return false;
                 }
                 ((LoanAccount) account).setTotalPeriods(totalPeriods);
@@ -321,8 +327,10 @@ public class AccountController {
             if (repaymentDate != null) ((LoanAccount) account).setRepaymentDate(repaymentDate);
             if (repaymentType != null) ((LoanAccount) account).setRepaymentType(repaymentType);
 
-            ((LoanAccount) account).updateRemainingAmount();
-
+            ((LoanAccount) account).setRemainingAmount(
+                    ((LoanAccount) account).calculateRemainingAmountWithRepaidPeriods()
+            );
+            ((LoanAccount) account).checkAndUpdateStatus();
             return accountDAO.update(account);
         }catch (SQLException e){
             System.err.println("SQL Exception during editLoanAccount: " + e.getMessage());

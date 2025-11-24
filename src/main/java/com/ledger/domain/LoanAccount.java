@@ -40,11 +40,7 @@ public class LoanAccount extends Account {
         this.annualInterestRate = interestRate;
         this.loanAmount = loanAmount;
         this.repaymentDay = repaymentDate;
-        if (repaymentType==null){
-            this.repaymentType = RepaymentType.EQUAL_INTEREST;
-        }else{
-            this.repaymentType = repaymentType;
-        }
+        this.repaymentType = repaymentType;
         this.remainingAmount= calculateRemainingAmountWithRepaidPeriods();
     }
 
@@ -72,9 +68,6 @@ public class LoanAccount extends Account {
     }
     public void setRepaymentType(RepaymentType repaymentType) {
         this.repaymentType = repaymentType;
-    }
-    public void updateRemainingAmount() { //metodo per aggiornare remainingAmount se si cambia loanAmount, totalPeriods, repaidPeriods o annualInterestRate
-        this.remainingAmount = calculateRemainingAmountWithRepaidPeriods();
     }
     public BigDecimal getRemainingAmount() {
         return remainingAmount;

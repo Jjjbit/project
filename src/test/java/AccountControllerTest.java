@@ -1064,6 +1064,39 @@ public class AccountControllerTest {
         assertEquals(LoanAccount.RepaymentType.EQUAL_INTEREST, editedAccount.getRepaymentType());
         assertEquals(0, editedAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(21731.47)));
     }
+    @Test
+    public void testEditLoanAccount_Boundary() throws SQLException {
+        LoanAccount account = accountController.createLoanAccount("Car Loan", "Initial Notes",
+                true, testUser, 48, 0,
+                BigDecimal.valueOf(3.5), //3.5% annual interest rate
+                BigDecimal.valueOf(20000.00), //loan amount
+                null, //no receiving account
+                LocalDate.now(), LoanAccount.RepaymentType.EQUAL_PRINCIPAL, testLedger);
+
+        boolean result = accountController.editLoanAccount(account, "Updated Short Loan",
+                null, false,
+                null, //remains same total periods
+                48, //new repaid periods
+                BigDecimal.valueOf(2.5), //2.5% annual interest rate
+                BigDecimal.valueOf(1000.00), //loan amount
+                LocalDate.now(), //new repayment date
+                LoanAccount.RepaymentType.EQUAL_PRINCIPAL);
+        assertTrue(result);
+
+        LoanAccount editedAccount = (LoanAccount) accountDAO.getAccountById(account.getId());
+        assertNotNull(editedAccount);
+        assertEquals("Updated Short Loan", editedAccount.getName());
+        assertNull(editedAccount.getNotes());
+        assertFalse(editedAccount.getIncludedInNetAsset());
+        assertEquals(0,  editedAccount.getAnnualInterestRate().compareTo(BigDecimal.valueOf(2.5)));
+        assertEquals(48, editedAccount.getTotalPeriods());
+        assertEquals(48, editedAccount.getRepaidPeriods());
+        assertEquals(0,  editedAccount.getLoanAmount().compareTo(BigDecimal.valueOf(1000.00)));
+        assertEquals(LocalDate.now(), editedAccount.getRepaymentDay());
+        assertEquals(LoanAccount.RepaymentType.EQUAL_PRINCIPAL, editedAccount.getRepaymentType());
+        assertEquals(0, editedAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertTrue(editedAccount.getIsEnded());
+    }
 
     @Test
     public void testEditBorrowingAccount_Success() throws SQLException {

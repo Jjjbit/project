@@ -5,13 +5,6 @@ public class Category { // General category not tied to a specific ledger. globa
     private String name;
     private Category parent;
     protected CategoryType type;
-    //private List<Category> children = new ArrayList<>();
-
-    /*public Category() {}
-    public Category(String name, CategoryType type) {
-        this.type = type;
-        this.name = name;
-    }*/
 
     // --- Getter/Setter ---
     public long getId() { return id; }
@@ -22,8 +15,6 @@ public class Category { // General category not tied to a specific ledger. globa
     public void setType(CategoryType type) { this.type = type; }
     public Category getParent() { return parent; }
     public void setParent(Category parent) { this.parent = parent; }
-    //public List<Category> getChildren() { return children; }
-
 }
 
 
