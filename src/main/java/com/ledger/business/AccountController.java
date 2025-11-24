@@ -320,7 +320,7 @@ public class AccountController {
             if (repaymentType != null) ((LoanAccount) account).setRepaymentType(repaymentType);
 
             ((LoanAccount) account).setRemainingAmount(
-                    ((LoanAccount) account).calculateRemainingAmountWithRepaidPeriods()
+                    ((LoanAccount) account).calculateRemainingAmount()
             );
             ((LoanAccount) account).checkAndUpdateStatus();
             return accountDAO.update(account);

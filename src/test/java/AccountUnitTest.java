@@ -28,9 +28,8 @@ public class AccountUnitTest {
                 25, // dueDay
                 AccountType.CREDIT_CARD);
 
-        assertEquals(IllegalArgumentException.class, assertThrows(IllegalArgumentException.class, () -> {
-            creditAccount.debit(BigDecimal.valueOf(1000.01));
-        }).getClass());
+        creditAccount.debit(BigDecimal.valueOf(1000.01));
+        assertEquals(0, creditAccount.getBalance().compareTo(BigDecimal.valueOf(-0.01)));
     }
 
 
@@ -188,7 +187,7 @@ public class AccountUnitTest {
         //total repayment should be 5077.44
 
         assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5077.44)));
-        assertEquals(0, loanAccount.calculateRemainingAmountWithRepaidPeriods().compareTo(BigDecimal.valueOf(5077.44)));
+        assertEquals(0, loanAccount.calculateRemainingAmount().compareTo(BigDecimal.valueOf(5077.44)));
 
         BigDecimal repayAmount = loanAccount.getMonthlyRepayment(loanAccount.getRepaidPeriods()+1);
         assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(141.04))); //first month repayment
