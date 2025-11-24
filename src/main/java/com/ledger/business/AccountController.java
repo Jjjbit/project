@@ -232,14 +232,6 @@ public class AccountController {
                 }
             } else {
                 for (Transaction tx : transactions) {
-                    Account fromAcc = tx.getFromAccount();
-                    Account toAcc = tx.getToAccount();
-                    if(fromAcc != null && fromAcc.getId() == account.getId()) {
-                        tx.setFromAccount(null);
-                    }
-                    if(toAcc != null && toAcc.getId() == account.getId()) {
-                        tx.setToAccount(null);
-                    }
                     transactionDAO.update(tx);
                 }
             }
