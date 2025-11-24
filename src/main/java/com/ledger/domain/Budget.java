@@ -13,8 +13,8 @@ public class Budget {
     private BigDecimal amount; // Budget amount
     private Period period; // e.g., "monthly", "yearly"
     private LedgerCategory category; // Category or subcategory
-    private transient LocalDate startDate;
-    private transient LocalDate endDate;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private Ledger ledger;
 
     public Budget(){}
