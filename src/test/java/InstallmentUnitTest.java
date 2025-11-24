@@ -251,15 +251,17 @@ public class InstallmentUnitTest {
                 null,
                 LocalDate.now(),
                 null, true);
+        //1000*0.05=50 interest
+        //total=1050
+        //monthly=1050/5=210
 
         BigDecimal payment = plan.getMonthlyPayment(1);
-        assertEquals(0, payment.compareTo(BigDecimal.valueOf(1010.00)));
+        assertEquals(0, payment.compareTo(BigDecimal.valueOf(210.00)));
     }
 
     @Test
     public void testGetMonthlyRepayment_Upfront() {
-        Installment plan = new Installment(null,
-                BigDecimal.valueOf(1000.00),
+        Installment plan = new Installment(null, BigDecimal.valueOf(1000.00),
                 5,
                 BigDecimal.valueOf(5.00),
                 0,
@@ -267,11 +269,15 @@ public class InstallmentUnitTest {
                 null,
                 LocalDate.now(),
                 null, true);
+        //1000*0.05=50 upfront interest
+        //total=1050
+        //first payment=50+1000/5=50+200=250
+        //subsequent=1000/5=200
 
         BigDecimal firstPayment = plan.getMonthlyPayment(1);
         BigDecimal subsequentPayment = plan.getMonthlyPayment(2);
 
-        assertEquals(0, firstPayment.compareTo(BigDecimal.valueOf(210.00))); // 200 + 10 upfront fee
+        assertEquals(0, firstPayment.compareTo(BigDecimal.valueOf(250.00)));
         assertEquals(0, subsequentPayment.compareTo(BigDecimal.valueOf(200.00)));
     }
 
@@ -286,11 +292,15 @@ public class InstallmentUnitTest {
                 null,
                 LocalDate.now(),
                 null, true);
+        //1000*0.05=50 final interest
+        //total=1050
+        //last payment=50+1000/5=50+200=250
+        //prior=1000/5=200
 
         BigDecimal lastPayment = plan.getMonthlyPayment(5);
         BigDecimal priorPayment = plan.getMonthlyPayment(4);
 
-        assertEquals(0, lastPayment.compareTo(BigDecimal.valueOf(210.00))); // 200 + 10 final fee
+        assertEquals(0, lastPayment.compareTo(BigDecimal.valueOf(250.00)));
         assertEquals(0, priorPayment.compareTo(BigDecimal.valueOf(200.00)));
     }
 
