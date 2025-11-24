@@ -59,7 +59,6 @@ public class BorrowingAccount extends Account{
 
     public void repay(BigDecimal amount){
         credit(amount);
-        //this.remainingAmount = this.remainingAmount.subtract(amount).setScale(2, RoundingMode.HALF_UP);
         checkAndUpdateStatus();
     }
 

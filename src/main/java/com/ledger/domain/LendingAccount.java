@@ -35,7 +35,6 @@ public class LendingAccount extends Account {
 
     public void receiveRepayment(BigDecimal amount){
         balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-        //transactions.add(tx);
         checkAndUpdateStatus();
     }
 
