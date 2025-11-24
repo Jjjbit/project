@@ -7,9 +7,6 @@ public class LedgerCategory {
     private LedgerCategory parent;
     protected CategoryType type;
     protected Ledger ledger;
-    //private List<LedgerCategory> children = new ArrayList<>();
-    //private List<Transaction> transactions = new ArrayList<>();
-    //private List<Budget> budgets = new ArrayList<>(); //monthly budget and yearly budget
 
     public LedgerCategory() {}
     public LedgerCategory(String name, CategoryType type, Ledger ledger) {
@@ -17,8 +14,6 @@ public class LedgerCategory {
         this.type = type;
         this.name = name;
     }
-
-
 
     // --- Getter/Setter ---
     public long getId() { return id; }
@@ -31,10 +26,6 @@ public class LedgerCategory {
     public void setType(CategoryType type) { this.type = type; }
     public LedgerCategory getParent() { return parent; }
     public void setParent(LedgerCategory parent) { this.parent = parent; }
-    //public List<Budget> getBudgets() { return budgets; }
-    //public List<LedgerCategory> getChildren() { return children; }
-    //public void setChildren(List<LedgerCategory> children) { this.children = children; }
-    //public List<Transaction> getTransactions() { return transactions;}
 }
 
 

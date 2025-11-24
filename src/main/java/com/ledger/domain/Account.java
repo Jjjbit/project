@@ -12,7 +12,6 @@ public abstract class Account {
     protected User owner;
     protected String notes;
     protected boolean hidden;
-    //protected List<Transaction> transactions = new ArrayList<>();
     protected boolean includedInNetAsset;
     protected boolean selectable;
 
@@ -40,9 +39,6 @@ public abstract class Account {
         balance = balance.add(amount).setScale(2, RoundingMode.HALF_UP);
     }
     public void debit(BigDecimal amount){
-        if(balance.compareTo(amount) < 0){
-            throw new IllegalArgumentException("Insufficient funds in the account to execute this transaction.");
-        }
         balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
     }
     public void hide() {
@@ -54,9 +50,6 @@ public abstract class Account {
     }
     public void setSelectable(boolean selectable) {
         this.selectable = selectable;
-    }
-    public void setOwner(User owner) {
-        this.owner = owner;
     }
     public void setId(long id) {
         this.id = id;
@@ -81,7 +74,6 @@ public abstract class Account {
     public User getOwner() {
         return owner;
     }
-    //public List<Transaction> getTransactions() {return transactions;}
     public BigDecimal getBalance() {
         return this.balance;
     }
