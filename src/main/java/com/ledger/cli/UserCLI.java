@@ -98,22 +98,14 @@ public class UserCLI {
         System.out.println("\n=== Change Password ===");
 
         System.out.print("Enter new password: ");
-        String newPassword = scanner.nextLine().trim();
+        String newPassword = inputPassword();
 
-        System.out.print("Confirm new password: ");
-        String confirmPassword = scanner.nextLine().trim();
-
-        if (!newPassword.equals(confirmPassword)) {
-            System.out.println("New passwords do not match!");
-            return;
-        }
-
-        boolean success = userController.updatePassword(userController.getCurrentUser(), newPassword);
+        boolean success = userController.updatePassword(newPassword);
         if (!success) {
-            System.out.println("✗ Password change failed.");
+            System.out.println("Password change failed.");
             return;
         }
-        System.out.println("✓ Password changed successfully.");
+        System.out.println("Password changed successfully.");
     }
 
     public void changeUsername() {
@@ -123,12 +115,12 @@ public class UserCLI {
         System.out.print("Enter new username: ");
         String newUsername = inputUsername();
 
-        boolean success = userController.updateUsername(userController.getCurrentUser(), newUsername);
+        boolean success = userController.updateUsername(newUsername);
         if (!success) {
-            System.out.println("✗ Username change failed: Username already taken.");
+            System.out.println("Username change failed.");
             return;
         }
-        System.out.println("✓ Username changed successfully to " + newUsername);
+        System.out.println("Username changed successfully to " + newUsername);
     }
 
     public boolean isUserLoggedIn(){
@@ -144,12 +136,6 @@ public class UserCLI {
             System.out.println("Username cannot be empty!");
             return inputUsername();
         }
-
-        if (username.length() < 3) {
-            System.out.println("Username must be at least 3 characters long!");
-            return inputUsername();
-        }
-
         return username;
     }
 
