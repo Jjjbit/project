@@ -455,7 +455,7 @@ public class AccountCLI {
             System.out.println("! Debt payment failed for account: " + accountToPayDebt.getName());
             return;
         }
-        System.out.println("Debt payment successful for account: " + accountToPayDebt.getName() + " -Current Debt: " + ((CreditAccount) accountToPayDebt).getCurrentDebt());
+        System.out.println("Debt payment successful for account: " + accountToPayDebt.getName() + " -Current Debt: " + accountToPayDebt.getCurrentDebt());
     }
 
     public void payLoan() {

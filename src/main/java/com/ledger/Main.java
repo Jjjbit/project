@@ -39,7 +39,7 @@ public class Main {
             TransactionController transactionController = new TransactionController(transactionDAO, accountDAO);
             InstallmentController installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
             LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
-            BudgetController budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO, transactionDAO);
+            BudgetController budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO);
             ReportController reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO, installmentDAO, ledgerCategoryDAO);
 
             //  create CLI layer
