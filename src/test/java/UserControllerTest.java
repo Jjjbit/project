@@ -65,7 +65,7 @@ public class UserControllerTest {
     }
 
     @Test
-    public void testRegister_Success() throws SQLException {
+    public void testRegister_Success() {
         boolean result = userController.register("test user", "password");
         assertTrue(result);
         assertNotNull(userDAO.getUserByUsername("test user"));
@@ -112,11 +112,11 @@ public class UserControllerTest {
     }
 
     @Test
-    public void testUpdateUsername_Success() throws SQLException {
+    public void testUpdateUsername_Success() {
         userController.register("oldusername", "password");
         User user=userController.login("oldusername", "password");
 
-        boolean updateResult = userController.updateUsername(user, "newusername");
+        boolean updateResult = userController.updateUsername("newusername");
         assertTrue(updateResult);
 
         User updatedUser = userDAO.getUserByUsername("newusername");
@@ -129,24 +129,22 @@ public class UserControllerTest {
     @Test
     public void testUpdateUserInfo_NoChanges() {
         userController.register("user1", "oldpassword");
-        User user=userController.login("user1","oldpassword");
+        userController.login("user1","oldpassword");
 
-        boolean updateResult = userController.updateUsername(user, "user1");
+        boolean updateResult = userController.updateUsername("user1");
         assertTrue(updateResult);
     }
 
     @Test
-    public void testUpdatePassword_Success() throws SQLException {
+    public void testUpdatePassword_Success() {
         userController.register("user2", "oldpassword");
         User user=userController.login("user2","oldpassword");
 
-        boolean updateResult = userController.updatePassword(user, "newpassword");
+        boolean updateResult = userController.updatePassword("newpassword");
         assertTrue(updateResult);
 
         User updatedUser = userDAO.getUserByUsername("user2");
         assertNotNull(updatedUser);
         assertEquals(updatedUser.getPassword(), user.getPassword());
     }
-
-
 }
