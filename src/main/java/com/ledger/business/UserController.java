@@ -44,6 +44,9 @@ public class UserController {
         if(currentUser == null ){
             return false;
         }
+        if(newUsername.isEmpty()) {
+            return false;
+        }
 
         if (userDAO.getUserByUsername(newUsername) != null) {
             return currentUser.getUsername().equals(newUsername);
