@@ -43,10 +43,10 @@ public class LoanControllerTest {
         UserDAO userDAO = new UserDAO(connection);
         accountDAO = new AccountDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
-        transactionDAO = new TransactionDAO(connection);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
+        transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
-        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
-        BudgetDAO budgetDAO = new BudgetDAO(connection);
+        BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
 
         UserController userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, transactionDAO);
@@ -96,7 +96,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testCreateBorrowing_NoToAccount() throws SQLException {
+    public void testCreateBorrowing_NoToAccount() {
         BorrowingAccount account = loanController.createBorrowingAccount(testUser, "Bob",
                 BigDecimal.valueOf(3000.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -125,7 +125,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testCreateBorrowing_WithToAccount() throws SQLException {
+    public void testCreateBorrowing_WithToAccount() {
         BorrowingAccount borrowingAccount = loanController.createBorrowingAccount(testUser, "Alice",
                 BigDecimal.valueOf(1500.00), //amount borrowed
                 null, true, true, testAccount, LocalDate.now(), testLedger);
@@ -150,7 +150,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testDeleteBorrowing_DeleteTransaction() throws SQLException {
+    public void testDeleteBorrowing_DeleteTransaction() {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Eve",
                 BigDecimal.valueOf(2000.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -170,7 +170,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testDeleteBorrowing_KeepTransaction() throws SQLException {
+    public void testDeleteBorrowing_KeepTransaction() {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Eve",
                 BigDecimal.valueOf(2000.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -191,7 +191,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testDeleteBorrowing_WithToAccount_DeleteTransaction() throws SQLException {
+    public void testDeleteBorrowing_WithToAccount_DeleteTransaction() {
         BorrowingAccount account = loanController.createBorrowingAccount(testUser, "Charlie",
                 BigDecimal.valueOf(2500.00), //amount borrowed
                 null, true, true, testAccount, LocalDate.now(), testLedger);
@@ -217,7 +217,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testDeleteBorrowing_WithToAccount_KeepTransaction() throws SQLException {
+    public void testDeleteBorrowing_WithToAccount_KeepTransaction() {
         BorrowingAccount account = loanController.createBorrowingAccount(testUser, "Charlie",
                 BigDecimal.valueOf(2500.00), //amount borrowed
                 null, true, true, testAccount, LocalDate.now(), testLedger);
@@ -242,7 +242,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testDeleteLending_DeleteTransaction() throws SQLException {
+    public void testDeleteLending_DeleteTransaction() {
         LendingAccount account = loanController.createLendingAccount(testUser, "Frank",
                 BigDecimal.valueOf(100.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -262,7 +262,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testDeleteLending_Success_KeepTransaction() throws SQLException {
+    public void testDeleteLending_Success_KeepTransaction() {
         LendingAccount account = accountController.createLendingAccount(testUser, "Frank",
                 BigDecimal.valueOf(1000.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -285,7 +285,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testPayBorrowing_NullFromAccount() throws SQLException {
+    public void testPayBorrowing_NullFromAccount() {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Alice",
                 BigDecimal.valueOf(1500.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -305,8 +305,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testPayBorrowing_WithFromAccount() throws SQLException {
-
+    public void testPayBorrowing_WithFromAccount() {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Alice",
                 BigDecimal.valueOf(1500.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger
@@ -333,7 +332,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testReceiveLending_NullToAccount() throws SQLException {
+    public void testReceiveLending_NullToAccount() {
         LendingAccount account = accountController.createLendingAccount(testUser, "Frank",
                 BigDecimal.valueOf(1000.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -353,8 +352,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testReceiveLending_WithToAccount() throws SQLException {
-
+    public void testReceiveLending_WithToAccount() {
         LendingAccount account = accountController.createLendingAccount(testUser, "Frank",
                 BigDecimal.valueOf(1000.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -380,7 +378,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testEditBorrowingAccount_Success() throws SQLException {
+    public void testEditBorrowingAccount_Success() {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Bob",
                 BigDecimal.valueOf(3000.00), //amount borrowed
                 "Initial Notes", true, true, null, LocalDate.now(), testLedger
@@ -404,7 +402,7 @@ public class LoanControllerTest {
     }
 
     @Test
-    public void testEditLendingAccount_Success() throws SQLException {
+    public void testEditLendingAccount_Success() {
         LendingAccount account = accountController.createLendingAccount(testUser, "Charlie",
                 BigDecimal.valueOf(4000.00), //amount lent
                 "Initial Notes", true, true, null, LocalDate.now(), testLedger);

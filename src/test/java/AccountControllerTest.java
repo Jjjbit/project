@@ -1099,7 +1099,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testEditBorrowingAccount_Success() throws SQLException {
+    public void testEditBorrowingAccount_Success() {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Bob",
                 BigDecimal.valueOf(3000.00), //amount borrowed
                 "Initial Notes", true, true, null, LocalDate.now(), testLedger
@@ -1123,7 +1123,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testEditLendingAccount_Success() throws SQLException {
+    public void testEditLendingAccount_Success() {
         LendingAccount account = accountController.createLendingAccount(testUser, "Charlie",
                 BigDecimal.valueOf(4000.00), //amount lent
                 "Initial Notes", true, true, null, LocalDate.now(), testLedger);
@@ -1145,7 +1145,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testHideBasicAccount_Success() throws SQLException {
+    public void testHideBasicAccount_Success() {
         BasicAccount account = accountController.createBasicAccount("Savings Account",
                 BigDecimal.valueOf(5000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
                 true, true);
@@ -1159,7 +1159,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testHideCreditAccount_Success() throws SQLException {
+    public void testHideCreditAccount_Success() {
         CreditAccount account = accountController.createCreditAccount("My Credit Card", null,
                 BigDecimal.valueOf(2500.00), //balance
                 true, true, testUser, AccountType.CREDIT_CARD,
@@ -1176,7 +1176,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testHideLoanAccount_Success() throws SQLException {
+    public void testHideLoanAccount_Success() {
         LoanAccount account = accountController.createLoanAccount("Car Loan", null, true,
                 testUser, 48, 0,
                 BigDecimal.valueOf(3.5), //3.5% annual interest rate

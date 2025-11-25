@@ -26,11 +26,11 @@ public class Main {
             UserDAO userDAO = new UserDAO(connection);
             AccountDAO accountDAO = new AccountDAO(connection);
             LedgerDAO ledgerDAO = new LedgerDAO(connection);
-            TransactionDAO transactionDAO = new TransactionDAO(connection);
-            InstallmentDAO installmentDAO = new InstallmentDAO(connection);
+            LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
+            TransactionDAO transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
+            InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
             CategoryDAO categoryDAO = new CategoryDAO(connection);
-            LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
-            BudgetDAO budgetDAO = new BudgetDAO(connection);
+            BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
 
             // create Business layer
             UserController userController = new UserController(userDAO);

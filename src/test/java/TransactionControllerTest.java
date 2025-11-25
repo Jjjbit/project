@@ -46,11 +46,11 @@ public class TransactionControllerTest {
 
         UserDAO userDAO = new UserDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
+        ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
         accountDAO = new AccountDAO(connection);
-        transactionDAO = new TransactionDAO(connection);
-        ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+        transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
-        BudgetDAO budgetDAO = new BudgetDAO(connection);
+        BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
 
         UserController userController = new UserController(userDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
@@ -102,7 +102,7 @@ public class TransactionControllerTest {
 
     //create
     @Test
-    public void testCreateIncome_Success() throws SQLException {
+    public void testCreateIncome_Success() {
         LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
@@ -135,7 +135,7 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testCreateExpense_Success() throws SQLException {
+    public void testCreateExpense_Success() {
         LedgerCategory shopping = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
                 .findFirst()
@@ -168,7 +168,7 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testCreateTransfer_Success() throws SQLException {
+    public void testCreateTransfer_Success() {
         BasicAccount toAccount = accountController.createBasicAccount("Savings Account",
                 BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS, testUser,
                 "Savings Account Notes", true, true);
@@ -202,7 +202,7 @@ public class TransactionControllerTest {
 
     //delete
     @Test
-    public void testDeleteIncome_Success() throws SQLException {
+    public void testDeleteIncome_Success() {
         LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
@@ -226,7 +226,7 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testDeleteExpense_Success() throws SQLException {
+    public void testDeleteExpense_Success() {
         LedgerCategory shopping = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
                 .findFirst()
@@ -250,7 +250,7 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testDeleteTransfer_Success() throws SQLException {
+    public void testDeleteTransfer_Success() {
         BasicAccount toAccount = accountController.createBasicAccount("Savings Account", BigDecimal.valueOf(500.00),
                 AccountType.DEBIT_CARD, AccountCategory.FUNDS, testUser, "Savings Account Notes",
                 true, true);
@@ -277,7 +277,7 @@ public class TransactionControllerTest {
 
     //edit
     @Test
-    public void testEditIncome_Success() throws SQLException {
+    public void testEditIncome_Success() {
         LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
@@ -329,38 +329,8 @@ public class TransactionControllerTest {
         assertEquals(newLedger.getId(), updatedIncome.getLedger().getId());
     }
 
-    /*@Test
-    public void testEditIncome_NewFromAccount_Failure() throws SQLException {
-        LedgerCategory salary = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Salary"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(salary);
-
-        Income income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary",
-                LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00));
-
-        Account newFromAccount = accountController.createBasicAccount("New From Account", BigDecimal.valueOf(2000.00),
-                AccountType.CASH, AccountCategory.FUNDS, testUser, "New From Account Notes",
-                true, true);
-
-        Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
-        List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedgerId(newLedger.getId());
-
-        LedgerCategory newCategory = newLedgerCategories.stream()
-                .filter(cat -> cat.getName().equals("Bonus"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(newCategory);
-
-        boolean result=transactionController.updateTransaction(income, newFromAccount, null, newCategory,
-                "Updated June Salary", LocalDate.of(2024,6,30),
-                BigDecimal.valueOf(6000.00), newLedger);
-        assertFalse(result);
-    }*/
-
     @Test
-    public void testEditIncome_Invariant_Success() throws SQLException {
+    public void testEditIncome_Invariant_Success() {
         LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
@@ -390,7 +360,7 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testEditExpense_Success() throws SQLException {
+    public void testEditExpense_Success() {
         LedgerCategory shopping = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
                 .findFirst()
@@ -444,7 +414,7 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testEditExpense_Invariant() throws SQLException {
+    public void testEditExpense_Invariant() {
         LedgerCategory shopping = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Shopping"))
                 .findFirst()
@@ -475,7 +445,7 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testEditTransfer_Success() throws SQLException {
+    public void testEditTransfer_Success() {
         BasicAccount toAccount = accountController.createBasicAccount("Savings Account",
                 BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS,
                 testUser, "Savings Account Notes", true, true);

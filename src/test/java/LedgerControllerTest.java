@@ -40,12 +40,12 @@ public class LedgerControllerTest {
         readDataScript();
 
         UserDAO userDAO = new UserDAO(connection);
-        ledgerCategoryDAO = new LedgerCategoryDAO(connection);
         ledgerDAO = new LedgerDAO(connection);
-        transactionDAO = new TransactionDAO(connection);
-        CategoryDAO categoryDAO = new CategoryDAO(connection);
         AccountDAO accountDAO = new AccountDAO(connection);
-        budgetDAO = new BudgetDAO(connection);
+        ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
+        transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
+        CategoryDAO categoryDAO = new CategoryDAO(connection);
+        budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
 
         UserController userController = new UserController(userDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
@@ -182,7 +182,7 @@ public class LedgerControllerTest {
     }
 
     @Test
-    public void testDeleteLedger_WithTransactions() throws SQLException {
+    public void testDeleteLedger_WithTransactions() {
         Ledger ledger = ledgerController.createLedger("Ledger With Transactions", testUser);
         assertNotNull(ledger);
 
@@ -297,7 +297,7 @@ public class LedgerControllerTest {
     }
 
     @Test
-    public void testRenameLedger_Success() throws SQLException {
+    public void testRenameLedger_Success() {
         Ledger ledger = ledgerController.createLedger("Ledger To Rename", testUser);
         assertNotNull(ledger);
 

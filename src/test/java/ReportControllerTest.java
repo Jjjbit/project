@@ -44,12 +44,13 @@ public class ReportControllerTest {
 
         UserDAO userDAO = new UserDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
-        budgetDAO = new BudgetDAO(connection);
-        TransactionDAO transactionDAO = new TransactionDAO(connection);
         AccountDAO accountDAO = new AccountDAO(connection);
-        InstallmentDAO installmentDAO = new InstallmentDAO(connection);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
+        TransactionDAO transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
+        InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
-        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+        budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+
 
         budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO, transactionDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
@@ -128,21 +129,35 @@ public class ReportControllerTest {
         List<Transaction> transactions = reportController.getTransactionsByLedgerInRangeDate(testLedger, startDate, endDate);
         assertEquals(3, transactions.size());
         for (Transaction tx : transactions) {
-            String info = "Transaction ID: " + tx.getId()
-                    + ", Date: " + tx.getDate()
-                    + ", Amount: " + tx.getAmount()
-                    + ", Type: " + tx.getType();
+            StringBuilder info = new StringBuilder();
 
-            if(tx.getCategory() != null) {
-                info += ", Category: " + tx.getCategory().getName();
+            info.append(String.format("ID: %d, Type: %s, Amount: %s, Date: %s",
+                    tx.getId(),
+                    tx.getType(),
+                    tx.getAmount(),
+                    tx.getDate()));
+
+            if (tx.getCategory() != null) {
+                info.append(", Category: ").append(tx.getCategory().getName());
             }
-            if (tx.getToAccount() != null) {
-                info += ", To Account: " + tx.getToAccount().getName();
-            } else if (tx.getFromAccount() != null) {
-                info += ", From Account: " + tx.getFromAccount().getName();
+
+            if (tx instanceof Transfer) {
+                if (tx.getFromAccount() != null) {
+                    info.append(", FROM: ").append(tx.getFromAccount().getName());
+                }
+                if (tx.getToAccount() != null) {
+                    info.append(", TO: ").append(tx.getToAccount().getName());
+                }
+            } else {
+                if (tx.getFromAccount() != null) {
+                    info.append(", From: ").append(tx.getFromAccount().getName());
+                } else if (tx.getToAccount() != null) {
+                    info.append(", To: ").append(tx.getToAccount().getName());
+                }
             }
-            if(tx.getNote() != null) {
-                info += ", Note: " + tx.getNote();
+
+            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info.append(", Note: ").append(tx.getNote());
             }
 
             System.out.println(info);
@@ -166,21 +181,35 @@ public class ReportControllerTest {
         assertEquals(2, transactions.size());
 
         for (Transaction tx : transactions) {
-            String info = "Transaction ID: " + tx.getId()
-                    + ", Date: " + tx.getDate()
-                    + ", Amount: " + tx.getAmount()
-                    + ", Type: " + tx.getType();
+            StringBuilder info = new StringBuilder();
 
-            if(tx.getCategory() != null) {
-                info += ", Category: " + tx.getCategory().getName();
+            info.append(String.format("ID: %d, Type: %s, Amount: %s, Date: %s",
+                    tx.getId(),
+                    tx.getType(),
+                    tx.getAmount(),
+                    tx.getDate()));
+
+            if (tx.getCategory() != null) {
+                info.append(", Category: ").append(tx.getCategory().getName());
             }
-            if (tx.getToAccount() != null) {
-                info += ", To Account: " + tx.getToAccount().getName();
-            } else if (tx.getFromAccount() != null) {
-                info += ", From Account: " + tx.getFromAccount().getName();
+
+            if (tx instanceof Transfer) {
+                if (tx.getFromAccount() != null) {
+                    info.append(", FROM: ").append(tx.getFromAccount().getName());
+                }
+                if (tx.getToAccount() != null) {
+                    info.append(", TO: ").append(tx.getToAccount().getName());
+                }
+            } else {
+                if (tx.getFromAccount() != null) {
+                    info.append(", From: ").append(tx.getFromAccount().getName());
+                } else if (tx.getToAccount() != null) {
+                    info.append(", To: ").append(tx.getToAccount().getName());
+                }
             }
-            if(tx.getNote() != null) {
-                info += ", Note: " + tx.getNote();
+
+            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info.append(", Note: ").append(tx.getNote());
             }
 
             System.out.println(info);
@@ -222,21 +251,35 @@ public class ReportControllerTest {
         List<Transaction> transactions = reportController.getTransactionsByAccountInRangeDate(testAccount, startDate, endDate);
         assertEquals(4, transactions.size());
         for (Transaction tx : transactions) {
-            String info = "Transaction ID: " + tx.getId()
-                    + ", Date: " + tx.getDate()
-                    + ", Amount: " + tx.getAmount()
-                    + ", Type: " + tx.getType();
+            StringBuilder info = new StringBuilder();
 
-            if(tx.getCategory() != null) {
-                info += ", Category: " + tx.getCategory().getName();
+            info.append(String.format("ID: %d, Type: %s, Amount: %s, Date: %s",
+                    tx.getId(),
+                    tx.getType(),
+                    tx.getAmount(),
+                    tx.getDate()));
+
+            if (tx.getCategory() != null) {
+                info.append(", Category: ").append(tx.getCategory().getName());
             }
-            if (tx.getToAccount() != null) {
-                info += ", To Account: " + tx.getToAccount().getName();
-            } else if (tx.getFromAccount() != null) {
-                info += ", From Account: " + tx.getFromAccount().getName();
+
+            if (tx instanceof Transfer) {
+                if (tx.getFromAccount() != null) {
+                    info.append(", FROM: ").append(tx.getFromAccount().getName());
+                }
+                if (tx.getToAccount() != null) {
+                    info.append(", TO: ").append(tx.getToAccount().getName());
+                }
+            } else {
+                if (tx.getFromAccount() != null) {
+                    info.append(", From: ").append(tx.getFromAccount().getName());
+                } else if (tx.getToAccount() != null) {
+                    info.append(", To: ").append(tx.getToAccount().getName());
+                }
             }
-            if(tx.getNote() != null) {
-                info += ", Note: " + tx.getNote();
+
+            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info.append(", Note: ").append(tx.getNote());
             }
 
             System.out.println(info);
@@ -268,21 +311,35 @@ public class ReportControllerTest {
         List<Transaction> transactions = reportController.getTransactionsByAccountInRangeDate(testAccount, startDate, endDate);
         assertEquals(6, transactions.size());
         for (Transaction tx : transactions) {
-            String info = "Transaction ID: " + tx.getId()
-                    + ", Date: " + tx.getDate()
-                    + ", Amount: " + tx.getAmount()
-                    + ", Type: " + tx.getType();
+            StringBuilder info = new StringBuilder();
 
-            if(tx.getCategory() != null) {
-                info += ", Category: " + tx.getCategory().getName();
+            info.append(String.format("ID: %d, Type: %s, Amount: %s, Date: %s",
+                    tx.getId(),
+                    tx.getType(),
+                    tx.getAmount(),
+                    tx.getDate()));
+
+            if (tx.getCategory() != null) {
+                info.append(", Category: ").append(tx.getCategory().getName());
             }
-            if (tx.getToAccount() != null) {
-                info += ", To Account: " + tx.getToAccount().getName();
-            } else if (tx.getFromAccount() != null) {
-                info += ", From Account: " + tx.getFromAccount().getName();
+
+            if (tx instanceof Transfer) {
+                if (tx.getFromAccount() != null) {
+                    info.append(", FROM: ").append(tx.getFromAccount().getName());
+                }
+                if (tx.getToAccount() != null) {
+                    info.append(", TO: ").append(tx.getToAccount().getName());
+                }
+            } else {
+                if (tx.getFromAccount() != null) {
+                    info.append(", From: ").append(tx.getFromAccount().getName());
+                } else if (tx.getToAccount() != null) {
+                    info.append(", To: ").append(tx.getToAccount().getName());
+                }
             }
-            if(tx.getNote() != null) {
-                info += ", Note: " + tx.getNote();
+
+            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info.append(", Note: ").append(tx.getNote());
             }
 
             System.out.println(info);
@@ -792,7 +849,7 @@ public class ReportControllerTest {
 
     //test getActiveBudgetsByLedger if budgets are expired
     @Test
-    public void testGetActiveBudgetsByLedger_ExpiredBudgets() throws SQLException{
+    public void testGetActiveBudgetsByLedger_ExpiredBudgets() {
         Budget budget = budgetDAO.getBudgetByLedgerId(testLedger.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget);
         //set start and end date to past to simulate expired budget
@@ -846,7 +903,7 @@ public class ReportControllerTest {
 
     //test getActiveBudgetsByCategory (first level) if budgets are expired
     @Test
-    public void testGetActiveBudgetsByCategory_ExpiredBudgets() throws SQLException{
+    public void testGetActiveBudgetsByCategory_ExpiredBudgets() {
         LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
@@ -906,7 +963,7 @@ public class ReportControllerTest {
 
     //test getActiveBudgetsByCategory (second level) if budgets are expired
     @Test
-    public void testGetActiveBudgetsByCategory_SecondLevel_ExpiredBudgets() throws SQLException{
+    public void testGetActiveBudgetsByCategory_SecondLevel_ExpiredBudgets() {
         LedgerCategory lunch = testCategories.stream()
                 .filter(c -> c.getName().equals("Lunch"))
                 .findFirst()
@@ -942,7 +999,7 @@ public class ReportControllerTest {
 
     //test is_over_budget
     @Test
-    public void testIsOverBudget() throws SQLException{
+    public void testIsOverBudget() {
         LedgerCategory food = testCategories.stream()
                 .filter(c -> c.getName().equals("Food"))
                 .findFirst()
@@ -983,7 +1040,7 @@ public class ReportControllerTest {
     }
 
     @Test
-    public void testIsOverBudget_NoTransactions_False() throws SQLException{
+    public void testIsOverBudget_NoTransactions_False() {
         LedgerCategory transport = testCategories.stream()
                 .filter(c -> c.getName().equals("Transport"))
                 .findFirst()
@@ -1004,7 +1061,7 @@ public class ReportControllerTest {
     }
 
     @Test
-    public void testIsOverBudget_ExpiredBudget() throws SQLException{
+    public void testIsOverBudget_ExpiredBudget() {
         LedgerCategory entertainment = testCategories.stream()
                 .filter(c -> c.getName().equals("Entertainment"))
                 .findFirst()
@@ -1028,7 +1085,7 @@ public class ReportControllerTest {
     }
 
     @Test
-    public void testIsOverBudget_TransactionOverPeriod_False() throws SQLException {
+    public void testIsOverBudget_TransactionOverPeriod_False() {
         LedgerCategory entertainment = testCategories.stream()
                 .filter(c -> c.getName().equals("Entertainment"))
                 .findFirst()
@@ -1045,7 +1102,7 @@ public class ReportControllerTest {
     }
 
     @Test
-    public void testIsOverBudget_BoundaryCase() throws SQLException {
+    public void testIsOverBudget_BoundaryCase() {
         Budget budget1 = budgetDAO.getBudgetByLedgerId(testLedger.getId(), Budget.Period.MONTHLY);
         assertNotNull(budget1);
         budgetController.editBudget(budget1, BigDecimal.valueOf(300.00));

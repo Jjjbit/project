@@ -43,13 +43,13 @@ public class InstallmentControllerTest {
         readDataScript();
 
         UserDAO userDAO = new UserDAO(connection);
-        accountDAO = new AccountDAO(connection);
-        installmentDAO = new InstallmentDAO(connection);
-        transactionDAO = new TransactionDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
+        accountDAO = new AccountDAO(connection);
+        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
+        transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
-        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
-        BudgetDAO budgetDAO = new BudgetDAO(connection);
+        BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
 
         UserController userController = new UserController(userDAO);
         AccountController accountController = new AccountController(accountDAO, transactionDAO);
@@ -114,7 +114,7 @@ public class InstallmentControllerTest {
 
     //create
     @Test
-    public void testCreateInstallment_IncludedInCurrentDebt() throws SQLException {
+    public void testCreateInstallment_IncludedInCurrentDebt() {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
@@ -146,7 +146,7 @@ public class InstallmentControllerTest {
     }
 
     @Test
-    public void testCreateInstallment_NotIncludedInCurrentDebt() throws SQLException {
+    public void testCreateInstallment_NotIncludedInCurrentDebt() {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
@@ -176,7 +176,7 @@ public class InstallmentControllerTest {
 
     //test repaymentStartDate in past
     @Test
-    public void testCreateInstallment_WithPastRepaymentStartDate() throws SQLException {
+    public void testCreateInstallment_WithPastRepaymentStartDate() {
         LocalDate startDate = LocalDate.now().minusMonths(3); // 3 months ago
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12,
@@ -215,7 +215,7 @@ public class InstallmentControllerTest {
 
     //test repaymentStartDate in future
     @Test
-    public void testCreateInstallment_WithFutureRepaymentStartDate() throws SQLException {
+    public void testCreateInstallment_WithFutureRepaymentStartDate() {
         LocalDate startDate = LocalDate.now().plusMonths(2); // 2 months later
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12,
@@ -246,7 +246,7 @@ public class InstallmentControllerTest {
 
     //delete
     @Test
-    public void testDeleteInstallment_Success() throws SQLException {
+    public void testDeleteInstallment_Success() {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
@@ -261,7 +261,7 @@ public class InstallmentControllerTest {
     }
 
     @Test
-    public void testDeleteInstallment_WithPaidPeriods_Success() throws SQLException {
+    public void testDeleteInstallment_WithPaidPeriods_Success() {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
@@ -287,7 +287,7 @@ public class InstallmentControllerTest {
 
     //test pay installment
     @Test
-    public void testPayInstallment_Success() throws SQLException {
+    public void testPayInstallment_Success() {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
@@ -312,7 +312,7 @@ public class InstallmentControllerTest {
     }
 
     @Test
-    public void testPayInstallment_FullFlow() throws SQLException {
+    public void testPayInstallment_FullFlow() {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
@@ -338,7 +338,7 @@ public class InstallmentControllerTest {
 
     //test pay installment when all periods paid
     @Test
-    public void testPayInstallment_AllPeriodsPaid_Failure() throws SQLException {
+    public void testPayInstallment_AllPeriodsPaid_Failure() {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12, BigDecimal.valueOf(5.00), // interest
                 Installment.Strategy.EVENLY_SPLIT,
@@ -368,7 +368,7 @@ public class InstallmentControllerTest {
 
     //test edit installment plan
     @Test
-    public void testEditInstallment_Success() throws SQLException {
+    public void testEditInstallment_Success() {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12, BigDecimal.valueOf(5.00), // interest
                 Installment.Strategy.EVENLY_SPLIT, LocalDate.now(), category, true, testLedger);
@@ -389,7 +389,7 @@ public class InstallmentControllerTest {
     }
 
     @Test
-    public void testEditInstallment_Success2() throws SQLException {
+    public void testEditInstallment_Success2() {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12, BigDecimal.valueOf(5.00), // interest
                 Installment.Strategy.EVENLY_SPLIT,
