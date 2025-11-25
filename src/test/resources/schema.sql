@@ -44,11 +44,6 @@ CREATE TABLE IF NOT EXISTS accounts (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
---basic account table for inheritance
-CREATE TABLE IF NOT EXISTS basic_account (
-    id BIGINT PRIMARY KEY,
-    FOREIGN KEY (id) REFERENCES accounts(id) ON DELETE CASCADE
-);
 
 
 --Credit account table for inheritance

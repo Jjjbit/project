@@ -404,7 +404,6 @@ public class AccountCLI {
                 .filter(account -> account instanceof CreditAccount)
                 .filter(account -> account.getType().equals(AccountType.CREDIT_CARD))
                 .filter(account -> ((CreditAccount) account).getCurrentDebt().compareTo(BigDecimal.ZERO) > 0)
-                .filter(Account::getSelectable)
                 .toList();
         if(creditAccounts.isEmpty()){
             System.out.println("No credit cards found.");
@@ -431,8 +430,8 @@ public class AccountCLI {
         }
 
         int accountIndex = choice - 1;
-        Account accountToPayDebt = creditAccounts.get(accountIndex);
-        System.out.println("Current debt: " + ((CreditAccount) accountToPayDebt).getCurrentDebt());
+        CreditAccount accountToPayDebt = (CreditAccount) creditAccounts.get(accountIndex);
+        System.out.println("Current debt: " + accountToPayDebt.getCurrentDebt());
 
         //input payment amount
         System.out.print("Enter payment amount: ");

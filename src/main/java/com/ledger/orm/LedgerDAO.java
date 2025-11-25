@@ -14,7 +14,7 @@ public class LedgerDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean insert(Ledger ledger) throws SQLException {
+    public boolean insert(Ledger ledger) {
         String sql = "INSERT INTO ledgers (user_id, name) VALUES (?, ?)";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -31,7 +31,10 @@ public class LedgerDAO {
                 }
             }
             return false;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during ledger insert: " + e.getMessage());
         }
+        return false;
     }
 
     @SuppressWarnings("SqlResolve")
@@ -56,18 +59,20 @@ public class LedgerDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public Ledger getById(Long id) throws SQLException {
+    public Ledger getById(Long id) {
         String sql = "SELECT id, name, user_id FROM ledgers WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, id);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                Ledger ledger = new Ledger();
-                ledger.setId(rs.getLong("id"));
-                ledger.setName(rs.getString("name"));
-                return ledger;
+            try(ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    Ledger ledger = new Ledger();
+                    ledger.setId(rs.getLong("id"));
+                    ledger.setName(rs.getString("name"));
+                    return ledger;
+                }
             }
-
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getById: " + e.getMessage());
         }
         return null;
     }

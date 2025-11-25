@@ -18,10 +18,10 @@ public class Installment {
     private BigDecimal interest;
     private int paidPeriods;
     private Strategy strategy;
-    private Account linkedAccount;
+    private Account linkedAccount; //composition
     private BigDecimal remainingAmount;
     private LocalDate repaymentStartDate;
-    private LedgerCategory category;
+    private LedgerCategory category; //association
     private String name;
     private boolean includedInCurrentDebts; // Whether this installment is included in current debts of linked account
 

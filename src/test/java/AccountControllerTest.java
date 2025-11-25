@@ -44,11 +44,11 @@ public class AccountControllerTest {
         UserDAO userDAO = new UserDAO(connection);
         accountDAO = new AccountDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
-        transactionDAO = new TransactionDAO(connection);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
+        transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
-        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
-        installmentDAO = new InstallmentDAO(connection);
-        BudgetDAO budgetDAO = new BudgetDAO(connection);
+        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
+        BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
 
         UserController userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, transactionDAO);
@@ -97,7 +97,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testCreateBasicAccount() throws SQLException {
+    public void testCreateBasicAccount() {
         BasicAccount account = accountController.createBasicAccount("Alice's Savings",
                 BigDecimal.valueOf(5000), AccountType.CASH, AccountCategory.FUNDS, testUser,
                 null, true, true);
@@ -118,7 +118,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testCreateCreditAccount() throws SQLException {
+    public void testCreateCreditAccount() {
         CreditAccount account = accountController.createCreditAccount("Bob's Credit Card", null,
                 BigDecimal.valueOf(2000.00), //balance
                 true, true, testUser, AccountType.CREDIT_CARD,
@@ -146,7 +146,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testCreateLoanAccount_NoReceivingAccount() throws SQLException {
+    public void testCreateLoanAccount_NoReceivingAccount() {
         LoanAccount account = accountController.createLoanAccount("Car Loan", null, true,
                 testUser, 60, 0,
                 BigDecimal.valueOf(3.5), //3.5% annual interest rate
@@ -186,7 +186,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testCreateLoanAccount_WithReceivingAccount() throws SQLException {
+    public void testCreateLoanAccount_WithReceivingAccount() {
         BasicAccount receivingAccount = accountController.createBasicAccount("Savings Account",
                 BigDecimal.valueOf(5000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
                 true, true);
@@ -235,7 +235,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testCreateBorrowing_NoToAccount() throws SQLException {
+    public void testCreateBorrowing_NoToAccount() {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Bob",
                 BigDecimal.valueOf(3000.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -267,7 +267,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testCreateBorrowing_WithToAccount() throws SQLException {
+    public void testCreateBorrowing_WithToAccount() {
         BasicAccount toAccount = accountController.createBasicAccount("Cash Wallet", BigDecimal.valueOf(500),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
 
@@ -296,7 +296,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testCreateLending_NoFromAccount() throws SQLException {
+    public void testCreateLending_NoFromAccount() {
         LendingAccount account = accountController.createLendingAccount(testUser, "Charlie",
                 BigDecimal.valueOf(4000.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -325,7 +325,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testCreateLending_WithFromAccount() throws SQLException {
+    public void testCreateLending_WithFromAccount() {
         BasicAccount fromAccount = accountController.createBasicAccount("Emergency Fund",
                 BigDecimal.valueOf(800), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
                 true, true);
@@ -355,7 +355,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteBasicAccount_NullTransaction() throws SQLException {
+    public void testDeleteBasicAccount_NullTransaction() {
         BasicAccount account = accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
 
@@ -370,7 +370,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteBasicAccount_DeleteTransaction() throws SQLException {
+    public void testDeleteBasicAccount_DeleteTransaction() {
         BasicAccount account = accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
 
@@ -414,7 +414,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteBasicAccount_KeepTransactions() throws SQLException {
+    public void testDeleteBasicAccount_KeepTransactions() {
         BasicAccount account = accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true,
                 true);
@@ -453,7 +453,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteCreditAccount_NoTransaction() throws SQLException {
+    public void testDeleteCreditAccount_NoTransaction() {
         CreditAccount account = accountController.createCreditAccount("Test Credit Account", null,
                 BigDecimal.valueOf(1500.00), //balance
                 true, true, testUser, AccountType.CREDIT_CARD,
@@ -472,7 +472,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteCreditAccount_DeleteTransactions() throws SQLException {
+    public void testDeleteCreditAccount_DeleteTransactions() {
         CreditAccount account = accountController.createCreditAccount("Test Credit Account", null,
                 BigDecimal.valueOf(1500.00), //balance
                 true, true, testUser, AccountType.CREDIT_CARD,
@@ -515,7 +515,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteCreditAccount_KeepTransactions() throws SQLException {
+    public void testDeleteCreditAccount_KeepTransactions() {
         CreditAccount account = accountController.createCreditAccount("Test Credit Account", null,
                 BigDecimal.valueOf(1500.00), //balance
                 true, true, testUser, AccountType.CREDIT_CARD,
@@ -557,7 +557,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteCreditAccount_WithInstallmentPlan() throws SQLException{
+    public void testDeleteCreditAccount_WithInstallmentPlan() {
         LedgerCategory category=testCategories.stream()
                 .filter(cat->cat.getName().equals("Shopping"))
                 .findFirst()
@@ -588,7 +588,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteLoanAccount_Success_DeleteTransaction() throws SQLException {
+    public void testDeleteLoanAccount_Success_DeleteTransaction() {
         LoanAccount account = accountController.createLoanAccount("Test Loan Account", null,
                 true, testUser, 36, 0,
                 BigDecimal.valueOf(5.0), //5% annual interest rate
@@ -609,7 +609,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteLoanAccount_Success_KeepTransaction() throws SQLException {
+    public void testDeleteLoanAccount_Success_KeepTransaction() {
         LoanAccount account = accountController.createLoanAccount("Test Loan Account", null,
                 true, testUser, 36, 0,
                 BigDecimal.valueOf(5.0), //5% annual interest rate
@@ -633,7 +633,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteLoanAccount_ReceivingAccount_KeepTransaction() throws SQLException {
+    public void testDeleteLoanAccount_ReceivingAccount_KeepTransaction() {
         BasicAccount receivingAccount = accountController.createBasicAccount("Savings Account",
                 BigDecimal.valueOf(5000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
                 true, true);
@@ -664,7 +664,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteBorrowing_DeleteTransaction() throws SQLException {
+    public void testDeleteBorrowing_DeleteTransaction() {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Eve",
                 BigDecimal.valueOf(2000.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -684,7 +684,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteBorrowing_Success_KeepTransaction() throws SQLException {
+    public void testDeleteBorrowing_Success_KeepTransaction() {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Eve",
                 BigDecimal.valueOf(2000.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -704,7 +704,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteLending_Success_DeleteTransaction() throws SQLException {
+    public void testDeleteLending_Success_DeleteTransaction() {
         LendingAccount account = accountController.createLendingAccount(testUser, "Frank",
                 BigDecimal.valueOf(1000.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -724,7 +724,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteLending_KeepTransaction() throws SQLException {
+    public void testDeleteLending_KeepTransaction() {
         LendingAccount account = accountController.createLendingAccount(testUser, "Frank",
                 BigDecimal.valueOf(1000.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -744,7 +744,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testPayDebt_NullFromAccount() throws SQLException {
+    public void testPayDebt_NullFromAccount() {
         CreditAccount account = accountController.createCreditAccount("Bob's Credit Card", null,
                 BigDecimal.valueOf(2000.00), true, true, testUser,
                 AccountType.CREDIT_CARD,
@@ -774,7 +774,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testPayDebt_WithFromAccount() throws SQLException {
+    public void testPayDebt_WithFromAccount() {
         BasicAccount fromAccount = accountController.createBasicAccount("Checking Account",
                 BigDecimal.valueOf(1000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
                 true, true);
@@ -816,7 +816,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testPayLoan_NullFromAccount() throws SQLException {
+    public void testPayLoan_NullFromAccount() {
         LoanAccount account = accountController.createLoanAccount("Personal Loan", null,
                 true, testUser, 24, 0,
                 BigDecimal.valueOf(4), //6% annual interest rate
@@ -847,7 +847,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testPayLoan_WithFromAccount() throws SQLException {
+    public void testPayLoan_WithFromAccount() {
         BasicAccount fromAccount = accountController.createBasicAccount("Checking Account",
                 BigDecimal.valueOf(2000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
                 true, true);
@@ -882,7 +882,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testPayBorrowing_NullFromAccount() throws SQLException {
+    public void testPayBorrowing_NullFromAccount() {
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Alice",
                 BigDecimal.valueOf(1500.00), //amount borrowed
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -902,7 +902,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testPayBorrowing_WithFromAccount() throws SQLException {
+    public void testPayBorrowing_WithFromAccount() {
         BasicAccount fromAccount = accountController.createBasicAccount("Checking Account",
                 BigDecimal.valueOf(1000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
                 true, true);
@@ -933,7 +933,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testReceiveLending_NullToAccount() throws SQLException {
+    public void testReceiveLending_NullToAccount() {
         LendingAccount account = accountController.createLendingAccount(testUser, "Frank",
                 BigDecimal.valueOf(1000.00), //amount lent
                 null, true, true, null, LocalDate.now(), testLedger);
@@ -953,7 +953,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testReceiveLending_WithToAccount() throws SQLException {
+    public void testReceiveLending_WithToAccount() {
         BasicAccount toAccount = accountController.createBasicAccount("Checking Account",
                 BigDecimal.valueOf(500), AccountType.CASH, AccountCategory.FUNDS, testUser,
                 null, true, true);
@@ -983,7 +983,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testEditBasicAccount_Success() throws SQLException {
+    public void testEditBasicAccount_Success() {
         BasicAccount account = accountController.createBasicAccount("Old Account Name",
                 BigDecimal.valueOf(1200), AccountType.CASH, AccountCategory.FUNDS, testUser,
                 "Initial Notes", true, true);
@@ -1002,7 +1002,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testEditCreditAccount_Success() throws SQLException {
+    public void testEditCreditAccount_Success() {
         CreditAccount account = accountController.createCreditAccount("My Credit Card",
                 "Initial Notes", BigDecimal.valueOf(2500.00), //balance
                 true, true, testUser, AccountType.CREDIT_CARD,
@@ -1032,7 +1032,7 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testEditLoanAccount_Success() throws SQLException {
+    public void testEditLoanAccount_Success() {
         LoanAccount account = accountController.createLoanAccount("Car Loan", "Initial Notes",
                 true, testUser, 48, 0,
                 BigDecimal.valueOf(3.5), //3.5% annual interest rate
@@ -1065,7 +1065,7 @@ public class AccountControllerTest {
         assertEquals(0, editedAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(21731.47)));
     }
     @Test
-    public void testEditLoanAccount_Boundary() throws SQLException {
+    public void testEditLoanAccount_Boundary() {
         LoanAccount account = accountController.createLoanAccount("Car Loan", "Initial Notes",
                 true, testUser, 48, 0,
                 BigDecimal.valueOf(3.5), //3.5% annual interest rate

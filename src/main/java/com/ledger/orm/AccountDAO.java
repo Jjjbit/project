@@ -14,30 +14,42 @@ public class AccountDAO {
     }
 
 
-    @SuppressWarnings("SqlResolve")
-    public boolean createBasicAccount(BasicAccount account) throws SQLException {
+    /*@SuppressWarnings("SqlResolve")
+    public boolean createBasicAccount(BasicAccount account) {
         String sql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
                 "VALUES ('BasicAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setString(1, account.getName());
-            stmt.setBigDecimal(2, account.getBalance());
-            stmt.setString(3, account.getType().name());
-            stmt.setString(4, account.getCategory().name());
-            stmt.setLong(5, account.getOwner().getId());
-            stmt.setString(6, account.getNotes());
-            stmt.setBoolean(7, account.getHidden());
-            stmt.setBoolean(8, account.getIncludedInNetAsset());
-            stmt.setBoolean(9, account.getSelectable());
+        boolean autoCommit = true;
+        try {
+            autoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
 
-            int affectedRows = stmt.executeUpdate();
-            if (affectedRows == 0) {
-                return false;
-            }
+            //insert into accounts table
+            try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setString(1, account.getName());
+                stmt.setBigDecimal(2, account.getBalance());
+                stmt.setString(3, account.getType().name());
+                stmt.setString(4, account.getCategory().name());
+                stmt.setLong(5, account.getOwner().getId());
+                stmt.setString(6, account.getNotes());
+                stmt.setBoolean(7, account.getHidden());
+                stmt.setBoolean(8, account.getIncludedInNetAsset());
+                stmt.setBoolean(9, account.getSelectable());
 
-            ResultSet rs = stmt.getGeneratedKeys();
-            if (rs.next()) {
-                account.setId(rs.getLong(1));
+                int affectedRows = stmt.executeUpdate();
+                if (affectedRows == 0) {
+                    connection.rollback();
+                    return false;
+                }
+
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        account.setId(rs.getLong(1));
+                    } else {
+                        connection.rollback();
+                        return false;
+                    }
+                }
             }
 
             //insert into basic_account table
@@ -46,18 +58,99 @@ public class AccountDAO {
                 basicStmt.setLong(1, account.getId());
                 int basicAffectedRows = basicStmt.executeUpdate();
                 if (basicAffectedRows == 0) {
+                    connection.rollback();
                     return false;
                 }
             }
-            return true;
-        }
 
+            connection.commit();
+            return true;
+
+        }catch (SQLException e){
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Rollback failed: " + ex.getMessage());
+            }
+            System.err.println("SQL Exception during createBasicAccount: " + e.getMessage());
+            return false;
+        }finally {
+            try {
+                connection.setAutoCommit(autoCommit);
+            } catch (SQLException e) {
+                System.err.println("Failed to restore auto commit: " + e.getMessage());
+            }
+        }
+    }*/
+
+    @SuppressWarnings("SqlResolve")
+    public boolean createBasicAccount(BasicAccount account) {
+        String sql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
+                "VALUES ('BasicAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        boolean autoCommit = true;
+
+        try {
+
+            autoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setString(1, account.getName());
+                stmt.setBigDecimal(2, account.getBalance());
+                stmt.setString(3, account.getType().name());
+                stmt.setString(4, account.getCategory().name());
+                stmt.setLong(5, account.getOwner().getId());
+                stmt.setString(6, account.getNotes());
+                stmt.setBoolean(7, account.getHidden());
+                stmt.setBoolean(8, account.getIncludedInNetAsset());
+                stmt.setBoolean(9, account.getSelectable());
+
+                int affectedRows = stmt.executeUpdate();
+                if (affectedRows == 0) {
+                    connection.rollback();
+                    return false;
+                }
+
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        account.setId(rs.getLong(1));
+                    } else {
+                        connection.rollback();
+                        return false;
+                    }
+                }
+            }
+
+            connection.commit();
+            return true;
+
+        } catch (SQLException e) {
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Rollback failed: " + ex.getMessage());
+            }
+            System.err.println("SQL Exception during createBasicAccount: " + e.getMessage());
+            return false;
+
+        } finally {
+            try {
+                connection.setAutoCommit(autoCommit);
+            } catch (SQLException e) {
+                System.err.println("Failed to restore auto commit: " + e.getMessage());
+            }
+        }
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean createCreditAccount(CreditAccount account) throws SQLException {
-        connection.setAutoCommit(false);
+    public boolean createCreditAccount(CreditAccount account) {
+        boolean autoCommit = true;
         try {
+            autoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
+            //insert into accounts table
             String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
                     "VALUES ('CreditAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -111,17 +204,29 @@ public class AccountDAO {
             connection.commit();
             return true;
         } catch (SQLException e) {
-            connection.rollback();
-            throw e;
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Rollback failed: " + ex.getMessage());
+            }
+            System.err.println("SQL Exception during createCreditAccount: " + e.getMessage());
+            return false;
         } finally {
-            connection.setAutoCommit(true);
+            try {
+                connection.setAutoCommit(autoCommit);
+            } catch (SQLException e) {
+                System.err.println("Failed to restore auto commit: " + e.getMessage());
+            }
         }
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean createLoanAccount(LoanAccount account) throws SQLException {
-        connection.setAutoCommit(false);
+    public boolean createLoanAccount(LoanAccount account) {
+        boolean autoCommit = true;
         try {
+            autoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
             //insert into accounts table
             String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
                     "VALUES ('LoanAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -175,17 +280,30 @@ public class AccountDAO {
             connection.commit();
             return true;
         } catch (SQLException e) {
-            connection.rollback();
-            throw e;
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Rollback failed: " + ex.getMessage());
+            }
+            System.err.println("SQL Exception during createLoanAccount: " + e.getMessage());
+            return false;
         } finally {
-            connection.setAutoCommit(true);
+            try {
+                connection.setAutoCommit(autoCommit);
+            } catch (SQLException e) {
+                System.err.println("Failed to restore auto commit: " + e.getMessage());
+            }
         }
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean createBorrowingAccount(BorrowingAccount account) throws SQLException {
-        connection.setAutoCommit(false);
+    public boolean createBorrowingAccount(BorrowingAccount account) {
+        boolean autoCommit = true;
         try {
+            autoCommit = connection.getAutoCommit(); // Save original auto-commit state
+            connection.setAutoCommit(false); // Disable auto-commit
+
+            //insert into accounts table
             String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
                     "VALUES ('BorrowingAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -233,20 +351,33 @@ public class AccountDAO {
                 }
             }
 
-            connection.commit();
+            connection.commit(); //commit 2 inserts
             return true;
         } catch (SQLException e) {
-            connection.rollback();
-            throw e;
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Rollback failed: " + ex.getMessage());
+            }
+            System.err.println("SQL Exception during createBorrowingAccount: " + e.getMessage());
+            return false;
         } finally {
-            connection.setAutoCommit(true);
+            try {
+                connection.setAutoCommit(autoCommit); // Restore original auto-commit state
+            } catch (SQLException e) {
+                System.err.println("Failed to restore auto commit: " + e.getMessage());
+            }
         }
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean createLendingAccount(LendingAccount account) throws SQLException {
-        connection.setAutoCommit(false);
+    public boolean createLendingAccount(LendingAccount account) {
+        boolean autoCommit = true;
         try {
+            autoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
+            //insert into accounts table
             String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
                     "VALUES ('LendingAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -295,15 +426,24 @@ public class AccountDAO {
             connection.commit();
             return true;
         } catch (SQLException e) {
-            connection.rollback();
-            throw e;
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Rollback failed: " + ex.getMessage());
+            }
+            System.err.println("SQL Exception during createLendingAccount: " + e.getMessage());
+            return false;
         } finally {
-            connection.setAutoCommit(true);
+            try {
+                connection.setAutoCommit(autoCommit);
+            } catch (SQLException e) {
+                System.err.println("Failed to restore auto commit: " + e.getMessage());
+            }
         }
     }
 
     @SuppressWarnings("SqlResolve")
-    public Account getAccountById(Long id) throws SQLException {
+    public Account getAccountById(Long id) {
         String baseSql =  "SELECT DISTINCT a.id AS account_id, a.name, a.balance, a.account_type, a.account_category, " +
                 "a.notes, a.is_hidden, a.included_in_net_asset, a.selectable, a.user_id, a.dtype, " +
 
@@ -321,10 +461,13 @@ public class AccountDAO {
 
         try (PreparedStatement stmt = connection.prepareStatement(baseSql)) {
             stmt.setLong(1, id);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return mapResultSetToAccount(rs);
+            try(ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToAccount(rs);
+                }
             }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getAccountById: " + e.getMessage());
         }
         return null;
     }
@@ -393,7 +536,7 @@ public class AccountDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<Account> getAccountsByOwnerId(Long ownerId) throws SQLException {
+    public List<Account> getAccountsByOwnerId(Long ownerId) {
         List<Account> accounts = new ArrayList<>();
 
         String sql = " SELECT DISTINCT a.id AS account_id, a.name, a.balance, a.account_type, a.account_category, " +
@@ -413,34 +556,165 @@ public class AccountDAO {
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, ownerId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                Account account = mapResultSetToAccount(rs);
-                accounts.add(account);
+            try(ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Account account = mapResultSetToAccount(rs);
+                    accounts.add(account);
+                }
             }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getAccountsByOwnerId: " + e.getMessage());
         }
         return accounts;
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean update(Account account) throws SQLException {
+    public boolean update(Account account) {
         String sql = "UPDATE accounts SET name = ?, balance = ?, account_type = ?, account_category = ?, " +
                 "notes = ?, included_in_net_asset = ?, selectable = ? , is_hidden = ?  " +
                 "WHERE id = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, account.getName());
-            stmt.setBigDecimal(2, account.getBalance());
-            stmt.setString(3, account.getType() != null ? account.getType().name() : null);
-            stmt.setString(4, account.getCategory() != null ? account.getCategory().name() : null);
-            stmt.setString(5, account.getNotes());
-            stmt.setBoolean(6, account.getIncludedInNetAsset());
-            stmt.setBoolean(7, account.getSelectable());
-            stmt.setBoolean(8, account.getHidden());
-            stmt.setLong(9, account.getId());
-            stmt.executeUpdate();
-        }
 
+        boolean originalAutoCommit = true;
+        try {
+            originalAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                stmt.setString(1, account.getName());
+                stmt.setBigDecimal(2, account.getBalance());
+                stmt.setString(3, account.getType() != null ? account.getType().name() : null);
+                stmt.setString(4, account.getCategory() != null ? account.getCategory().name() : null);
+                stmt.setString(5, account.getNotes());
+                stmt.setBoolean(6, account.getIncludedInNetAsset());
+                stmt.setBoolean(7, account.getSelectable());
+                stmt.setBoolean(8, account.getHidden());
+                stmt.setLong(9, account.getId());
+                stmt.executeUpdate();
+            }
+
+            boolean childUpdated = updateSubclass(account);
+
+            if (!childUpdated) {
+                connection.rollback();
+                connection.setAutoCommit(originalAutoCommit);
+                return false;
+            }
+
+            connection.commit();
+            connection.setAutoCommit(originalAutoCommit);
+            return true;
+
+            /*if (account instanceof CreditAccount credit) {
+                String sqlCredit = "UPDATE credit_account SET credit_limit=?, current_debt=?, bill_date=?, due_date=? " +
+                        "WHERE id=?";
+                try (PreparedStatement stmt = connection.prepareStatement(sqlCredit)) {
+                    stmt.setBigDecimal(1, credit.getCreditLimit());
+                    stmt.setBigDecimal(2, credit.getCurrentDebt());
+
+                    if (credit.getBillDay() != null) {
+                        stmt.setInt(3, credit.getBillDay());
+                    }else {
+                        stmt.setNull(3, Types.INTEGER);
+                    }
+
+                    if (credit.getDueDay() != null) {
+                        stmt.setInt(4, credit.getDueDay());
+                    }else {
+                        stmt.setNull(4, Types.INTEGER);
+                    }
+                    stmt.setLong(5, credit.getId());
+                    int rowsAffected = stmt.executeUpdate();
+                    return rowsAffected > 0;
+                }
+
+            } else if (account instanceof LoanAccount loan) {
+                String sqlLoan = "UPDATE loan_account SET total_periods=?, repaid_periods=?, annual_interest_rate=?, " +
+                        "loan_amount=?, repayment_date=?, repayment_type=?, loan_remaining_amount=?, is_ended=? " +
+                        "WHERE id=?";
+                try (PreparedStatement stmt = connection.prepareStatement(sqlLoan)) {
+                    stmt.setInt(1, loan.getTotalPeriods());
+                    stmt.setInt(2, loan.getRepaidPeriods());
+                    stmt.setBigDecimal(3, loan.getAnnualInterestRate());
+                    stmt.setBigDecimal(4, loan.getLoanAmount());
+
+                    if (loan.getRepaymentDay() != null) {
+                        stmt.setDate(5, Date.valueOf(loan.getRepaymentDay()));
+                    } else {
+                        stmt.setNull(5, Types.DATE);
+                    }
+                    if (loan.getRepaymentType() != null) {
+                        stmt.setString(6, loan.getRepaymentType().name());
+                    }else {
+                        stmt.setNull(6, java.sql.Types.VARCHAR);
+                    }
+                    stmt.setBigDecimal(7, loan.getRemainingAmount());
+                    stmt.setBoolean(8, loan.getIsEnded());
+                    stmt.setLong(9, loan.getId());
+
+                    int rowsAffected = stmt.executeUpdate();
+                    return rowsAffected > 0;
+                }
+
+            } else if (account instanceof BorrowingAccount borrowing) {
+                String sqlBorrow = "UPDATE borrowing_account SET is_ended=?, borrowing_date=?, borrowing_amount=?, " +
+                        "borrowing_remaining_amount =? " +
+                        "WHERE id=?";
+                try (PreparedStatement stmt = connection.prepareStatement(sqlBorrow)) {
+                    stmt.setBoolean(1, borrowing.getIsEnded());
+
+                    if (borrowing.getBorrowingDate() != null) {
+                        stmt.setDate(2, Date.valueOf(borrowing.getBorrowingDate()));
+                    }else {
+                        stmt.setNull(2, Types.DATE);
+                    }
+                    stmt.setBigDecimal(3, borrowing.getBorrowingAmount());
+                    stmt.setBigDecimal(4, borrowing.getRemainingAmount());
+                    stmt.setLong(5, borrowing.getId());
+                    //stmt.executeUpdate();
+                    int rowsAffected = stmt.executeUpdate();
+                    return rowsAffected > 0;
+                }
+
+            } else if (account instanceof LendingAccount lending) {
+                String sqlLend = "UPDATE lending_account SET is_ended=?, lending_date=? WHERE id=?";
+                try (PreparedStatement stmt = connection.prepareStatement(sqlLend)) {
+                    stmt.setBoolean(1, lending.getIsEnded());
+                    if (lending.getDate() != null)
+                        stmt.setDate(2, java.sql.Date.valueOf(lending.getDate()));
+                    else
+                        stmt.setNull(2, java.sql.Types.DATE);
+
+                    stmt.setLong(3, lending.getId());
+                    //stmt.executeUpdate();
+                    int rowsAffected = stmt.executeUpdate();
+                    return rowsAffected > 0;
+                }
+
+            } else if (account instanceof BasicAccount) {
+                String sqlBasic = "UPDATE basic_account SET id=? WHERE id=?";
+                try (PreparedStatement stmt = connection.prepareStatement(sqlBasic)) {
+                    stmt.setLong(1, account.getId());
+                    stmt.setLong(2, account.getId());
+                    //stmt.executeUpdate();
+                    int rowsAffected = stmt.executeUpdate();
+                    return rowsAffected > 0;
+                }
+                //return true;
+            }*/
+        }catch (SQLException e){
+            try {
+                connection.rollback();
+                connection.setAutoCommit(originalAutoCommit);
+            } catch (SQLException ex) {
+                System.err.println("Rollback failed: " + ex.getMessage());
+            }
+            System.err.println("SQL Exception during update: " + e.getMessage());
+        }
+        return false;
+    }
+
+    @SuppressWarnings("SqlResolve")
+    private boolean updateSubclass(Account account) throws SQLException {
         if (account instanceof CreditAccount credit) {
             String sqlCredit = "UPDATE credit_account SET credit_limit=?, current_debt=?, bill_date=?, due_date=? " +
                     "WHERE id=?";
@@ -528,28 +802,28 @@ public class AccountDAO {
             }
 
         } else if (account instanceof BasicAccount) {
-            // No additional fields to update for BasicAccount
-            String sqlBasic = "UPDATE basic_account SET id=? WHERE id=?";
+            /*String sqlBasic = "UPDATE basic_account SET id=? WHERE id=?";
             try (PreparedStatement stmt = connection.prepareStatement(sqlBasic)) {
                 stmt.setLong(1, account.getId());
                 stmt.setLong(2, account.getId());
-                //stmt.executeUpdate();
                 int rowsAffected = stmt.executeUpdate();
                 return rowsAffected > 0;
-            }
+            }*/
+            return true;
         }
         return false;
     }
-
     @SuppressWarnings("SqlResolve")
-    public boolean deleteAccount(Account account) throws SQLException {
+    public boolean deleteAccount(Account account) {
         String sql = "DELETE FROM accounts WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, account.getId());
             int affected = stmt.executeUpdate();
             return affected > 0;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during deleteAccount: " + e.getMessage());
+            return false;
         }
-
     }
 
 }

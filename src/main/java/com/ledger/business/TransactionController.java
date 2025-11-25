@@ -5,7 +5,6 @@ import com.ledger.orm.AccountDAO;
 import com.ledger.orm.TransactionDAO;
 
 import java.math.BigDecimal;
-import java.sql.SQLException;
 import java.time.LocalDate;
 
 public class TransactionController {
@@ -54,16 +53,11 @@ public class TransactionController {
                 ledger,
                 category
         );
-        try {
-            transactionDAO.insert(incomeTransaction);
-            toAccount.credit(amount);
-            accountDAO.update(toAccount); //update balance in database
+        transactionDAO.insert(incomeTransaction);
+        toAccount.credit(amount);
+        accountDAO.update(toAccount); //update balance in database
 
-            return incomeTransaction;
-        } catch (SQLException e) {
-            System.err.println("Error creating income transaction: " + e.getMessage());
-            return null;
-        }
+        return incomeTransaction;
     }
 
     public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String description,
@@ -93,16 +87,11 @@ public class TransactionController {
                 ledger,
                 category
         );
-        try {
-            transactionDAO.insert(expenseTransaction);
-            fromAccount.debit(amount);
-            accountDAO.update(fromAccount); //update balance in database
+        transactionDAO.insert(expenseTransaction);
+        fromAccount.debit(amount);
+        accountDAO.update(fromAccount); //update balance in database
 
-            return expenseTransaction;
-        } catch (SQLException e) {
-            System.err.println("Error creating expense transaction: " + e.getMessage());
-            return null;
-        }
+        return expenseTransaction;
     }
 
     public Transfer createTransfer(Ledger ledger, Account fromAccount, Account toAccount, String description,
@@ -127,22 +116,17 @@ public class TransactionController {
                 amount,
                 ledger
         );
-        try {
-            transactionDAO.insert(transferTransaction);
+        transactionDAO.insert(transferTransaction);
 
-            if (fromAccount != null) {
-                fromAccount.debit(amount);
-                accountDAO.update(fromAccount);
-            }
-            if (toAccount != null) {
-                toAccount.credit(amount);
-                accountDAO.update(toAccount);
-            }
-            return transferTransaction;
-        } catch (SQLException e) {
-            System.err.println("Error creating transfer transaction: " + e.getMessage());
-            return null;
+        if (fromAccount != null) {
+            fromAccount.debit(amount);
+            accountDAO.update(fromAccount);
         }
+        if (toAccount != null) {
+            toAccount.credit(amount);
+            accountDAO.update(toAccount);
+        }
+        return transferTransaction;
     }
 
     public boolean deleteTransaction(Transaction tx) {
@@ -153,33 +137,28 @@ public class TransactionController {
         Account fromAccount = tx.getFromAccount();
         Account toAccount = tx.getToAccount();
 
-        try {
-            switch (tx.getType()) {
-                case INCOME:
-                    toAccount.debit(tx.getAmount());
-                    accountDAO.update(toAccount);
-                    break;
-                case EXPENSE:
+        switch (tx.getType()) {
+            case INCOME:
+                toAccount.debit(tx.getAmount());
+                accountDAO.update(toAccount);
+                break;
+            case EXPENSE:
+                fromAccount.credit(tx.getAmount());
+                accountDAO.update(fromAccount);
+                break;
+            case TRANSFER:
+                if (fromAccount != null) {
                     fromAccount.credit(tx.getAmount());
                     accountDAO.update(fromAccount);
-                    break;
-                case TRANSFER:
-                    if (fromAccount != null) {
-                        fromAccount.credit(tx.getAmount());
-                        accountDAO.update(fromAccount);
-                    }
-                    if (toAccount != null) {
-                        toAccount.debit(tx.getAmount());
-                        accountDAO.update(toAccount);
-                    }
-                    break;
-            }
-
-            return transactionDAO.delete(tx);
-        } catch (SQLException e) {
-            System.err.println("Error deleting transaction: " + e.getMessage());
-            return false;
+                }
+                if (toAccount != null) {
+                    toAccount.debit(tx.getAmount());
+                    accountDAO.update(toAccount);
+                }
+                break;
         }
+
+        return transactionDAO.delete(tx);
     }
 
 
@@ -218,12 +197,7 @@ public class TransactionController {
         if (toAccount != null && toAccount.getId() != oldToAccount.getId()) { //change account
             //rollback old account
             oldToAccount.debit(oldAmount);
-            try {
-                accountDAO.update(oldToAccount);
-            } catch (SQLException e) {
-                System.err.println("Error updating old toAccount during income update: " + e.getMessage());
-                return false;
-            }
+            accountDAO.update(oldToAccount);
 
             if (!toAccount.getSelectable()) {
                 return false;
@@ -232,23 +206,13 @@ public class TransactionController {
             //apply new account
             toAccount.credit(amount != null ? amount : oldAmount);
             income.setToAccount(toAccount);
-            try {
-                accountDAO.update(toAccount);
-            } catch (SQLException e) {
-                System.err.println("Error updating new toAccount during income update: " + e.getMessage());
-                return false;
-            }
+            accountDAO.update(toAccount);
         }
 
         income.setAmount(amount != null ? amount : oldAmount);
         income.setDate(date != null ? date : income.getDate());
         income.setNote(note);
-        try {
-            return transactionDAO.update(income);
-        } catch (SQLException e) {
-            System.err.println("Error updating income transaction: " + e.getMessage());
-            return false;
-        }
+        return transactionDAO.update(income);
     }
 
     public boolean updateExpense(Expense expense, Account fromAccount, LedgerCategory category, String note,
@@ -281,12 +245,7 @@ public class TransactionController {
         if (fromAccount != null && fromAccount.getId() != oldFromAccount.getId()) { //change account
             //rollback old account
             oldFromAccount.credit(oldAmount);
-            try {
-                accountDAO.update(oldFromAccount);
-            } catch (SQLException e) {
-                System.err.println("Error updating old fromAccount during expense update: " + e.getMessage());
-                return false;
-            }
+            accountDAO.update(oldFromAccount);
 
             if (!fromAccount.getSelectable()) {
                 return false;
@@ -295,23 +254,13 @@ public class TransactionController {
             //apply new account
             fromAccount.debit(amount != null ? amount : oldAmount);
             expense.setFromAccount(fromAccount);
-            try {
-                accountDAO.update(fromAccount);
-            } catch (SQLException e) {
-                System.err.println("Error updating new fromAccount during expense update: " + e.getMessage());
-                return false;
-            }
+            accountDAO.update(fromAccount);
         }
 
         expense.setAmount(amount != null ? amount : oldAmount);
         expense.setDate(date != null ? date : expense.getDate());
         expense.setNote(note);
-        try {
-            return transactionDAO.update(expense);
-        } catch (SQLException e) {
-            System.err.println("Error updating expense transaction: " + e.getMessage());
-            return false;
-        }
+        return transactionDAO.update(expense);
     }
 
     //newFromAccount or newToAccount can be null meaning removal of that account
@@ -349,12 +298,7 @@ public class TransactionController {
             //rollback old fromAccount
             if (oldFromAccount != null) {
                 oldFromAccount.credit(oldAmount);
-                try {
-                    accountDAO.update(oldFromAccount);
-                } catch (SQLException e) {
-                    System.err.println("Error updating old fromAccount during transfer update: " + e.getMessage());
-                    return false;
-                }
+                accountDAO.update(oldFromAccount);
             }
 
             //apply new fromAccount
@@ -364,13 +308,7 @@ public class TransactionController {
                 }
                 BigDecimal amountToApply = amount != null ? amount : oldAmount;
                 newFromAccount.debit(amountToApply);
-
-                try {
-                    accountDAO.update(newFromAccount);
-                } catch (SQLException e) {
-                    System.err.println("Error updating new fromAccount during transfer update: " + e.getMessage());
-                    return false;
-                }
+                accountDAO.update(newFromAccount);
             }
 
             transfer.setFromAccount(newFromAccount); //apply new fromAccount (can be null)
@@ -382,12 +320,7 @@ public class TransactionController {
             //rollback old toAccount
             if (oldToAccount != null) {
                 oldToAccount.debit(oldAmount);
-                try {
-                    accountDAO.update(oldToAccount);
-                } catch (SQLException e) {
-                    System.err.println("Error updating old toAccount during transfer update: " + e.getMessage());
-                    return false;
-                }
+                accountDAO.update(oldToAccount);
             }
 
             //apply new toAccount
@@ -397,13 +330,7 @@ public class TransactionController {
                 }
                 BigDecimal amountToApply = amount != null ? amount : oldAmount;
                 newToAccount.credit(amountToApply);
-
-                try {
-                    accountDAO.update(newToAccount);
-                } catch (SQLException e) {
-                    System.err.println("Error updating new toAccount during transfer update: " + e.getMessage());
-                    return false;
-                }
+                accountDAO.update(newToAccount);
             }
             transfer.setToAccount(newToAccount); //apply new toAccount (can be null)
         }
@@ -411,12 +338,7 @@ public class TransactionController {
         transfer.setAmount(amount != null ? amount : oldAmount);
         transfer.setDate(date != null ? date : transfer.getDate());
         transfer.setNote(note);
-        try {
-            return transactionDAO.update(transfer);
-        } catch (SQLException e) {
-            System.err.println("Error updating transfer transaction: " + e.getMessage());
-            return false;
-        }
+        return transactionDAO.update(transfer);
     }
 
 }

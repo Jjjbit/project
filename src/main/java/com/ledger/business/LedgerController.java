@@ -75,30 +75,25 @@ public class LedgerController {
     }
 
     private List<LedgerCategory> copyCategoryTree(Category template, Ledger ledger) {
-        try {
-            List<LedgerCategory> result = new ArrayList<>();
+        List<LedgerCategory> result = new ArrayList<>();
 
-            LedgerCategory copy = new LedgerCategory();
-            copy.setName(template.getName());
-            copy.setType(template.getType());
-            copy.setLedger(ledger);
-            result.add(copy);
-            ledgerCategoryDAO.insert(copy);
+        LedgerCategory copy = new LedgerCategory();
+        copy.setName(template.getName());
+        copy.setType(template.getType());
+        copy.setLedger(ledger);
+        result.add(copy);
+        ledgerCategoryDAO.insert(copy);
 
-            for (Category childTemplate : categoryDAO.getCategoriesByParentId(template.getId())) {
-                List<LedgerCategory> childCopies = copyCategoryTree(childTemplate, ledger);
-                for (LedgerCategory childCopy : childCopies) {
-                    childCopy.setParent(copy);
-                    ledgerCategoryDAO.update(childCopy);
-                }
-                result.addAll(childCopies);
+        for (Category childTemplate : categoryDAO.getCategoriesByParentId(template.getId())) {
+            List<LedgerCategory> childCopies = copyCategoryTree(childTemplate, ledger);
+            for (LedgerCategory childCopy : childCopies) {
+                childCopy.setParent(copy);
+                ledgerCategoryDAO.update(childCopy);
             }
-
-            return result;
-        } catch (SQLException e) {
-            System.err.println("SQL Exception during category tree copy: " + e.getMessage());
-            return new ArrayList<>();
+            result.addAll(childCopies);
         }
+
+        return result;
     }
 
 
@@ -160,44 +155,38 @@ public class LedgerController {
             return null;
         }
 
-        try {
-            String newName = original.getName() + " Copy";
-            Ledger copy = new Ledger(newName, user);
-            ledgerDAO.insert(copy); // insert to db
+        String newName = original.getName() + " Copy";
+        Ledger copy = new Ledger(newName, user);
+        ledgerDAO.insert(copy); // insert to db
 
-            List<LedgerCategory> parents = new ArrayList<>(ledgerCategoryDAO.getCategoriesNullParent(original.getId()));
+        List<LedgerCategory> parents = new ArrayList<>(ledgerCategoryDAO.getCategoriesNullParent(original.getId()));
 
-            List<LedgerCategory> categoryCopies = new ArrayList<>();
-            for (LedgerCategory originalCat : parents) {
-                List<LedgerCategory> copiedCats = copyLedgerCategoryTree(originalCat, copy);
-                categoryCopies.addAll(copiedCats);
-            }
+        List<LedgerCategory> categoryCopies = new ArrayList<>();
+        for (LedgerCategory originalCat : parents) {
+            List<LedgerCategory> copiedCats = copyLedgerCategoryTree(originalCat, copy);
+            categoryCopies.addAll(copiedCats);
+        }
 
-            //create Budget for ledger level for each Period
-            for (Budget.Period period : Budget.Period.values()) {
-                Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, copy);
-                budgetDAO.insert(ledgerBudget);
-            }
+        //create Budget for ledger level for each Period
+        for (Budget.Period period : Budget.Period.values()) {
+            Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, copy);
+            budgetDAO.insert(ledgerBudget);
+        }
 
-            //create Budget for each default category
-            for (LedgerCategory cat : categoryCopies) {
-                if (cat.getType() == CategoryType.EXPENSE) {
-                    for (Budget.Period period : Budget.Period.values()) {
-                        Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, copy);
-                        budgetDAO.insert(categoryBudget);
-                    }
+        //create Budget for each default category
+        for (LedgerCategory cat : categoryCopies) {
+            if (cat.getType() == CategoryType.EXPENSE) {
+                for (Budget.Period period : Budget.Period.values()) {
+                    Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, copy);
+                    budgetDAO.insert(categoryBudget);
                 }
             }
-
-            return copy;
-        } catch (SQLException e) {
-            System.err.println("SQL Exception during ledger copy: " + e.getMessage());
-            return null;
         }
+
+        return copy;
     }
 
     private List<LedgerCategory> copyLedgerCategoryTree(LedgerCategory oldCategory, Ledger newLedger) {
-        try{
         List<LedgerCategory> result = new ArrayList<>();
 
         LedgerCategory copy = new LedgerCategory();
@@ -217,10 +206,7 @@ public class LedgerController {
         }
 
         return result;
-        } catch (SQLException e) {
-            System.err.println("SQL Exception during ledger category tree copy: " + e.getMessage());
-            return List.of();
-        }
+
     }
 
     public boolean renameLedger(Ledger ledger, String newName, User user) {

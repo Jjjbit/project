@@ -37,28 +37,19 @@ public class ReportController {
 
     public List<Transaction> getTransactionsByLedgerInRangeDate(Ledger ledger, LocalDate startDate,
                                                                 LocalDate endDate){
-        try {
-            return transactionDAO.getByLedgerId(ledger.getId()).stream()
-                    .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
-                    .sorted((comparing(Transaction::getDate).reversed()))
-                    .toList();
-        } catch (SQLException e) {
-            System.err.println("SQL Exception in getTransactionsByLedgerInRangeDate: " + e.getMessage());
-            return List.of();
-        }
+        return transactionDAO.getByLedgerId(ledger.getId()).stream()
+                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
+                .sorted((comparing(Transaction::getDate).reversed()))
+                .toList();
     }
 
     public List<Transaction> getTransactionsByAccountInRangeDate(Account account, LocalDate startDate,
                                                       LocalDate endDate) {
-        try {
-            return transactionDAO.getByAccountId(account.getId()).stream()
-                    .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
-                    .sorted((comparing(Transaction::getDate).reversed()))
-                    .toList();
-        } catch (SQLException e) {
-            System.err.println("SQL Exception in getTransactionsByAccountInRangeDate: " + e.getMessage());
-            return List.of();
-        }
+        return transactionDAO.getByAccountId(account.getId()).stream()
+                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
+                .sorted((comparing(Transaction::getDate).reversed()))
+                .toList();
+
     }
 
     public BigDecimal getTotalExpenseByLedger(Ledger ledger, LocalDate startDate, LocalDate endDate) {
@@ -68,7 +59,6 @@ public class ReportController {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    //
     public BigDecimal getTotalIncomeByLedger(Ledger ledger, LocalDate startDate, LocalDate endDate) {
         return getTransactionsByLedgerInRangeDate(ledger, startDate, endDate).stream()
                 .filter(t -> t.getType() == TransactionType.INCOME)
@@ -76,7 +66,6 @@ public class ReportController {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    //
     public BigDecimal getTotalExpenseByAccount(Account account, LocalDate startDate, LocalDate endDate) {
         return getTransactionsByAccountInRangeDate(account, startDate, endDate).stream()
                 .filter(t -> t.getFromAccount() != null &&
@@ -86,7 +75,6 @@ public class ReportController {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    //
     public BigDecimal getTotalIncomeByAccount(Account account,LocalDate startDate, LocalDate endDate) {
         return getTransactionsByAccountInRangeDate(account, startDate, endDate).stream()
                 .filter(t -> t.getToAccount() != null &&
@@ -95,107 +83,70 @@ public class ReportController {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    //
     public List<BorrowingAccount> getActiveBorrowingAccounts(User user) {
-        try {
-            return accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                    .filter(account -> account instanceof BorrowingAccount)
-                    .map(account -> (BorrowingAccount) account)
-                    .filter(account -> !account.getHidden())
-                    .toList();
-        }catch (SQLException e){
-            System.err.println("SQL Exception in getAccountByOwnerId: " + e.getMessage());
-        }
-        return List.of();
+        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+                .filter(account -> account instanceof BorrowingAccount)
+                .map(account -> (BorrowingAccount) account)
+                .filter(account -> !account.getHidden())
+                .toList();
     }
 
-    //
     public List<LendingAccount> getActiveLendingAccounts(User user) {
-        try{
-            return accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(account -> account instanceof LendingAccount)
-                .map(account -> (LendingAccount) account)
-                .filter(account-> !account.getHidden())
-                .toList();
-
-        }catch (SQLException e){
-            System.err.println("SQL Exception in getAccountByOwnerId: " + e.getMessage());
-            return List.of();
-        }
+        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+            .filter(account -> account instanceof LendingAccount)
+            .map(account -> (LendingAccount) account)
+            .filter(account-> !account.getHidden())
+            .toList();
     }
 
     public BigDecimal getTotalAssets(User user) {
-
-        try {
-            BigDecimal totalAssets = accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                    .filter(account -> account instanceof BasicAccount || account instanceof CreditAccount)
-                    .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
-                    .map(Account::getBalance)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal totalLending = getActiveLendingAccounts(user).stream()
-                    .filter(Account::getIncludedInNetAsset)
-                    .filter(account -> !account.getIsEnded())
-                    .map(LendingAccount::getBalance)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            return totalAssets.add(totalLending);
-        } catch (SQLException e) {
-            System.err.println("SQL Exception in getAccountByOwnerId: " + e.getMessage());
-            return BigDecimal.ZERO;
-        }
+        BigDecimal totalAssets = accountDAO.getAccountsByOwnerId(user.getId()).stream()
+                .filter(account -> account instanceof BasicAccount || account instanceof CreditAccount)
+                .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
+                .map(Account::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalLending = getActiveLendingAccounts(user).stream()
+                .filter(Account::getIncludedInNetAsset)
+                .filter(account -> !account.getIsEnded())
+                .map(LendingAccount::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return totalAssets.add(totalLending);
     }
 
     public BigDecimal getTotalLiabilities(User user) {
-        try {
-            BigDecimal totalCreditDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                    .filter(account -> account instanceof CreditAccount)
-                    .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
-                    .map(account -> ((CreditAccount) account).getCurrentDebt())
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal totalUnpaidLoan = accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                    .filter(account -> account instanceof LoanAccount)
-                    .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
-                    .map(account -> ((LoanAccount) account).getRemainingAmount()) //get this.remainingAmount
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal totalBorrowing = getActiveBorrowingAccounts(user).stream()
-                    .filter(Account::getIncludedInNetAsset)
-                    .filter(account -> !account.getIsEnded())
-                    .map(BorrowingAccount::getRemainingAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal totalInstallmentDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                    .filter(account -> account instanceof CreditAccount)
-                    .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
-                    .map(account -> {
-                        try {
-                            return installmentDAO.getByAccountId(account.getId()).stream()
-                                    .filter(plan -> !plan.isIncludedInCurrentDebts())
-                                    .map(Installment::getRemainingAmount)
-                                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-                        } catch (SQLException e) {
-                            System.err.println("SQL Exception in getTotalLiabilities installment part: " + e.getMessage());
-                            return BigDecimal.ZERO;
-                        }
-                    })
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            return totalCreditDebt.add(totalUnpaidLoan).add(totalBorrowing).add(totalInstallmentDebt);
-        }catch (SQLException e){
-            System.err.println("SQL Exception in getAccountByOwnerId: " + e.getMessage());
-            return BigDecimal.ZERO;
-        }
+        BigDecimal totalCreditDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
+                .filter(account -> account instanceof CreditAccount)
+                .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
+                .map(account -> ((CreditAccount) account).getCurrentDebt())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalUnpaidLoan = accountDAO.getAccountsByOwnerId(user.getId()).stream()
+                .filter(account -> account instanceof LoanAccount)
+                .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
+                .map(account -> ((LoanAccount) account).getRemainingAmount()) //get this.remainingAmount
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalBorrowing = getActiveBorrowingAccounts(user).stream()
+                .filter(Account::getIncludedInNetAsset)
+                .filter(account -> !account.getIsEnded())
+                .map(BorrowingAccount::getRemainingAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalInstallmentDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
+                .filter(account -> account instanceof CreditAccount)
+                .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
+                .map(account -> installmentDAO.getByAccountId(account.getId()).stream()
+                            .filter(plan -> !plan.isIncludedInCurrentDebts())
+                            .map(Installment::getRemainingAmount)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return totalCreditDebt.add(totalUnpaidLoan).add(totalBorrowing).add(totalInstallmentDebt);
     }
 
-    //
     public List<Account> getAccountsNotHidden(User user) { //get visible BasicAccount, CreditAccount, LoanAccount
-        try {
-            return accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                    .filter(account -> account instanceof BasicAccount
-                            || account instanceof CreditAccount
-                            || account instanceof LoanAccount)
-                    .filter(account -> !account.getHidden())
-                    .toList();
-        }catch (SQLException e){
-            System.err.println("SQL Exception in getAccountByOwnerId: " + e.getMessage());
-            return List.of();
-        }
+        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+                .filter(account -> account instanceof BasicAccount
+                        || account instanceof CreditAccount
+                        || account instanceof LoanAccount)
+                .filter(account -> !account.getHidden())
+                .toList();
     }
 
     //
@@ -208,101 +159,69 @@ public class ReportController {
         }
     }
 
-    //
     public List<Installment> getActiveInstallments(CreditAccount account) {
-        try {
-            return installmentDAO.getByAccountId(account.getId()).stream()
-                    .filter(plan -> plan.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
-                    .toList();
-        }catch (SQLException e){
-            System.err.println("SQL Exception in getActiveInstallmentPlansByAccount: " + e.getMessage());
-            return List.of();
-        }
+        return installmentDAO.getByAccountId(account.getId()).stream()
+                .filter(plan -> plan.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
     }
 
-    //
     public List<LedgerCategory> getLedgerCategoryTreeByLedger(Ledger ledger) {
-        try {
-            return ledgerCategoryDAO.getTreeByLedgerId(ledger.getId());
-        }catch (SQLException e){
-            System.err.println("SQL Exception in getLedgerCategoryTreeByLedgerId: " + e.getMessage());
-            return List.of();
-        }
+        return ledgerCategoryDAO.getTreeByLedgerId(ledger.getId());
     }
 
     public Budget getActiveBudgetByLedger(Ledger ledger, Budget.Period period) {
-        try {
-            Budget budget = budgetDAO.getBudgetByLedgerId(ledger.getId(), period);
-            if(budget!=null){
-                budget.refreshIfExpired();
-                budgetDAO.update(budget);
-            }
-            return budget;
-        }catch (SQLException e){
-            System.err.println("SQL Exception in getActiveBudgetsByLedger: " + e.getMessage());
-            return null;
+        Budget budget = budgetDAO.getBudgetByLedgerId(ledger.getId(), period);
+        if(budget!=null){
+            budget.refreshIfExpired();
+            budgetDAO.update(budget);
         }
-
+        return budget;
     }
 
     public Budget getActiveBudgetByCategory(LedgerCategory category, Budget.Period period) {
-        try {
-            Budget budget = budgetDAO.getBudgetByCategoryId(category.getId(), period);
-            if(budget!=null){
-                budget.refreshIfExpired();
-                budgetDAO.update(budget);
-            }
-            return budget;
-        }catch (SQLException e){
-            System.err.println("SQL Exception in getActiveBudgetByCategory: " + e.getMessage());
-            return null;
+        Budget budget = budgetDAO.getBudgetByCategoryId(category.getId(), period);
+        if(budget!=null){
+            budget.refreshIfExpired();
+            budgetDAO.update(budget);
         }
-
+        return budget;
     }
 
     public boolean isOverBudget(Budget budget) {
         budget.refreshIfExpired();
-        try {
-            budgetDAO.update(budget);
-        } catch (SQLException e) {
-            System.err.println("SQL Exception during budgetDAO.update: " + e.getMessage());
-        }
+        budgetDAO.update(budget);
 
         Ledger ledger = budget.getLedger();
-        try {
-            if (budget.getCategory() == null) { //ledger-level budget
-                List<Transaction> transactions = transactionDAO.getByLedgerId(ledger.getId()).stream()
-                        .filter(t -> t.getType() == TransactionType.EXPENSE)
-                        .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
-                        .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
-                        .toList();
-                BigDecimal totalExpenses = transactions.stream()
-                        .map(Transaction::getAmount)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                return totalExpenses.compareTo(budget.getAmount()) > 0;
-            } else { //budget is a category-level budget
-                LedgerCategory category= budget.getCategory();
-                List<Transaction> transactions = new ArrayList<>(transactionDAO.getByCategoryId(category.getId()).stream()
+        if (budget.getCategory() == null) { //ledger-level budget
+            List<Transaction> transactions = transactionDAO.getByLedgerId(ledger.getId()).stream()
+                    .filter(t -> t.getType() == TransactionType.EXPENSE)
+                    .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
+                    .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
+                    .toList();
+            BigDecimal totalExpenses = transactions.stream()
+                    .map(Transaction::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            return totalExpenses.compareTo(budget.getAmount()) > 0;
+        } else { //budget is a category-level budget
+            LedgerCategory category= budget.getCategory();
+            List<Transaction> transactions = new ArrayList<>(transactionDAO.getByCategoryId(category.getId()).stream()
+                    .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
+                    .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
+                    .toList());
+
+            List<LedgerCategory> childCategories = ledgerCategoryDAO.getCategoriesByParentId(category.getId());
+            for (LedgerCategory childCategory : childCategories) {
+                transactions.addAll(transactionDAO.getByCategoryId(childCategory.getId()).stream()
                         .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
                         .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
                         .toList());
-
-                List<LedgerCategory> childCategories = ledgerCategoryDAO.getCategoriesByParentId(category.getId());
-                for (LedgerCategory childCategory : childCategories) {
-                    transactions.addAll(transactionDAO.getByCategoryId(childCategory.getId()).stream()
-                            .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
-                            .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
-                            .toList());
-                }
-                BigDecimal totalCategoryBudget = transactions.stream()
-                        .map(Transaction::getAmount)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                return totalCategoryBudget.compareTo(budget.getAmount()) > 0; //>0: over budget
             }
-        }catch (SQLException e){
-            System.err.println("SQL Exception in isOverBudget: " + e.getMessage());
-            return false;
+            BigDecimal totalCategoryBudget = transactions.stream()
+                    .map(Transaction::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            return totalCategoryBudget.compareTo(budget.getAmount()) > 0; //>0: over budget
         }
+
     }
 
 }

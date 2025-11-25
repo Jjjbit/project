@@ -23,11 +23,7 @@ public class CreditAccount extends Account {
                          AccountType type) {
         super(name, balance, type, AccountCategory.CREDIT, owner, notes, includedInNetWorth, selectable);
         this.creditLimit = creditLimit;
-        if(currentDebt == null){
-            this.currentDebt=BigDecimal.ZERO;
-        }else {
-            this.currentDebt = currentDebt;
-        }
+        this.currentDebt = currentDebt;
         this.billDay = billDate;
         this.dueDay = dueDate;
     }

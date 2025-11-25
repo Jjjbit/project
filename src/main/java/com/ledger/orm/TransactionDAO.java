@@ -9,13 +9,20 @@ import java.util.List;
 
 public class TransactionDAO {
     private final Connection connection;
+    private final LedgerCategoryDAO categoryDAO;
+    private final AccountDAO accountDAO;
+    private final LedgerDAO ledgerDAO;
 
-    public TransactionDAO(Connection connection) {
+    public TransactionDAO(Connection connection, LedgerCategoryDAO categoryDAO,
+                          AccountDAO  accountDAO, LedgerDAO ledgerDAO) {
+        this.accountDAO = accountDAO;
+        this.ledgerDAO = ledgerDAO;
+        this.categoryDAO = categoryDAO;
         this.connection = connection;
     }
 
     @SuppressWarnings("SqlResolve")
-    public <T extends Transaction> boolean insert(T transaction) throws SQLException {
+    public <T extends Transaction> boolean insert(T transaction) {
         // insert into transactions table
         String transactionSql = "INSERT INTO transactions (transaction_date, amount, note, from_account_id," +
                 " to_account_id, ledger_id, category_id, dtype) " +
@@ -54,7 +61,6 @@ public class TransactionDAO {
                 stmt.setNull(7, Types.BIGINT);
             }
 
-
             stmt.setString(8, transaction.getType().name());
 
             int affectedRows = stmt.executeUpdate();
@@ -70,20 +76,26 @@ public class TransactionDAO {
                 }
             }
             return false;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during transaction insert: " + e.getMessage());
         }
+        return false;
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean delete(Transaction transaction) throws SQLException {
+    public boolean delete(Transaction transaction) {
         String sql = "DELETE FROM transactions WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, transaction.getId());
             return stmt.executeUpdate() > 0;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during transaction delete: " + e.getMessage());
+            return false;
         }
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean update(Transaction transaction) throws SQLException {
+    public boolean update(Transaction transaction) {
         String sql = "UPDATE transactions SET transaction_date = ?, amount = ?, note = ?, from_account_id = ?, " +
                 "to_account_id = ?, ledger_id = ?, category_id = ?, dtype = ?  " +
                 "WHERE id = ?";
@@ -126,11 +138,14 @@ public class TransactionDAO {
             stmt.setLong(9, transaction.getId());
 
             return stmt.executeUpdate() > 0;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during transaction update: " + e.getMessage());
+            return false;
         }
     }
 
     @SuppressWarnings("SqlResolve")
-    public Transaction getById(Long id) throws SQLException {
+    public Transaction getById(Long id) {
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
                 "ta.id as to_account_id, ta.name as to_account_name, " +
@@ -151,12 +166,14 @@ public class TransactionDAO {
                     return mapResultSetToTransaction(rs);
                 }
             }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getById: " + e.getMessage());
         }
         return null;
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<Transaction> getByLedgerId(Long ledgerId) throws SQLException {
+    public List<Transaction> getByLedgerId(Long ledgerId) {
         List<Transaction> transactions = new ArrayList<>();
 
         String sql = "SELECT t.*, " +
@@ -180,12 +197,14 @@ public class TransactionDAO {
                     transactions.add(mapResultSetToTransaction(rs));
                 }
             }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getByLedgerId: " + e.getMessage());
         }
         return transactions;
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<Transaction> getByCategoryId(Long categoryId) throws SQLException {
+    public List<Transaction> getByCategoryId(Long categoryId) {
         List<Transaction> transactions = new ArrayList<>();
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
@@ -208,13 +227,15 @@ public class TransactionDAO {
                     transactions.add(mapResultSetToTransaction(rs));
                 }
             }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getByCategoryId: " + e.getMessage());
         }
         return transactions;
     }
 
 
     @SuppressWarnings("SqlResolve")
-    public List<Transaction> getByAccountId(Long accountId) throws SQLException {
+    public List<Transaction> getByAccountId(Long accountId) {
         List<Transaction> transactions = new ArrayList<>();
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
@@ -238,17 +259,22 @@ public class TransactionDAO {
                     transactions.add(mapResultSetToTransaction(rs));
                 }
             }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getByAccountId: " + e.getMessage());
         }
         return transactions;
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean delete(Long id) throws SQLException {
+    public boolean delete(Long id) {
         // delete from transactions table
         String sql = "DELETE FROM transactions WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, id);
             return stmt.executeUpdate() > 0;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during transaction delete by id: " + e.getMessage());
+            return false;
         }
     }
 
@@ -269,7 +295,8 @@ public class TransactionDAO {
                 transaction = new Income();
                 break;
             default:
-                throw new SQLException("Unknown transaction type: " + dtype);
+                System.err.println("Unknown transaction type: " + dtype);
+                return null;
         }
 
         // set common fields
@@ -278,8 +305,6 @@ public class TransactionDAO {
         transaction.setAmount(rs.getBigDecimal("amount"));
         transaction.setNote(rs.getString("note"));
         transaction.setType(TransactionType.valueOf(rs.getString("dtype")));
-
-        AccountDAO accountDAO = new AccountDAO(connection);
 
         //set fromAccount
         if( rs.getLong("from_account_id") != 0) {
@@ -292,12 +317,10 @@ public class TransactionDAO {
 
         //set ledger
         if( rs.getLong("ledger_id") != 0) {
-            LedgerDAO ledgerDAO = new LedgerDAO(connection);
             transaction.setLedger(ledgerDAO.getById(rs.getLong("ledger_id")));
         }
         //set category
         if( rs.getLong("category_id") != 0) {
-            LedgerCategoryDAO categoryDAO = new LedgerCategoryDAO(connection);
             transaction.setCategory(categoryDAO.getById(rs.getLong("category_id")));
         }
         return transaction;
