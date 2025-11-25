@@ -12,7 +12,7 @@ public class UserDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean register(User user) throws SQLException {
+    public boolean register(User user) {
         String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -30,11 +30,14 @@ public class UserDAO {
                 }
             }
             return false;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during registration: " + e.getMessage());
+            return false;
         }
     }
 
     @SuppressWarnings("SqlResolve")
-    public User login (String username, String password) throws SQLException {
+    public User login (String username, String password) {
         String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, username);
@@ -47,29 +50,15 @@ public class UserDAO {
                 );
             }
             return null;
-        }
-    }
-
-    @SuppressWarnings("SqlResolve")
-    public User getUserById(Long id) throws SQLException {
-        String sql = "SELECT * FROM users WHERE id = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, id);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                User user= new User();
-                user.setId(rs.getLong("id"));
-                user.setUsername(rs.getString("username"));
-                user.setPassword(rs.getString("password"));
-                return user;
-            }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during login: " + e.getMessage());
             return null;
         }
     }
 
 
     @SuppressWarnings("SqlResolve")
-    public User getUserByUsername(String username) throws SQLException {
+    public User getUserByUsername(String username){
         String sql = "SELECT * FROM users WHERE username = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, username);
@@ -82,11 +71,14 @@ public class UserDAO {
                     return user;
                 }
             return null;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getUserByUsername: " + e.getMessage());
+            return null;
         }
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean updateUser(User user) throws SQLException {
+    public boolean updateUser(User user) {
         String sql = "UPDATE users SET username = ?, password = ? WHERE id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -96,6 +88,9 @@ public class UserDAO {
 
             int affectedRows = stmt.executeUpdate();
             return affectedRows > 0;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during updateUser: " + e.getMessage());
+            return false;
         }
     }
 
