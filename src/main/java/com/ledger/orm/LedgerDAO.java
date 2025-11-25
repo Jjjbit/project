@@ -38,24 +38,29 @@ public class LedgerDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean delete(Ledger ledger) throws SQLException {
+    public boolean delete(Ledger ledger) {
         String sql = "DELETE FROM ledgers WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, ledger.getId());
             return stmt.executeUpdate() > 0;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during ledger delete: " + e.getMessage());
         }
+        return false;
     }
 
 
     @SuppressWarnings("SqlResolve")
-    public boolean update(Ledger ledger) throws SQLException {
+    public boolean update(Ledger ledger) {
         String sql = "UPDATE ledgers SET name = ? WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, ledger.getName());
             stmt.setLong(2, ledger.getId());
             return stmt.executeUpdate() > 0;
+        }catch (SQLException e){
+            System.err.println("SQL Exception during ledger update: " + e.getMessage());
         }
-
+        return false;
     }
 
     @SuppressWarnings("SqlResolve")
@@ -78,7 +83,7 @@ public class LedgerDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public Ledger getByNameAndOwnerId(String name, Long ownerId) throws SQLException {
+    public Ledger getByNameAndOwnerId(String name, Long ownerId){
         String sql = "SELECT id, name FROM ledgers WHERE name = ? AND user_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, name);
@@ -91,28 +96,32 @@ public class LedgerDAO {
                 return ledger;
             }
 
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getByNameAndOwnerId: " + e.getMessage());
         }
         return null;
     }
 
 
     @SuppressWarnings("SqlResolve")
-    public List<Ledger> getLedgersByUserId(Long userId) throws SQLException {
+    public List<Ledger> getLedgersByUserId(Long userId) {
         List<Ledger> ledgers = new ArrayList<>();
         String sql = "SELECT * FROM ledgers WHERE user_id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, userId);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                Ledger ledger = new Ledger();
-                ledger.setId(rs.getLong("id"));
-                ledger.setName(rs.getString("name"));
-                ledgers.add(ledger);
+            try(ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Ledger ledger = new Ledger();
+                    ledger.setId(rs.getLong("id"));
+                    ledger.setName(rs.getString("name"));
+                    ledgers.add(ledger);
+                }
             }
 
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getLedgersByUserId: " + e.getMessage());
         }
-
         return ledgers;
     }
 
