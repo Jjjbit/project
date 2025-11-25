@@ -5,7 +5,6 @@ import com.ledger.domain.*;
 import com.ledger.orm.*;
 
 import java.math.BigDecimal;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -151,12 +150,7 @@ public class ReportController {
 
     //
     public List<Ledger> getLedgerByUser(User user) {
-        try {
-            return ledgerDAO.getLedgersByUserId(user.getId());
-        }catch (SQLException e){
-            System.err.println("SQL Exception in getLedgerByUserId: " + e.getMessage());
-            return List.of();
-        }
+        return ledgerDAO.getLedgersByUserId(user.getId());
     }
 
     public List<Installment> getActiveInstallments(CreditAccount account) {
