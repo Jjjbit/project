@@ -40,25 +40,31 @@ public class UserController {
         return false;
     }
 
-     public boolean updateUsername(User user, String newUsername) {
-        if(currentUser == null || currentUser.getId() != user.getId()){
+     public boolean updateUsername(String newUsername) {
+        if(currentUser == null ){
             return false;
         }
 
         if (userDAO.getUserByUsername(newUsername) != null) {
-            return user.getUsername().equals(newUsername);
+            return currentUser.getUsername().equals(newUsername);
         }
-        user.setUsername(newUsername);
-        return userDAO.updateUser(user);
+        currentUser.setUsername(newUsername);
+        return userDAO.updateUser(currentUser);
      }
 
-    public boolean updatePassword(User user, String newPassword) {
-        if (user != null) {
-            String hashedPassword = PasswordUtils.hash(newPassword);
-            user.setPassword(hashedPassword);
-            return userDAO.updateUser(user);
+    public boolean updatePassword(String newPassword) {
+        if(currentUser == null ){
+            return false;
         }
-        return false;
+        if(newPassword.isEmpty()) {
+            return false;
+        }
+        if(newPassword.length() < 6) {
+            return false;
+        }
+        String hashedPassword = PasswordUtils.hash(newPassword);
+        currentUser.setPassword(hashedPassword);
+        return userDAO.updateUser(currentUser);
     }
 
     public User getCurrentUser(){
