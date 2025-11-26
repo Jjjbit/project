@@ -118,7 +118,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     amount DECIMAL(15,2) NOT NULL,
     note TEXT,
     transaction_date DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ledger_id) REFERENCES ledgers(id) ON DELETE CASCADE,
     FOREIGN KEY (from_account_id) REFERENCES accounts(id) ON DELETE SET NULL,
     FOREIGN KEY (to_account_id) REFERENCES accounts(id) ON DELETE SET NULL,
