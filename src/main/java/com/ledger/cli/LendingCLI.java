@@ -340,7 +340,7 @@ public class LendingCLI {
 
         //select ledger option can be added later
         System.out.println("Select a ledger to associate with this receiving:");
-        List<Ledger> ledgers = reportController.getLedgerByUser(userController.getCurrentUser());
+        List<Ledger> ledgers = reportController.getLedgersByUser(userController.getCurrentUser());
         if (ledgers.isEmpty()) {
             System.out.println("No available ledgers to select.");
             return;
@@ -432,7 +432,7 @@ public class LendingCLI {
     }
 
     private Ledger selectLedger(User user) {
-        List<Ledger> ledgers = reportController.getLedgerByUser(user);
+        List<Ledger> ledgers = reportController.getLedgersByUser(user);
 
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found for the user.");

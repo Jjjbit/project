@@ -318,7 +318,7 @@ public class InstallmentCLI {
     }
 
     private Ledger selectLedger() {
-        List<Ledger> ledgers = reportController.getLedgerByUser(userController.getCurrentUser());
+        List<Ledger> ledgers = reportController.getLedgersByUser(userController.getCurrentUser());
 
         if (ledgers.isEmpty()) {
             System.out.println("No ledgers found. Please create a ledger first.");

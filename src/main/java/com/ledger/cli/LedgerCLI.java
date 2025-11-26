@@ -41,7 +41,7 @@ public class LedgerCLI {
 
         System.out.println("\n === Your Ledgers ===");
 
-        List<Ledger> ledgers =reportController.getLedgerByUser(userController.getCurrentUser());
+        List<Ledger> ledgers =reportController.getLedgersByUser(userController.getCurrentUser());
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found.");
             return;
@@ -273,7 +273,7 @@ public class LedgerCLI {
         return name;
     }
     private Ledger selectLedger() {
-        List<Ledger> ledgers =reportController.getLedgerByUser(userController.getCurrentUser());
+        List<Ledger> ledgers =reportController.getLedgersByUser(userController.getCurrentUser());
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found.");
             return null;

@@ -221,7 +221,7 @@ public class BudgetCLI {
     }
 
     private Ledger selectLedger() {
-        List<Ledger> ledgers=reportController.getLedgerByUser(userController.getCurrentUser());
+        List<Ledger> ledgers=reportController.getLedgersByUser(userController.getCurrentUser());
 
         for(int i=0;i<ledgers.size();i++){
             System.out.println((i+1) + ". " + ledgers.get(i).getName());

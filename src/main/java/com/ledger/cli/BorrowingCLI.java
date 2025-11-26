@@ -322,7 +322,7 @@ public class BorrowingCLI {
         }
 
         System.out.println("Select a ledger to associate with this payment:");
-        List<Ledger> ledgers = reportController.getLedgerByUser(userController.getCurrentUser());
+        List<Ledger> ledgers = reportController.getLedgersByUser(userController.getCurrentUser());
         for (int i = 0; i < ledgers.size(); i++) {
             System.out.println((i + 1) + ". " + ledgers.get(i).getName());
         }
@@ -404,7 +404,7 @@ public class BorrowingCLI {
     }
 
     private Ledger selectLedger(User user) {
-        List<Ledger> ledgers = reportController.getLedgerByUser(user);
+        List<Ledger> ledgers = reportController.getLedgersByUser(user);
 
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found for the user.");

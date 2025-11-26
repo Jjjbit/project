@@ -537,7 +537,7 @@ public class ReportControllerTest {
         assertNotNull(deletedLedger);
         ledgerController.deleteLedger(deletedLedger);
 
-        List<Ledger> ledgers = reportController.getLedgerByUser(testUser);
+        List<Ledger> ledgers = reportController.getLedgersByUser(testUser);
         assertEquals(2, ledgers.size());
     }
 

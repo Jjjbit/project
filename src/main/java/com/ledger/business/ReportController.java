@@ -148,7 +148,7 @@ public class ReportController {
                 .toList();
     }
 
-    public List<Ledger> getLedgerByUser(User user) {
+    public List<Ledger> getLedgersByUser(User user) {
         return ledgerDAO.getLedgersByUserId(user.getId());
     }
 

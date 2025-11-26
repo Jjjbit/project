@@ -509,7 +509,7 @@ public class TransactionCLI {
     }
 
     private Ledger selectLedger(User user) {
-        List<Ledger> ledgers = reportController.getLedgerByUser(user);
+        List<Ledger> ledgers = reportController.getLedgersByUser(user);
 
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found for the user.");
