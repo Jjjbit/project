@@ -77,7 +77,7 @@ public class AccountCLI {
     public void showAllAccounts() {
         System.out.println("\n=== Show All Accounts ===");
 
-        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()); //select visible BasicAccount, LoanAccount, CreditAccount
+        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()); //select visible BasicAccount, LoanAccount, CreditAccount
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -105,7 +105,7 @@ public class AccountCLI {
         System.out.println("\n=== Update Account ===");
 
         System.out.println("\nSelect the account to update:");
-        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser());
+        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -130,7 +130,7 @@ public class AccountCLI {
 
         //rename account
         System.out.print("Current name: " + accountToUpdate.getName() + ". Enter new name (press Enter to skip): ");
-        String newName = scanner.nextLine().trim();
+        String newName = scanner.nextLine();
         if (newName.isEmpty()) {
             newName = null;
         }
@@ -309,7 +309,7 @@ public class AccountCLI {
         //select account to delete
         System.out.println("\nSelect the account to delete:");
         Account accountToDelete;
-        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser());
+        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -360,7 +360,7 @@ public class AccountCLI {
 
         //select account to hide
         System.out.println("\nSelect the account to hide:");
-        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser());
+        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -400,7 +400,7 @@ public class AccountCLI {
         System.out.println("\n === Pay Debt ===");
 
         //select credit card
-        List<Account> creditAccounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+        List<Account> creditAccounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
                 .filter(account -> account instanceof CreditAccount)
                 .filter(account -> account.getType().equals(AccountType.CREDIT_CARD))
                 .filter(account -> ((CreditAccount) account).getCurrentDebt().compareTo(BigDecimal.ZERO) > 0)
@@ -462,7 +462,7 @@ public class AccountCLI {
         System.out.println("\n === Pay Loan ===");
 
         //select account to pay loan
-        List<Account> loanAccounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+        List<Account> loanAccounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
                 .filter(account -> account instanceof LoanAccount)
                 .filter(account -> ((LoanAccount) account).getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
                 .toList();
@@ -673,7 +673,7 @@ public class AccountCLI {
     }
 
     private String inputAccountName() {
-        String name = scanner.nextLine().trim();
+        String name = scanner.nextLine();
         if( name.isEmpty()) {
             System.out.println("Account name cannot be empty!");
             return inputAccountName();
@@ -735,7 +735,7 @@ public class AccountCLI {
     }
 
     private Account getSelectableAccount(){
-        List<Account> userAccounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+        List<Account> userAccounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
                 .filter(Account::getSelectable)
                 .toList();
 
@@ -764,7 +764,7 @@ public class AccountCLI {
     }
 
     private Account selectAccount() {
-        List<Account> userAccounts = reportController.getAccountsNotHidden(userController.getCurrentUser());
+        List<Account> userAccounts = reportController.getVisibleAccounts(userController.getCurrentUser());
 
         if (userAccounts.isEmpty()) {
             System.out.println("No accounts found. Please create an account first.");

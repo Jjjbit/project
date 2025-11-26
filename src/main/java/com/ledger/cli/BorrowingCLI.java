@@ -58,7 +58,7 @@ public class BorrowingCLI {
         //select to account
         System.out.println("Select an account that receives this borrowing:");
         Account selectedAccount;
-        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
                 .filter(Account::getSelectable)
                 .toList();
         for(int i=0;i<accounts.size();i++) {
@@ -140,7 +140,7 @@ public class BorrowingCLI {
         //enter new name
         System.out.println("Current name: " + borrowingToEdit.getName());
         System.out.print("Enter new name (press Enter to skip): ");
-        String newNameInput = scanner.nextLine().trim();
+        String newNameInput = scanner.nextLine();
         String newName = null;
         if (!newNameInput.isEmpty()) {
             newName = newNameInput;
@@ -158,7 +158,7 @@ public class BorrowingCLI {
         //
         System.out.println("Current note: " + (borrowingToEdit.getNotes() == null ? "No note" : borrowingToEdit.getNotes()));
         System.out.print("Enter new note (press Enter to skip): ");
-        String newNoteInput = scanner.nextLine().trim();
+        String newNoteInput = scanner.nextLine();
         String newNote = null;
         if (!newNoteInput.isEmpty()) {
             newNote = newNoteInput;
@@ -299,7 +299,7 @@ public class BorrowingCLI {
         Account fromAccount = null;
         if (selectAccountInput.equals("y") || selectAccountInput.equals("yes")) {
             System.out.println("Select an account to make the payment from:");
-            List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+            List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
                     .filter(Account::getSelectable)
                     .toList();
             for (int i = 0; i < accounts.size(); i++) {
@@ -383,7 +383,7 @@ public class BorrowingCLI {
     }
 
     private String inputName() {
-        String name= scanner.nextLine().trim();
+        String name= scanner.nextLine();
         if(name.isEmpty()) {
             System.out.println("Name cannot be empty. Please enter a valid name.");
             return inputName();

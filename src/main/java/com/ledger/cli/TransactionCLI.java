@@ -112,7 +112,7 @@ public class TransactionCLI {
         Ledger selectedLedger = selectLedger(userController.getCurrentUser());
 
         //get selectable accounts
-        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
                 .filter(Account::getSelectable)
                 .toList();
 
@@ -343,7 +343,7 @@ public class TransactionCLI {
                         newCategory, note, date, amount, newLedger);
             }
             case TRANSFER -> {
-                List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+                List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
                         .filter(Account::getSelectable)
                         .toList();
                 if (accounts.isEmpty()) {
@@ -531,7 +531,7 @@ public class TransactionCLI {
     }
 
     private Account selectAccount() {
-        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser());
+        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found for the user.");
             return null;

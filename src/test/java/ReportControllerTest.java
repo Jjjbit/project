@@ -453,7 +453,7 @@ public class ReportControllerTest {
 
     //test getAccountsNotHidden
     @Test
-    public void testGetAccountsNotHidden() {
+    public void testGetVisibleAccounts() {
         //visible BasicAccount is testAccount created in setup
         //create hidden BasicAccount
         Account hiddenAccount = accountController.createBasicAccount("Hidden Account", BigDecimal.valueOf(300.00),
@@ -514,7 +514,7 @@ public class ReportControllerTest {
         assertNotNull(borrowingAccount2);
         accountController.hideAccount(borrowingAccount2);
 
-        List<Account> accountsNotHidden = reportController.getAccountsNotHidden(testUser);
+        List<Account> accountsNotHidden = reportController.getVisibleAccounts(testUser);
         assertEquals(3, accountsNotHidden.size());
         for( Account acc : accountsNotHidden) {
             assertFalse(acc.getHidden());
@@ -616,7 +616,7 @@ public class ReportControllerTest {
         assertEquals(1, borrowingAccounts.size());
 
         BigDecimal totalAsset = reportController.getTotalAssets(testUser);
-        List<Account> accountsNotHidden = reportController.getAccountsNotHidden(testUser);
+        List<Account> accountsNotHidden = reportController.getVisibleAccounts(testUser);
         assertEquals(5, accountsNotHidden.size());
 
         List<LendingAccount> activeLendingAccounts = reportController.getActiveLendingAccounts(testUser);

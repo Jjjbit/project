@@ -255,7 +255,7 @@ public class InstallmentCLI {
 
     //private helper methods
     private CreditAccount selectCreditCardAccount(){
-        List<Account> userAccounts = reportController.getAccountsNotHidden(userController.getCurrentUser());
+        List<Account> userAccounts = reportController.getVisibleAccounts(userController.getCurrentUser());
 
         List<CreditAccount> creditAccounts = userAccounts.stream()
                 .filter(account -> account instanceof CreditAccount)

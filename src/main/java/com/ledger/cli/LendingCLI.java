@@ -56,7 +56,7 @@ public class LendingCLI {
         //enter from account option can be added later
         System.out.println("Select an account to lend from: ");
         Account fromAccount;
-        List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
                 .filter(Account::getSelectable)
                 .toList();
 
@@ -309,7 +309,7 @@ public class LendingCLI {
         String toAccountChoice = scanner.nextLine().trim().toLowerCase();
         Account toAccount = null;
         if(toAccountChoice.equals("y") || toAccountChoice.equals("yes")) {
-            List<Account> accounts = reportController.getAccountsNotHidden(userController.getCurrentUser()).stream()
+            List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
                     .filter(Account::getSelectable)
                     .toList();
             if (accounts.isEmpty()) {

@@ -139,7 +139,7 @@ public class ReportController {
         return totalCreditDebt.add(totalUnpaidLoan).add(totalBorrowing).add(totalInstallmentDebt);
     }
 
-    public List<Account> getAccountsNotHidden(User user) { //get visible BasicAccount, CreditAccount, LoanAccount
+    public List<Account> getVisibleAccounts(User user) { //get visible BasicAccount, CreditAccount, LoanAccount
         return accountDAO.getAccountsByOwnerId(user.getId()).stream()
                 .filter(account -> account instanceof BasicAccount
                         || account instanceof CreditAccount
@@ -148,7 +148,6 @@ public class ReportController {
                 .toList();
     }
 
-    //
     public List<Ledger> getLedgerByUser(User user) {
         return ledgerDAO.getLedgersByUserId(user.getId());
     }
