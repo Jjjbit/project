@@ -93,7 +93,7 @@ public class LedgerControllerTest {
     }
 
     @Test
-    public void testCreateLedger() throws SQLException {
+    public void testCreateLedger() {
         Ledger ledger = ledgerController.createLedger("Test Ledger", testUser);
         assertNotNull(ledger);
 
@@ -169,7 +169,7 @@ public class LedgerControllerTest {
     }
 
     @Test
-    public void testDeleteLedger_NullTransaction() throws SQLException {
+    public void testDeleteLedger_NullTransaction() {
         Ledger ledger = ledgerController.createLedger("Ledger To Delete", testUser);
         assertNotNull(ledger);
 
@@ -230,7 +230,7 @@ public class LedgerControllerTest {
     }
 
     @Test
-    public void testCopyLedger() throws SQLException {
+    public void testCopyLedger() {
         Ledger originalLedger = ledgerController.createLedger("Original Ledger", testUser);
         assertNotNull(originalLedger);
 
