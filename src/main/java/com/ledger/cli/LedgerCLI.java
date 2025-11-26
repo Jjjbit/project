@@ -23,11 +23,10 @@ public class LedgerCLI {
     }
 
     public void createLedger() {
-
         System.out.println("\n === Creating a new ledger ===");
 
         System.out.print("Enter ledger name: ");
-        String name = scanner.nextLine().trim();
+        String name = inputName();
 
         Ledger ledger=ledgerController.createLedger(name, userController.getCurrentUser());
         if(ledger==null){
@@ -154,11 +153,10 @@ public class LedgerCLI {
 
         //prompt for new name
         System.out.println("\nCurrent name: " + selectedLedger.getName());
-        System.out.print("Enter new name for the ledger (leave blank to keep current): ");
-        String newName = scanner.nextLine().trim();
+        System.out.print("Enter new name for the ledger (press Enter to keep current): ");
+        String newName = scanner.nextLine();
         if(newName.isEmpty()) {
-            System.out.println("Ledger name unchanged.");
-            return;
+            newName= selectedLedger.getName();
         }
 
         boolean updated = ledgerController.renameLedger(selectedLedger, newName, userController.getCurrentUser());
@@ -266,6 +264,14 @@ public class LedgerCLI {
 
 
     //private helper method
+    private String inputName(){
+        String name = scanner.nextLine();
+        if(name.isEmpty()){
+            System.out.println("Name cannot be empty. Please try again.");
+            return inputName();
+        }
+        return name;
+    }
     private Ledger selectLedger() {
         List<Ledger> ledgers =reportController.getLedgerByUser(userController.getCurrentUser());
         if(ledgers.isEmpty()) {

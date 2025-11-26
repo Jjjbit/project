@@ -27,7 +27,7 @@ public class LedgerController {
 
     public Ledger createLedger(String name, User owner) {
 
-        if(name == null || name.trim().isEmpty()) {
+        if(name == null || name.isEmpty()) {
             return null;
         }
         if(owner == null){
@@ -45,8 +45,7 @@ public class LedgerController {
 
         List<LedgerCategory> allCategories = new ArrayList<>();
         for (Category template : templateCategories) {
-            List<LedgerCategory> categoriesFromTemplate = copyCategoryTree(template, ledger); //return list of categories (first level and children)
-            allCategories.addAll(categoriesFromTemplate);
+            allCategories.addAll(copyCategoryTree(template, ledger));
         }
 
         //create Budget for ledger level for each Period
@@ -90,7 +89,6 @@ public class LedgerController {
         return result;
     }
 
-
     public boolean deleteLedger(Ledger ledger) {
         //delete ledger categories (cascade delete transactions and ledger categories -> delete budgets)
         if(ledger == null){
@@ -101,7 +99,6 @@ public class LedgerController {
         for (Transaction tx : transactionsToDelete) {
             Account to = tx.getToAccount();
             Account from = tx.getFromAccount();
-            LedgerCategory category = tx.getCategory();
 
             switch(tx.getType()) {
                 case INCOME:
@@ -127,13 +124,6 @@ public class LedgerController {
                     }
                     break;
             }
-
-            if (category != null) {
-                tx.setCategory(null);
-            }
-
-            tx.setLedger(null); //rimuove riferimento a ledger in tx
-            transactionDAO.delete(tx);
         }
 
         return ledgerDAO.delete(ledger);
@@ -152,17 +142,16 @@ public class LedgerController {
 
         List<LedgerCategory> categoryCopies = new ArrayList<>();
         for (LedgerCategory originalCat : parents) {
-            List<LedgerCategory> copiedCats = copyLedgerCategoryTree(originalCat, copy);
-            categoryCopies.addAll(copiedCats);
+            categoryCopies.addAll(copyLedgerCategoryTree(originalCat, copy));
         }
 
-        //create Budget for ledger level for each Period
+        //create Budget for ledger for each Period
         for (Budget.Period period : Budget.Period.values()) {
             Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, copy);
             budgetDAO.insert(ledgerBudget);
         }
 
-        //create Budget for each default category
+        //create Budgets for each category
         for (LedgerCategory cat : categoryCopies) {
             if (cat.getType() == CategoryType.EXPENSE) {
                 for (Budget.Period period : Budget.Period.values()) {
@@ -202,7 +191,7 @@ public class LedgerController {
         if(ledger == null){
             return false;
         }
-        if(newName == null || newName.trim().isEmpty()) {
+        if(newName == null || newName.isEmpty()) {
             return false;
         }
 
@@ -214,6 +203,4 @@ public class LedgerController {
         ledger.setName(newName);
         return ledgerDAO.update(ledger);
     }
-
-
 }
