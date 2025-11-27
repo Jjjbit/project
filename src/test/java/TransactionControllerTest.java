@@ -479,7 +479,31 @@ public class TransactionControllerTest {
 
     //test edit transfer invariant
     //test edit transfer: old note is not null and new note is null
-    //test edit transfer: old fromAccount is null and new fromAccount is not null
+    //test edit transfer: old fromAccount is null and new fromAccount is not null & old toAccount is not null and new toAccount is null
+    @Test
+    public void testUpdateTransfer_SetNewFromAccount(){
+        BasicAccount fromAccount = accountController.createBasicAccount("Savings Account",
+                BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS,
+                testUser, "Savings Account Notes", true, true);
+        Transfer transfer = transactionController.createTransfer(testLedger, null,
+                testAccount, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+                BigDecimal.valueOf(200.00));
+
+        boolean result = transactionController.updateTransfer(transfer, fromAccount, null,
+                null, null, null, null);
+        assertTrue(result);
+        //verify account balances updated
+        BasicAccount updatedFromAccount = (BasicAccount) accountDAO.getAccountById(fromAccount.getId());
+        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(300.00))); //500 - 200 = 300
+
+        BasicAccount updatedToAccount = (BasicAccount) accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //1000-200+200=1000
+
+        Transaction updatedTransfer = transactionDAO.getById(transfer.getId());
+        assertEquals(fromAccount.getId(), updatedTransfer.getFromAccount().getId());
+        assertNull(updatedTransfer.getToAccount());
+
+    }
     //test edit transfer: old fromAccount is not null and new fromAccount is null
 }
 
