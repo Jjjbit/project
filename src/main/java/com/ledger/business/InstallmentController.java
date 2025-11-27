@@ -8,7 +8,6 @@ import com.ledger.orm.TransactionDAO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.Optional;
 
 public class InstallmentController {
     private final InstallmentDAO installmentDAO;
@@ -110,69 +109,42 @@ public class InstallmentController {
 
     }
 
-    public boolean deleteInstallment(Installment plan, CreditAccount account, User user) {
+    public boolean deleteInstallment(Installment plan, CreditAccount account) {
         if (plan == null) {
             return false;
         }
-        if (installmentDAO.getById(plan.getId()) == null) {
-            return false;
-        }
-
-        Optional<CreditAccount> creditAccountOptional = accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(acc -> acc.getId() == account.getId() && acc instanceof CreditAccount)
-                .map(acc -> (CreditAccount) acc)
-                .findFirst();
-        if (creditAccountOptional.isEmpty()) {
-            return false;
-        }
-
-        CreditAccount creditAccount = creditAccountOptional.get();
 
         if(plan.isIncludedInCurrentDebts()){
-            BigDecimal oldDebt = creditAccount.getCurrentDebt();
-            creditAccount.setCurrentDebt(oldDebt.subtract(plan.getRemainingAmount()));
-            accountDAO.update(creditAccount); //update current debt in db
+            BigDecimal oldDebt = account.getCurrentDebt();
+            account.setCurrentDebt(oldDebt.subtract(plan.getRemainingAmount()));
+            accountDAO.update(account); //update current debt in db
         }
 
         return installmentDAO.delete(plan);
     }
 
-    //includedInCurrentDebts id null means no change
-    public boolean editInstallment(Installment plan, Boolean includedInCurrentDebts, User user, CreditAccount account) {
+    //includedInCurrentDebts is null means no change
+    public boolean editInstallment(Installment plan, Boolean includedInCurrentDebts, CreditAccount account) {
         if(plan == null){
             return false;
         }
 
         if(includedInCurrentDebts != null && includedInCurrentDebts != plan.isIncludedInCurrentDebts()) {
-
-            Optional<CreditAccount> creditAccountOptional = accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                    .filter(acc -> acc.getId() == account.getId() && acc instanceof CreditAccount)
-                    .map(acc -> (CreditAccount) acc)
-                    .findFirst();
-
-            Optional<BigDecimal> oldDebtOptional = creditAccountOptional
-                    .map(CreditAccount::getCurrentDebt);
-
-            if (creditAccountOptional.isEmpty() || oldDebtOptional.isEmpty()) {
-                return false;
-            }
-            CreditAccount creditAccount = creditAccountOptional.get();
-            BigDecimal oldDebt = oldDebtOptional.get();
+            BigDecimal oldDebt = account.getCurrentDebt();
 
             if (includedInCurrentDebts) {
-                creditAccount.setCurrentDebt(oldDebt.add(plan.getRemainingAmount()));
+                account.setCurrentDebt(oldDebt.add(plan.getRemainingAmount()));
             } else {
-                creditAccount.setCurrentDebt(oldDebt.subtract(plan.getRemainingAmount()));
+                account.setCurrentDebt(oldDebt.subtract(plan.getRemainingAmount()));
             }
             plan.setIncludedInCurrentDebts(includedInCurrentDebts);
-            accountDAO.update(creditAccount); //update current debt in db
+            accountDAO.update(account); //update current debt in db
             return installmentDAO.update(plan); //update plan in db
         }
         return true;
     }
 
-
-    public boolean payInstallment(Installment plan, CreditAccount account, User user) {
+    public boolean payInstallment(Installment plan, CreditAccount account) {
         if (plan == null) {
             return false;
         }
@@ -181,29 +153,21 @@ public class InstallmentController {
         }
 
         BigDecimal paymentAmount = plan.getMonthlyPayment(plan.getPaidPeriods() + 1);
-        Optional<CreditAccount> creditAccountOptional = accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(acc -> acc.getId() == account.getId() && acc instanceof CreditAccount)
-                .map(acc -> (CreditAccount) acc)
-                .findFirst();
-        if (creditAccountOptional.isEmpty()) {
-            return false;
-        }
-        CreditAccount creditAccount = creditAccountOptional.get();
         LedgerCategory category = plan.getCategory();
         Ledger ledger = category.getLedger();
 
         Transaction tx = new Expense(LocalDate.now(), paymentAmount,
                 "Installment payment " + (plan.getPaidPeriods() + 1) + " " + plan.getName(),
-                creditAccount, ledger, category);
+                account, ledger, category);
         transactionDAO.insert(tx); //insert transaction to db
 
         plan.repayOnePeriod(); //update remaining amount and paid periods
-        creditAccount.debit(paymentAmount); //reduce balance or increase debt
+        account.debit(paymentAmount); //reduce balance or increase debt
         if(plan.isIncludedInCurrentDebts()){
-            BigDecimal oldDebt = creditAccount.getCurrentDebt();
-            creditAccount.setCurrentDebt(oldDebt.subtract(paymentAmount));
+            BigDecimal oldDebt = account.getCurrentDebt();
+            account.setCurrentDebt(oldDebt.subtract(paymentAmount));
         }
-        accountDAO.update(creditAccount); //update balance and current debt in db
+        accountDAO.update(account); //update balance and current debt in db
 
         return installmentDAO.update(plan); //update plan in db
     }

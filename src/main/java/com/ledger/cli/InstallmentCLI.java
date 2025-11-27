@@ -37,7 +37,7 @@ public class InstallmentCLI {
         if (creditAccount == null) return;
 
         // input installment details
-        System.out.println("Enter name for your installment :");
+        System.out.print("Enter name for your installment :");
         String name = scanner.nextLine().trim();
 
         // input total amount
@@ -143,12 +143,12 @@ public class InstallmentCLI {
         String confirm = scanner.nextLine().trim().toLowerCase();
 
         if (confirm.equals("y") || confirm.equals("yes")) {
-            boolean success= installmentController.payInstallment(selectedPlan, creditAccount, userController.getCurrentUser());
+            boolean success= installmentController.payInstallment(selectedPlan, creditAccount);
             if(!success){
-                System.out.println("✗ Payment failed!");
+                System.out.println("Payment failed!");
                 return;
             }
-            System.out.println("✓ Payment completed successfully!");
+            System.out.println("Payment completed successfully!");
             System.out.println(formatInstallment(selectedPlan));
         } else {
             System.out.println("Payment cancelled.");
@@ -187,16 +187,16 @@ public class InstallmentCLI {
         Installment selectedPlan = plans.get(choice);
 
         // confirm deletion
-        System.out.print("Are you sure you want to delete this installment plan? Transactions related to this installment will be retained. (y/n): ");
+        System.out.print("Transactions related to this installment will be retained. Are you sure you want to delete this installment plan? (y/n): ");
         String confirm = scanner.nextLine().trim().toLowerCase();
 
         if (confirm.equals("y") || confirm.equals("yes")) {
-            boolean success= installmentController.deleteInstallment(selectedPlan, creditAccount, userController.getCurrentUser());
+            boolean success= installmentController.deleteInstallment(selectedPlan, creditAccount);
             if(!success){
-                System.out.println("✗ Deletion failed!");
+                System.out.println("Deletion failed!");
                 return;
             }
-            System.out.println("✓ Installment plan deleted successfully!");
+            System.out.println("Installment plan deleted successfully!");
         } else {
             System.out.println("Deletion cancelled.");
         }
@@ -223,13 +223,14 @@ public class InstallmentCLI {
         }
         System.out.println("0. Cancel");
         System.out.print("Enter choice: ");
-        int choice = Integer.parseInt(scanner.nextLine().trim()) ;
+        String inputPlan = scanner.nextLine().trim();
+        int choice = Integer.parseInt(inputPlan);
         if(choice==0) return;
-        if (choice < 0 || choice >= plans.size()) {
+        if (choice < 0 || choice > plans.size()) {
             System.out.println("Invalid choice!");
             return;
         }
-        Installment selectedPlan = plans.get(choice);
+        Installment selectedPlan = plans.get(choice-1);
 
         if(selectedPlan.isIncludedInCurrentDebts()){
             System.out.print("The installment is currently included in current debts. Do you want to exclude it? (y/n): ");
@@ -242,7 +243,7 @@ public class InstallmentCLI {
             includeInCurrentDebt = !selectedPlan.isIncludedInCurrentDebts();
         }
 
-        boolean success= installmentController.editInstallment(selectedPlan, includeInCurrentDebt, userController.getCurrentUser(), creditAccount);
+        boolean success= installmentController.editInstallment(selectedPlan, includeInCurrentDebt, creditAccount);
         if(!success) {
             System.out.println("Edit failed!");
             return;

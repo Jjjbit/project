@@ -27,7 +27,6 @@ public class InstallmentControllerTest {
     private CreditAccount account;
     private LedgerCategory category;
     private Ledger testLedger;
-    private User testUser;
 
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
@@ -58,7 +57,7 @@ public class InstallmentControllerTest {
 
         // Create a test user
         userController.register("test user", "password123");
-        testUser = userController.login("test user", "password123");
+        User testUser = userController.login("test user", "password123");
 
         // Create a test credit account for the user
         account = accountController.createCreditAccount("Test Credit Account", "Credit Account Note",
@@ -254,7 +253,7 @@ public class InstallmentControllerTest {
                 LocalDate.now(), //repaid periods =0
                 category, true, testLedger);
 
-        boolean deleted = installmentController.deleteInstallment(plan, account, testUser);
+        boolean deleted = installmentController.deleteInstallment(plan, account);
         assertTrue(deleted);
         assertNull(installmentDAO.getById(plan.getId()));
         assertEquals(0, installmentDAO.getByAccountId(account.getId()).size());
@@ -268,12 +267,12 @@ public class InstallmentControllerTest {
                 Installment.Strategy.EVENLY_SPLIT,
                 LocalDate.now().minusMonths(3), // 3 months ago
                 category, true, testLedger);
-        installmentController.payInstallment(plan, account, testUser); //pay once
+        installmentController.payInstallment(plan, account); //pay once
         //total repayment = 120 + 5% = 126
         //remaining amount = 126 - (126/12 * 4) = 84.0
         //repaid amount = 126/12 *4 =42.0
 
-        boolean deleted = installmentController.deleteInstallment(plan, account, testUser);
+        boolean deleted = installmentController.deleteInstallment(plan, account);
         assertTrue(deleted);
 
         assertNull(installmentDAO.getById(plan.getId()));
@@ -293,7 +292,7 @@ public class InstallmentControllerTest {
                 BigDecimal.valueOf(5.00), // interest
                 Installment.Strategy.EVENLY_SPLIT, LocalDate.now(), category, true, testLedger);
 
-        boolean paid = installmentController.payInstallment(plan, account, testUser);
+        boolean paid = installmentController.payInstallment(plan, account);
         assertTrue(paid);
         assertEquals(2, plan.getPaidPeriods());
         assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.valueOf(105.00))); // 126 - 10.5*2 = 105
@@ -319,7 +318,7 @@ public class InstallmentControllerTest {
                 Installment.Strategy.EVENLY_SPLIT, LocalDate.now(), category, true, testLedger);
 
         for (int i = 2; i <= 12; i++) {
-            boolean paid = installmentController.payInstallment(plan, account, testUser);
+            boolean paid = installmentController.payInstallment(plan, account);
             assertTrue(paid);
             assertEquals(i, plan.getPaidPeriods());
         }
@@ -349,7 +348,7 @@ public class InstallmentControllerTest {
         //remaining amount = 0
         //repaid amount =126
 
-        boolean paid = installmentController.payInstallment(plan, account, testUser);
+        boolean paid = installmentController.payInstallment(plan, account);
         assertFalse(paid);
         assertEquals(12, plan.getPaidPeriods());
         assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.ZERO));
@@ -376,7 +375,7 @@ public class InstallmentControllerTest {
         //balance of account =1000-10.5=989.5
         //current debt =20 +115.5=135.5
 
-        boolean edited = installmentController.editInstallment(plan, false, testUser, account);
+        boolean edited = installmentController.editInstallment(plan, false, account);
         assertTrue(edited);
 
         Installment updatedPlan = installmentDAO.getById(plan.getId());
@@ -399,7 +398,7 @@ public class InstallmentControllerTest {
         //balance of account =1000-10.5=989.5
         //current debt =20
 
-        boolean edited = installmentController.editInstallment(plan, true, testUser, account);
+        boolean edited = installmentController.editInstallment(plan, true, account);
         assertTrue(edited);
 
         Installment updatedPlan = installmentDAO.getById(plan.getId());
