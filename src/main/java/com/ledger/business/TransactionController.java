@@ -62,6 +62,9 @@ public class TransactionController {
 
     public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String description,
                                  LocalDate date, BigDecimal amount) {
+        if (ledger == null) {
+            return null;
+        }
 
         if (category == null) {
             return null;
@@ -96,14 +99,24 @@ public class TransactionController {
 
     public Transfer createTransfer(Ledger ledger, Account fromAccount, Account toAccount, String description,
                                    LocalDate date, BigDecimal amount) {
-
+        if( ledger == null) {
+            return null;
+        }
         if (fromAccount != null && toAccount != null && fromAccount.getId() == toAccount.getId()) {
             return null;
         }
         if( fromAccount == null && toAccount == null) {
             return null;
         }
-
+        if( fromAccount != null && !fromAccount.getSelectable()) {
+            return null;
+        }
+        if( toAccount != null && !toAccount.getSelectable()) {
+            return null;
+        }
+        if( amount == null) {
+            return null;
+        }
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
@@ -161,12 +174,12 @@ public class TransactionController {
         return transactionDAO.delete(tx);
     }
 
-
     //toAccount is null meaning no change
     //category is null meaning no change
     //ledger is null meaning no change
     //date is null meaning no change
     //amount is null meaning no change
+    //note is null meaning removal of old note
     public boolean updateIncome(Income income, Account toAccount, LedgerCategory category, String note,
                                 LocalDate date, BigDecimal amount, Ledger ledger) {
         if (income == null) {
@@ -278,7 +291,12 @@ public class TransactionController {
         if (newFromAccount != null && newToAccount != null && newFromAccount.getId() == newToAccount.getId()) {
             return false;
         }
-
+        if(newFromAccount != null && !newFromAccount.getSelectable()) {
+            return false;
+        }
+        if(newToAccount != null && !newToAccount.getSelectable()) {
+            return false;
+        }
         if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
             return false;
         } //change amount and amount>0
@@ -292,7 +310,7 @@ public class TransactionController {
             transfer.setLedger(ledger);
         } //change ledger
 
-        //fromAccount change or removal/addition
+        //fromAccount change, removal or addition
         if (newFromAccount != null && (oldFromAccount == null || newFromAccount.getId() != oldFromAccount.getId())
                 || (newFromAccount == null && oldFromAccount != null)) {
             //rollback old fromAccount
@@ -310,7 +328,6 @@ public class TransactionController {
                 newFromAccount.debit(amountToApply);
                 accountDAO.update(newFromAccount);
             }
-
             transfer.setFromAccount(newFromAccount); //apply new fromAccount (can be null)
         }
 
