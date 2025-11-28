@@ -28,7 +28,6 @@ public class AccountCLI {
 
         System.out.println("\n=== Create New Account ===");
 
-
         //choose account category
         AccountCategory category = selectAccountCategory();
         if (category == null) return;
@@ -42,7 +41,7 @@ public class AccountCLI {
         String name = inputAccountName();
 
         BigDecimal balance = BigDecimal.ZERO;
-        if(type != AccountType.LOAN){ //balance of LoanAccount  is 0
+        if(type != AccountType.LOAN && type != AccountType.BORROWING){
             System.out.print("Enter initial balance: ");
             String balanceInput = scanner.nextLine().trim();
             balance = balanceInput.isEmpty() ? BigDecimal.ZERO : new BigDecimal(balanceInput);
@@ -61,7 +60,14 @@ public class AccountCLI {
             } else if(type == AccountType.CREDIT_CARD || type == AccountType.OTHER_CREDIT) {
                 account = createCreditCardAccount(name, balance, type, includedInNetWorth, selectable, note);
             }
-        }else{
+        }else if(AccountCategory.VIRTUAL_ACCOUNT.equals(category)){
+            if(type == AccountType.BORROWING){
+                account = createBorrowingAccount(name, includedInNetWorth, note, selectable);
+            }else{
+                account = createLendingAccount(name, includedInNetWorth, note, selectable, balance);
+            }
+        }
+        else{
             account = createBasicAccount(name, balance, type, category, includedInNetWorth, selectable, note);
         }
 
@@ -512,7 +518,7 @@ public class AccountCLI {
         System.out.println("\n=== Account Summary ===");
 
         //select Account
-        Account account = selectAccount(); //select visible BasicAccount, LoanAccount, CreditAccount
+        Account account = selectAccount();
         if( account == null) {
             System.out.println("Account selection cancelled.");
             return;
@@ -613,11 +619,56 @@ public class AccountCLI {
     }
 
     //private helper methods for input and selection
+    private LocalDate inputDate() {
+        String inputDate = scanner.nextLine().trim();
+        if (inputDate.isEmpty()) {
+            return LocalDate.now();
+        }
+        if(!inputDate.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            System.out.println("Invalid date format. Please use YYYY-MM-DD.");
+            return inputDate();
+        }
+        return LocalDate.parse(inputDate);
+    }
+
+    private Account createBorrowingAccount(String name, boolean includedInNetWorth, String note, boolean selectable) {
+        System.out.print("Enter borrowing amount: ");
+        BigDecimal amount = new BigDecimal(scanner.nextLine().trim());
+        if(amount.compareTo(BigDecimal.ZERO) <= 0){
+            return null;
+        }
+
+        System.out.println("Select to account for this borrowing: ");
+        Account toAccount = getSelectableAccount();
+
+        System.out.println("Select ledger for this borrowing account: ");
+        Ledger ledger = selectLedger(userController.getCurrentUser());
+
+        System.out.print("Enter borrowing date (YYYY-MM-DD): ");
+        LocalDate date = inputDate();
+
+        return accountController.createBorrowingAccount(userController.getCurrentUser(), name, amount, note,
+                includedInNetWorth, selectable, toAccount, date, ledger);
+    }
+
+    private Account createLendingAccount(String name, boolean includedInNetWorth, String note, boolean selectable, BigDecimal balance) {
+        System.out.println("Select from account for this lending: ");
+        Account fromAccount = getSelectableAccount();
+
+        System.out.println("Select ledger for this lending account: ");
+        Ledger ledger = selectLedger(userController.getCurrentUser());
+
+        System.out.print("Enter lending date (YYYY-MM-DD): ");
+        LocalDate date = inputDate();
+
+        return accountController.createLendingAccount(userController.getCurrentUser(), name, balance,
+                note, includedInNetWorth, selectable, fromAccount, date, ledger);
+    }
     private AccountCategory selectAccountCategory() {
         System.out.println("\nSelect account category:");
 
         AccountCategory[] categories = Arrays.stream(AccountCategory.values())
-                .filter(c -> c != AccountCategory.VIRTUAL_ACCOUNT)
+                //.filter(c -> c != AccountCategory.VIRTUAL_ACCOUNT)
                 .toArray(AccountCategory[]::new);
 
         for (int i = 0; i < categories.length; i++) {
@@ -746,7 +797,7 @@ public class AccountCLI {
         if (choice == 0) return null;
         if (choice < 1 || choice > userAccounts.size()) {
             System.out.println("Invalid choice!");
-            return selectAccount();
+            return getSelectableAccount();
         }
 
         return userAccounts.get(choice - 1);
@@ -860,7 +911,7 @@ public class AccountCLI {
         int repaidPeriods = repaidInput.isEmpty() ? 0 : Integer.parseInt(repaidInput);
 
         System.out.println("Select the account to receive the loan amount: (optional) ");
-        Account receivingAccount = selectAccount(); //receiving account can be null
+        Account receivingAccount = getSelectableAccount(); //receiving account can be null
 
         System.out.print("necessary enter repayment date (YYYY-MM-DD): ");
         LocalDate repaymentDay = inputRepaymentDate(); //repayment date can not be null
@@ -906,7 +957,10 @@ public class AccountCLI {
                     AccountType.FUTURES, AccountType.CRYPTO,
                     AccountType.FIXED_DEPOSIT, AccountType.OTHER_INVEST
             };
-            default -> AccountType.values();
+            case VIRTUAL_ACCOUNT -> new AccountType[]{
+                    AccountType.BORROWING, AccountType.LENDING
+            };
+            //default -> AccountType.values();
         };
     }
 
