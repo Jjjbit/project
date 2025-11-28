@@ -411,7 +411,7 @@ public class ReportControllerTest {
 
     //test getActiveBorrowingAccounts
     @Test
-    public void testGetActiveBorrowingAccounts() {
+    public void testGetVisibleBorrowingAccounts() {
         //create borrowing account not hidden
         Account borrowingAccount1 = accountController.createBorrowingAccount(testUser, "Borrowing Account 1",
                 BigDecimal.valueOf(50.00), "Car loan account", true, true, testAccount,
@@ -425,14 +425,14 @@ public class ReportControllerTest {
         assertNotNull(borrowingAccount2);
         accountController.hideAccount(borrowingAccount2);
 
-        List<BorrowingAccount> activeBorrowingAccounts = reportController.getActiveBorrowingAccounts(testUser);
+        List<BorrowingAccount> activeBorrowingAccounts = reportController.getVisibleBorrowingAccounts(testUser);
         assertEquals(1, activeBorrowingAccounts.size());
         assertEquals("Borrowing Account 1", activeBorrowingAccounts.getFirst().getName());
     }
 
     //test getActiveLendingAccounts
     @Test
-    public void testGetActiveLendingAccounts() {
+    public void testGetVisibleLendingAccounts() {
         //create visible lending account
         Account lendingAccount1 = accountController.createLendingAccount(testUser, "Lending Account 1",
                 BigDecimal.valueOf(100.00), "Mortgage account", true, true,
@@ -446,7 +446,7 @@ public class ReportControllerTest {
         assertNotNull(lendingAccount2);
         accountController.hideAccount(lendingAccount2);
 
-        List<LendingAccount> activeLendingAccounts = reportController.getActiveLendingAccounts(testUser);
+        List<LendingAccount> activeLendingAccounts = reportController.getVisibleLendingAccounts(testUser);
         assertEquals(1, activeLendingAccounts.size());
         assertEquals("Lending Account 1", activeLendingAccounts.getFirst().getName());
     }
@@ -613,14 +613,14 @@ public class ReportControllerTest {
                 BigDecimal.valueOf(50.00), "Car loan account", true, true,
                 testAccount, LocalDate.now(), testLedger); //balance of testAccount is 300+50=350.00
         assertNotNull(borrowingAccount1);
-        List<BorrowingAccount> borrowingAccounts = reportController.getActiveBorrowingAccounts(testUser);
+        List<BorrowingAccount> borrowingAccounts = reportController.getVisibleBorrowingAccounts(testUser);
         assertEquals(1, borrowingAccounts.size());
 
         BigDecimal totalAsset = reportController.getTotalAssets(testUser);
         List<Account> accountsNotHidden = reportController.getVisibleAccounts(testUser);
         assertEquals(9, accountsNotHidden.size());
 
-        List<LendingAccount> activeLendingAccounts = reportController.getActiveLendingAccounts(testUser);
+        List<LendingAccount> activeLendingAccounts = reportController.getVisibleLendingAccounts(testUser);
         assertEquals(3, activeLendingAccounts.size());
 
         System.out.println("Total Asset: " + totalAsset);
@@ -711,7 +711,7 @@ public class ReportControllerTest {
         assertNotNull(borrowingAccount4);
 
         BigDecimal totalLiability = reportController.getTotalLiabilities(testUser);
-        List<BorrowingAccount> activeBorrowingAccounts = reportController.getActiveBorrowingAccounts(testUser);
+        List<BorrowingAccount> activeBorrowingAccounts = reportController.getVisibleBorrowingAccounts(testUser);
         assertEquals(3, activeBorrowingAccounts.size());
 
         assertEquals(0, totalLiability.compareTo(BigDecimal.valueOf(6965.94))); //150 + 1111.00 + 507.50 + 5077.44 + 50 + 70 = 6965.94

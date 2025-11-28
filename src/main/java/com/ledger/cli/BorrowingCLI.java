@@ -92,7 +92,7 @@ public class BorrowingCLI {
     public void showAllBorrowings() {
         System.out.println("\n === Showing all borrowings ===");
 
-        List<BorrowingAccount> userBorrowings = reportController.getActiveBorrowingAccounts(userController.getCurrentUser());
+        List<BorrowingAccount> userBorrowings = reportController.getVisibleBorrowingAccounts(userController.getCurrentUser());
         if(userBorrowings.isEmpty()){
             System.out.println("No active borrowings found.");
         }
@@ -112,7 +112,7 @@ public class BorrowingCLI {
 
         //select borrowing to edit
         System.out.println("\nSelect the borrowing to edit:");
-        List<BorrowingAccount> userBorrowings = reportController.getActiveBorrowingAccounts(userController.getCurrentUser());
+        List<BorrowingAccount> userBorrowings = reportController.getVisibleBorrowingAccounts(userController.getCurrentUser());
         for(int i=0;i<userBorrowings.size();i++){
             BorrowingAccount borrowing=userBorrowings.get(i);
             System.out.println((i+1) + ". " + "Name: " + borrowing.getName() +
@@ -213,7 +213,7 @@ public class BorrowingCLI {
 
        //select borrowing to delete
         System.out.println("Select the borrowing to delete:");
-        List<BorrowingAccount> userBorrowings = reportController.getActiveBorrowingAccounts(userController.getCurrentUser());
+        List<BorrowingAccount> userBorrowings = reportController.getVisibleBorrowingAccounts(userController.getCurrentUser());
         for(int i=0;i<userBorrowings.size();i++){
             BorrowingAccount borrowing=userBorrowings.get(i);
             System.out.println((i+1) + ". " + "Name: " + borrowing.getName() +
@@ -258,7 +258,7 @@ public class BorrowingCLI {
 
         //select borrowing to make payment
         System.out.println("Select the borrowing to make a payment to:");
-        List<BorrowingAccount> userBorrowings = reportController.getActiveBorrowingAccounts(userController.getCurrentUser());
+        List<BorrowingAccount> userBorrowings = reportController.getVisibleBorrowingAccounts(userController.getCurrentUser());
         for(int i=0;i<userBorrowings.size();i++){
             BorrowingAccount borrowing=userBorrowings.get(i);
             System.out.println((i+1) + ". " + "Name: " + borrowing.getName() +

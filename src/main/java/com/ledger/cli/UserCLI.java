@@ -73,12 +73,12 @@ public class UserCLI {
         BigDecimal totalLiabilities = reportController.getTotalLiabilities(user);
         BigDecimal netWorth = totalAssets.subtract(totalLiabilities);
 
-        BigDecimal totalBorrowing = reportController.getActiveBorrowingAccounts(user).stream()
+        BigDecimal totalBorrowing = reportController.getVisibleBorrowingAccounts(user).stream()
                 .filter(Account::getIncludedInNetAsset)
                 .map(BorrowingAccount::getRemainingAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalLending = reportController.getActiveLendingAccounts(user).stream()
+        BigDecimal totalLending = reportController.getVisibleLendingAccounts(user).stream()
                 .filter(Account::getIncludedInNetAsset)
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

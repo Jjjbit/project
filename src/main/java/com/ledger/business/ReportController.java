@@ -82,7 +82,7 @@ public class ReportController {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public List<BorrowingAccount> getActiveBorrowingAccounts(User user) {
+    public List<BorrowingAccount> getVisibleBorrowingAccounts(User user) {
         return accountDAO.getAccountsByOwnerId(user.getId()).stream()
                 .filter(account -> account instanceof BorrowingAccount)
                 .map(account -> (BorrowingAccount) account)
@@ -90,7 +90,7 @@ public class ReportController {
                 .toList();
     }
 
-    public List<LendingAccount> getActiveLendingAccounts(User user) {
+    public List<LendingAccount> getVisibleLendingAccounts(User user) {
         return accountDAO.getAccountsByOwnerId(user.getId()).stream()
             .filter(account -> account instanceof LendingAccount)
             .map(account -> (LendingAccount) account)
@@ -104,9 +104,8 @@ public class ReportController {
                 .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalLending = getActiveLendingAccounts(user).stream()
+        BigDecimal totalLending = getVisibleLendingAccounts(user).stream()
                 .filter(Account::getIncludedInNetAsset)
-                .filter(account -> !account.getIsEnded())
                 .map(LendingAccount::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return totalAssets.add(totalLending);
@@ -123,9 +122,8 @@ public class ReportController {
                 .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
                 .map(account -> ((LoanAccount) account).getRemainingAmount()) //get this.remainingAmount
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalBorrowing = getActiveBorrowingAccounts(user).stream()
+        BigDecimal totalBorrowing = getVisibleBorrowingAccounts(user).stream()
                 .filter(Account::getIncludedInNetAsset)
-                .filter(account -> !account.getIsEnded())
                 .map(BorrowingAccount::getRemainingAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalInstallmentDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
