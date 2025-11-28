@@ -39,11 +39,7 @@ public class LedgerCategoryCLI {
 
         //enter category name
         System.out.print("Enter the name of the new category: ");
-        String categoryName = scanner.nextLine().trim();
-        if(categoryName.isEmpty()){
-            System.out.println("Category name cannot be empty.");
-            return;
-        }
+        String categoryName = inputName();
 
         //enter category type
         System.out.println("Enter the type of the new category: ");
@@ -89,12 +85,12 @@ public class LedgerCategoryCLI {
 
         //enter sub-category name
         System.out.print("Enter the name of the new sub-category: ");
-        String subCategoryName = scanner.nextLine().trim();
+        String subCategoryName = inputName();
 
         //create sub-category
         LedgerCategory subCategory = ledgerCategoryController.createSubCategory(subCategoryName, parentCategory, selectedLedger);
         if (subCategory == null) {
-            System.out.println("Failed to create sub-category. It may already exist or the input was invalid.");
+            System.out.println("Failed to create sub-category.");
             return;
         }
         System.out.println("Sub-category '" + subCategory.getName() + "' added successfully under category '"
@@ -114,25 +110,16 @@ public class LedgerCategoryCLI {
             return;
         }
 
-        //select category type
-        System.out.println("Enter the type of the category to rename (INCOME/EXPENSE): ");
-        String categoryTypeInput = selectCategoryType();
-        CategoryType categoryType = categoryTypeInput.equalsIgnoreCase("INCOME") ?
-                CategoryType.INCOME : CategoryType.EXPENSE;
-
         //select category
-        List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
-                .filter(cat -> cat.getType() == categoryType)
-                .toList();
+        List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
         System.out.println("\nSelect a category to rename:");
         LedgerCategory categoryToRename = selectCategoryWithTree(allCategories);
 
         //enter new name
         System.out.print("Enter the new name for the category '" + categoryToRename.getName() + "': ");
-        String newName = scanner.nextLine().trim();
+        String newName = scanner.nextLine();
         if(newName.isEmpty()){
-            System.out.println("Category name cannot be empty.");
-            return;
+            newName = categoryToRename.getName();
         }
 
         //rename category
@@ -148,7 +135,6 @@ public class LedgerCategoryCLI {
     public void deleteCategory() {
         System.out.println("\n === Deleting a category ===");
 
-
         //select ledger
         System.out.println("\nSelect a ledger:");
         Ledger selectedLedger = selectLedger(userController.getCurrentUser());
@@ -156,7 +142,6 @@ public class LedgerCategoryCLI {
             System.out.println("No ledger selected.");
             return;
         }
-
 
         //select category
         List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
@@ -312,6 +297,15 @@ public class LedgerCategoryCLI {
     }
 
     //private helper methods
+    private String inputName(){
+        System.out.print("Enter the name: ");
+        String name = scanner.nextLine();
+        if(name.isEmpty()){
+            System.out.println("Name cannot be empty.");
+            return inputName();
+        }
+        return name;
+    }
     private void printCategoryTree(Ledger selectedLedger) {
         List<LedgerCategory> updatedCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
 

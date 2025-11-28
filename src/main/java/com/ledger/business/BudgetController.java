@@ -8,7 +8,6 @@ import com.ledger.orm.BudgetDAO;
 import com.ledger.orm.LedgerCategoryDAO;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +21,9 @@ public class BudgetController {
     }
 
     public boolean editBudget(Budget budget, BigDecimal newAmount) {
+        if(budget == null || newAmount == null) {
+            return false;
+        }
         if (newAmount.compareTo(BigDecimal.ZERO) < 0) {
             return false;
         }
@@ -30,11 +32,17 @@ public class BudgetController {
     }
 
     public boolean refreshBudget(Budget budget) {
+        if(budget == null) {
+            return false;
+        }
         budget.refreshIfExpired();
         return budgetDAO.update(budget);
     }
 
     public boolean mergeBudgets(Budget targetBudget) {
+        if (targetBudget == null) {
+            return false;
+        }
         refreshBudget(targetBudget);
 
         if (targetBudget.getCategory() != null) {
@@ -81,7 +89,7 @@ public class BudgetController {
             BigDecimal mergedAmount = sourceBudgets.stream()
                     .map(Budget::getAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            targetBudget.setAmount(targetBudget.getAmount().add(mergedAmount).setScale(2, RoundingMode.HALF_UP));
+            targetBudget.setAmount(targetBudget.getAmount().add(mergedAmount));
         }
         return budgetDAO.update(targetBudget);
     }

@@ -25,7 +25,7 @@ public class LedgerCategoryController {
             return null;
         }
 
-        if(name == null || name.trim().isEmpty()) {
+        if(name == null || name.isEmpty()) {
             return null;
         }
         if(type == null){
@@ -45,7 +45,6 @@ public class LedgerCategoryController {
         }
 
         return category;
-
     }
 
     public LedgerCategory createSubCategory(String name, LedgerCategory parentCategory, Ledger ledger) {
@@ -55,7 +54,7 @@ public class LedgerCategoryController {
         if(parentCategory.getParent()!=null){
             return null;
         }
-        if(name == null || name.trim().isEmpty()) {
+        if(name == null || name.isEmpty()) {
             return null;
         }
         if (ledgerCategoryDAO.getByNameAndLedger(name, ledger) != null) {
@@ -84,9 +83,7 @@ public class LedgerCategoryController {
         }
 
         subCategory.setParent(null);
-
         return ledgerCategoryDAO.update(subCategory); //update parent_id in database
-
     }
 
     public boolean demoteCategory(LedgerCategory category, LedgerCategory newParent) {
@@ -114,14 +111,16 @@ public class LedgerCategoryController {
 
         category.setParent(newParent);
         return ledgerCategoryDAO.update(category); //update parent_id in database
-
     }
 
     public boolean renameCategory(LedgerCategory category, String newName, Ledger ledger) {
         if(category == null){
             return false;
         }
-        if(newName == null || newName.trim().isEmpty()) {
+        if(ledger == null){
+            return false;
+        }
+        if(newName == null || newName.isEmpty()) {
             return false;
         }
 
@@ -148,7 +147,6 @@ public class LedgerCategoryController {
             for(Transaction tx : txs){
                 transactionDAO.delete(tx);
             }
-
         }else{ //migrate transactions
             if(migrateCategory == null){
                 return false;
@@ -166,11 +164,9 @@ public class LedgerCategoryController {
         }
 
         return ledgerCategoryDAO.delete(category);
-
     }
 
     public boolean changeParent (LedgerCategory category, LedgerCategory newParent) {
-
         if (category == null) {
             return false;
         }
