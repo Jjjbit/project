@@ -515,7 +515,8 @@ public class ReportControllerTest {
         accountController.hideAccount(borrowingAccount2);
 
         List<Account> accountsNotHidden = reportController.getVisibleAccounts(testUser);
-        assertEquals(3, accountsNotHidden.size());
+        assertEquals(5, accountsNotHidden.size());
+
         for( Account acc : accountsNotHidden) {
             assertFalse(acc.getHidden());
             System.out.println("Account ID: " + acc.getId() + ", class: " + acc.getClass().getSimpleName() +
@@ -617,7 +618,7 @@ public class ReportControllerTest {
 
         BigDecimal totalAsset = reportController.getTotalAssets(testUser);
         List<Account> accountsNotHidden = reportController.getVisibleAccounts(testUser);
-        assertEquals(5, accountsNotHidden.size());
+        assertEquals(9, accountsNotHidden.size());
 
         List<LendingAccount> activeLendingAccounts = reportController.getActiveLendingAccounts(testUser);
         assertEquals(3, activeLendingAccounts.size());

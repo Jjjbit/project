@@ -139,11 +139,8 @@ public class ReportController {
         return totalCreditDebt.add(totalUnpaidLoan).add(totalBorrowing).add(totalInstallmentDebt);
     }
 
-    public List<Account> getVisibleAccounts(User user) { //get visible BasicAccount, CreditAccount, LoanAccount
+    public List<Account> getVisibleAccounts(User user) {
         return accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(account -> account instanceof BasicAccount
-                        || account instanceof CreditAccount
-                        || account instanceof LoanAccount)
                 .filter(account -> !account.getHidden())
                 .toList();
     }
@@ -164,7 +161,7 @@ public class ReportController {
 
     public Budget getActiveBudgetByLedger(Ledger ledger, Budget.Period period) {
         Budget budget = budgetDAO.getBudgetByLedgerId(ledger.getId(), period);
-        if(budget!=null){
+        if(budget != null){
             budget.refreshIfExpired();
             budgetDAO.update(budget);
         }
@@ -173,7 +170,7 @@ public class ReportController {
 
     public Budget getActiveBudgetByCategory(LedgerCategory category, Budget.Period period) {
         Budget budget = budgetDAO.getBudgetByCategoryId(category.getId(), period);
-        if(budget!=null){
+        if(budget != null){
             budget.refreshIfExpired();
             budgetDAO.update(budget);
         }
@@ -214,7 +211,6 @@ public class ReportController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             return totalCategoryBudget.compareTo(budget.getAmount()) > 0; //>0: over budget
         }
-
     }
 
 }
