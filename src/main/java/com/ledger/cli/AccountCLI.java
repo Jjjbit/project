@@ -626,22 +626,16 @@ public class AccountCLI {
         System.out.println("0. Cancel");
         System.out.print("Enter number: ");
 
-        try {
-            int choice = scanner.nextInt();
-            scanner.nextLine(); // consume newline
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // consume newline
 
-            if (choice == 0) return null;
-            if (choice < 1 || choice > categories.length) {
-                System.out.println("Invalid choice!");
-                return selectAccountCategory();
-            }
-
-            return categories[choice - 1];
-        } catch (Exception e) {
-            scanner.nextLine(); // clear invalid input
-            System.out.println("Invalid input! Please enter a number.");
+        if (choice == 0) return null;
+        if (choice < 1 || choice > categories.length) {
+            System.out.println("Invalid choice!");
             return selectAccountCategory();
         }
+
+        return categories[choice - 1];
     }
 
     private AccountType selectAccountType(AccountCategory category) {
@@ -654,22 +648,16 @@ public class AccountCLI {
         System.out.println("0. Back");
         System.out.print("Enter number: ");
 
-        try {
-            int choice = scanner.nextInt();
-            scanner.nextLine(); // consume newline
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // consume newline
 
-            if (choice == 0) return null;
-            if (choice < 1 || choice > availableTypes.length) {
-                System.out.println("Invalid choice!");
-                return selectAccountType(category);
-            }
-
-            return availableTypes[choice - 1];
-        } catch (Exception e) {
-            scanner.nextLine(); // clear invalid input
-            System.out.println("Invalid input! Please enter a number.");
+        if (choice == 0) return null;
+        if (choice < 1 || choice > availableTypes.length) {
+            System.out.println("Invalid choice!");
             return selectAccountType(category);
         }
+
+        return availableTypes[choice - 1];
     }
 
     private String inputAccountName() {
@@ -711,6 +699,7 @@ public class AccountCLI {
         String note = scanner.nextLine().trim();
         return note.isEmpty() ? null : note;
     }
+
     private Integer inputOptionalInteger(String prompt, int min, int max) {
         System.out.print(prompt);
         String input = scanner.nextLine().trim();
