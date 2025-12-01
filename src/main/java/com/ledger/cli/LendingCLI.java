@@ -1,9 +1,13 @@
 package com.ledger.cli;
 
 import com.ledger.business.AccountController;
+import com.ledger.business.LedgerController;
 import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
-import com.ledger.domain.*;
+import com.ledger.domain.Account;
+import com.ledger.domain.Ledger;
+import com.ledger.domain.LendingAccount;
+import com.ledger.domain.User;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,9 +19,11 @@ public class LendingCLI {
     private final ReportController reportController;
     private final AccountController accountController;
     private final UserController userController;
+    private final LedgerController ledgerController;
 
     public LendingCLI(ReportController reportController, AccountController accountController,
-                      UserController userController) {
+                      UserController userController, LedgerController ledgerController) {
+        this.ledgerController = ledgerController;
         this.userController = userController;
         this.accountController = accountController;
         this.reportController = reportController;
@@ -56,10 +62,7 @@ public class LendingCLI {
         //enter from account option can be added later
         System.out.println("Select an account to lend from: ");
         Account fromAccount;
-        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
-                .filter(Account::getSelectable)
-                .toList();
-
+        List<Account> accounts = accountController.getSelectableAccounts(userController.getCurrentUser());
         for (int i = 0; i < accounts.size(); i++) {
             System.out.println((i + 1) + ". " + accounts.get(i).getName());
         }
@@ -93,7 +96,7 @@ public class LendingCLI {
     public void showAllLendings() {
         System.out.println("\n === Listing all lendings ===");
 
-        List<LendingAccount> lendings = reportController.getVisibleLendingAccounts(userController.getCurrentUser());
+        List<LendingAccount> lendings = accountController.getVisibleLendingAccounts(userController.getCurrentUser());
         if (lendings.isEmpty()) {
             System.out.println("No active lendings found.");
             return;
@@ -113,7 +116,7 @@ public class LendingCLI {
         System.out.println("\n === Editing a lending ===");
 
         System.out.println("\nSelect the lending to edit:");
-        List<LendingAccount> userLendings = reportController.getVisibleLendingAccounts(userController.getCurrentUser());
+        List<LendingAccount> userLendings = accountController.getVisibleLendingAccounts(userController.getCurrentUser());
 
         for(int i=0;i<userLendings.size();i++){
             LendingAccount lending=userLendings.get(i);
@@ -218,7 +221,7 @@ public class LendingCLI {
         System.out.println("\n === Deleting a lending ===");
 
         System.out.println("Select the lending to delete:");
-        List<LendingAccount> userLendings = reportController.getVisibleLendingAccounts(userController.getCurrentUser());
+        List<LendingAccount> userLendings = accountController.getVisibleLendingAccounts(userController.getCurrentUser());
         System.out.println("0. Cancel");
         for(int i=0;i<userLendings.size();i++){
             LendingAccount lending=userLendings.get(i);
@@ -267,7 +270,7 @@ public class LendingCLI {
         System.out.println("\n === Receiving a lending payment ===");
 
         System.out.println("Select the lending to receive payment for:");
-        List<LendingAccount> userLendings = reportController.getVisibleLendingAccounts(userController.getCurrentUser());
+        List<LendingAccount> userLendings = accountController.getVisibleLendingAccounts(userController.getCurrentUser());
         System.out.println("0. Cancel");
         for(int i=0;i<userLendings.size();i++){
             LendingAccount lending=userLendings.get(i);
@@ -309,9 +312,7 @@ public class LendingCLI {
         String toAccountChoice = scanner.nextLine().trim().toLowerCase();
         Account toAccount = null;
         if(toAccountChoice.equals("y") || toAccountChoice.equals("yes")) {
-            List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
-                    .filter(Account::getSelectable)
-                    .toList();
+            List<Account> accounts = accountController.getSelectableAccounts(userController.getCurrentUser());
             if (accounts.isEmpty()) {
                 System.out.println("No available accounts to select.");
                 return;
@@ -340,7 +341,7 @@ public class LendingCLI {
 
         //select ledger option can be added later
         System.out.println("Select a ledger to associate with this receiving:");
-        List<Ledger> ledgers = reportController.getLedgersByUser(userController.getCurrentUser());
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(userController.getCurrentUser());
         if (ledgers.isEmpty()) {
             System.out.println("No available ledgers to select.");
             return;
@@ -432,7 +433,7 @@ public class LendingCLI {
     }
 
     private Ledger selectLedger(User user) {
-        List<Ledger> ledgers = reportController.getLedgersByUser(user);
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(user);
 
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found for the user.");

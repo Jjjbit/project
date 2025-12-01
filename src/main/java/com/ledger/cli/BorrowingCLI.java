@@ -1,6 +1,7 @@
 package com.ledger.cli;
 
 import com.ledger.business.AccountController;
+import com.ledger.business.LedgerController;
 import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
 import com.ledger.domain.*;
@@ -14,10 +15,12 @@ public class BorrowingCLI {
     private final ReportController reportController;
     private final AccountController accountController;
     private final UserController userController;
+    private final LedgerController ledgerController;
     private final Scanner scanner = new Scanner(System.in);
 
     public BorrowingCLI(ReportController reportController, AccountController accountController,
-                        UserController userController) {
+                        UserController userController, LedgerController ledgerController) {
+        this.ledgerController = ledgerController;
         this.userController = userController;
         this.accountController = accountController;
         this.reportController = reportController;
@@ -58,9 +61,7 @@ public class BorrowingCLI {
         //select to account
         System.out.println("Select an account that receives this borrowing:");
         Account selectedAccount;
-        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
-                .filter(Account::getSelectable)
-                .toList();
+        List<Account> accounts = accountController.getSelectableAccounts(userController.getCurrentUser());
         for(int i=0;i<accounts.size();i++) {
             System.out.println((i+1)+". "+accounts.get(i).getName());
         }
@@ -92,7 +93,7 @@ public class BorrowingCLI {
     public void showAllBorrowings() {
         System.out.println("\n === Showing all borrowings ===");
 
-        List<BorrowingAccount> userBorrowings = reportController.getVisibleBorrowingAccounts(userController.getCurrentUser());
+        List<BorrowingAccount> userBorrowings = accountController.getVisibleBorrowingAccounts(userController.getCurrentUser());
         if(userBorrowings.isEmpty()){
             System.out.println("No active borrowings found.");
         }
@@ -112,7 +113,8 @@ public class BorrowingCLI {
 
         //select borrowing to edit
         System.out.println("\nSelect the borrowing to edit:");
-        List<BorrowingAccount> userBorrowings = reportController.getVisibleBorrowingAccounts(userController.getCurrentUser());
+        List<BorrowingAccount> userBorrowings = accountController.getVisibleBorrowingAccounts(userController.getCurrentUser());
+
         for(int i=0;i<userBorrowings.size();i++){
             BorrowingAccount borrowing=userBorrowings.get(i);
             System.out.println((i+1) + ". " + "Name: " + borrowing.getName() +
@@ -213,7 +215,8 @@ public class BorrowingCLI {
 
        //select borrowing to delete
         System.out.println("Select the borrowing to delete:");
-        List<BorrowingAccount> userBorrowings = reportController.getVisibleBorrowingAccounts(userController.getCurrentUser());
+        List<BorrowingAccount> userBorrowings = accountController.getVisibleBorrowingAccounts(userController.getCurrentUser());
+
         for(int i=0;i<userBorrowings.size();i++){
             BorrowingAccount borrowing=userBorrowings.get(i);
             System.out.println((i+1) + ". " + "Name: " + borrowing.getName() +
@@ -258,7 +261,8 @@ public class BorrowingCLI {
 
         //select borrowing to make payment
         System.out.println("Select the borrowing to make a payment to:");
-        List<BorrowingAccount> userBorrowings = reportController.getVisibleBorrowingAccounts(userController.getCurrentUser());
+        List<BorrowingAccount> userBorrowings = accountController.getVisibleBorrowingAccounts(userController.getCurrentUser());
+
         for(int i=0;i<userBorrowings.size();i++){
             BorrowingAccount borrowing=userBorrowings.get(i);
             System.out.println((i+1) + ". " + "Name: " + borrowing.getName() +
@@ -299,9 +303,7 @@ public class BorrowingCLI {
         Account fromAccount = null;
         if (selectAccountInput.equals("y") || selectAccountInput.equals("yes")) {
             System.out.println("Select an account to make the payment from:");
-            List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
-                    .filter(Account::getSelectable)
-                    .toList();
+            List<Account> accounts = accountController.getSelectableAccounts(userController.getCurrentUser());
             for (int i = 0; i < accounts.size(); i++) {
                 System.out.println((i + 1) + ". " + accounts.get(i).getName());
             }
@@ -322,7 +324,7 @@ public class BorrowingCLI {
         }
 
         System.out.println("Select a ledger to associate with this payment:");
-        List<Ledger> ledgers = reportController.getLedgersByUser(userController.getCurrentUser());
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(userController.getCurrentUser());
         for (int i = 0; i < ledgers.size(); i++) {
             System.out.println((i + 1) + ". " + ledgers.get(i).getName());
         }
@@ -404,7 +406,7 @@ public class BorrowingCLI {
     }
 
     private Ledger selectLedger(User user) {
-        List<Ledger> ledgers = reportController.getLedgersByUser(user);
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(user);
 
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found for the user.");

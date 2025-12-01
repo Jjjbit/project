@@ -25,6 +25,10 @@ public class LedgerController {
         this.transactionDAO = transactionDAO;
     }
 
+    public List<Ledger> getLedgersByUser(User user) {
+        return ledgerDAO.getLedgersByUserId(user.getId());
+    }
+
     public Ledger createLedger(String name, User owner) {
 
         if(name == null || name.isEmpty()) {

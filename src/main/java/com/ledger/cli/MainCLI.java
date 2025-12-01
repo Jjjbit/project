@@ -1,6 +1,4 @@
 package com.ledger.cli;
-
-
 import java.util.Scanner;
 
 public class MainCLI {
@@ -13,7 +11,7 @@ public class MainCLI {
     private final LedgerCategoryCLI ledgerCategoryCLI;
     private final BorrowingCLI borrowingCLI;
     private final LendingCLI lendingCLI;
-
+    private final ReimbursementCLI reimbursementCLI;
 
     private final Scanner scanner = new Scanner(System.in);
     private boolean running = true;
@@ -23,7 +21,7 @@ public class MainCLI {
                    BudgetCLI budgetCLI,
                    LedgerCategoryCLI ledgerCategoryCLI,
                    BorrowingCLI borrowingCLI,
-                   LendingCLI lendingCLI) {
+                   LendingCLI lendingCLI, ReimbursementCLI reimbursementCLI) {
         this.userCLI = userCLI;
         this.accountCLI =  accountCLI;
         this.ledgerCLI = ledgerCLI;
@@ -33,6 +31,7 @@ public class MainCLI {
         this.ledgerCategoryCLI = ledgerCategoryCLI;
         this.borrowingCLI = borrowingCLI;
         this.lendingCLI = lendingCLI;
+        this.reimbursementCLI = reimbursementCLI;
     }
 
     public void run() {
@@ -86,8 +85,9 @@ public class MainCLI {
         System.out.println("6. Borrowing Management");
         System.out.println("7. Category Management");
         System.out.println("8. Installment Management");
-        System.out.println("9. User Profile");
-        System.out.println("10. Logout");
+        System.out.println("9. Reimbursement Management");
+        System.out.println("10. User Profile");
+        System.out.println("11. Logout");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -118,17 +118,22 @@ public class MainCLI {
                 showBorrowingMenu();
                 break;
             case "7":
+                // category management menu
                 showCategoryMenu();
                 break;
             case "8":
                 // installment management menu
                 showInstallmentMenu();
                 break;
-            case "9" :
+            case "9":
+                // reimbursement management menu
+                showReimbursementMenu();
+                break;
+            case "10" :
                 // user profile menu
                 showUserMenu();
                 break;
-            case "10":
+            case "11":
                 // logout
                 userCLI.logout();
                 showWelcomeMenu();
@@ -136,6 +141,32 @@ public class MainCLI {
             default:
                 System.out.println("Invalid option! Please choose 1-6.");
                 showMainMenu();
+        }
+    }
+
+    private void showReimbursementMenu() {
+        System.out.println("\n=== Reimbursement Management ===");
+        System.out.println("1. Claim Reimbursement");
+        System.out.println("2. View Reimbursements");
+        System.out.println("3. Back to Main Menu");
+        System.out.print("Choose an option: ");
+
+        String choice = scanner.nextLine().trim();
+
+        switch (choice) {
+            case "1":
+                reimbursementCLI.claim();
+                break;
+            case "2":
+                //reimbursementCLI.Reimbursement();
+                break;
+            case "3":
+                // go back to main menu
+                showMainMenu();
+                break;
+            default:
+                System.out.println("Invalid option! Please choose 1-3.");
+                showReimbursementMenu();
         }
     }
 

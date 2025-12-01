@@ -25,8 +25,8 @@ public class TransactionDAO {
     public <T extends Transaction> boolean insert(T transaction) {
         // insert into transactions table
         String transactionSql = "INSERT INTO transactions (transaction_date, amount, note, from_account_id," +
-                " to_account_id, ledger_id, category_id, dtype) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                " to_account_id, ledger_id, category_id, dtype, is_reimbursable) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = connection.prepareStatement(transactionSql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setObject(1, transaction.getDate());
@@ -62,6 +62,7 @@ public class TransactionDAO {
             }
 
             stmt.setString(8, transaction.getType().name());
+            stmt.setBoolean(9, transaction.isReimbursable());
 
             int affectedRows = stmt.executeUpdate();
             if (affectedRows == 0) {
@@ -97,7 +98,7 @@ public class TransactionDAO {
     @SuppressWarnings("SqlResolve")
     public boolean update(Transaction transaction) {
         String sql = "UPDATE transactions SET transaction_date = ?, amount = ?, note = ?, from_account_id = ?, " +
-                "to_account_id = ?, ledger_id = ?, category_id = ?, dtype = ?  " +
+                "to_account_id = ?, ledger_id = ?, category_id = ?, dtype = ?, is_reimbursable = ?  " +
                 "WHERE id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -135,7 +136,10 @@ public class TransactionDAO {
 
             //update type
             stmt.setString(8, transaction.getType().name());
-            stmt.setLong(9, transaction.getId());
+
+            stmt.setBoolean(9, transaction.isReimbursable());
+
+            stmt.setLong(10, transaction.getId());
 
             return stmt.executeUpdate() > 0;
         }catch (SQLException e){
@@ -305,6 +309,7 @@ public class TransactionDAO {
         transaction.setAmount(rs.getBigDecimal("amount"));
         transaction.setNote(rs.getString("note"));
         transaction.setType(TransactionType.valueOf(rs.getString("dtype")));
+        transaction.setReimbursable(rs.getBoolean("is_reimbursable"));
 
         //set fromAccount
         if( rs.getLong("from_account_id") != 0) {

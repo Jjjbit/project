@@ -9,8 +9,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.Comparator.comparing;
-
 public class ReportController {
     private final TransactionDAO transactionDAO;
     private final AccountDAO accountDAO;
@@ -18,85 +16,92 @@ public class ReportController {
     private final BudgetDAO budgetDAO;
     private final InstallmentDAO installmentDAO;
     private final LedgerCategoryDAO ledgerCategoryDAO;
+    private final ReimbursementTxLinkDAO reimbursementTxLinkDAO;
 
     public ReportController(TransactionDAO transactionDAO,
                             AccountDAO accountDAO,
                             LedgerDAO ledgerDAO,
                             BudgetDAO budgetDAO,
                             InstallmentDAO installmentDAO,
-                            LedgerCategoryDAO ledgerCategoryDAO) {
+                            LedgerCategoryDAO ledgerCategoryDAO, ReimbursementTxLinkDAO reimbursementTxLinkDAO) {
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
         this.ledgerDAO = ledgerDAO;
         this.budgetDAO = budgetDAO;
         this.installmentDAO = installmentDAO;
         this.ledgerCategoryDAO = ledgerCategoryDAO;
+        this.reimbursementTxLinkDAO = reimbursementTxLinkDAO;
     }
 
 
-    public List<Transaction> getTransactionsByLedgerInRangeDate(Ledger ledger, LocalDate startDate,
-                                                                LocalDate endDate){
-        return transactionDAO.getByLedgerId(ledger.getId()).stream()
-                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
-                .sorted((comparing(Transaction::getDate).reversed()))
-                .toList();
-    }
+//    public List<Transaction> getTransactionsByLedgerInRangeDate(Ledger ledger, LocalDate startDate,
+//                                                                LocalDate endDate){
+//        return transactionDAO.getByLedgerId(ledger.getId()).stream()
+//                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
+//                .sorted((comparing(Transaction::getDate).reversed()))
+//                .toList();
+//    }
 
-    public List<Transaction> getTransactionsByAccountInRangeDate(Account account, LocalDate startDate,
-                                                      LocalDate endDate) {
-        return transactionDAO.getByAccountId(account.getId()).stream()
-                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
-                .sorted((comparing(Transaction::getDate).reversed()))
-                .toList();
-
-    }
+//    public List<Transaction> getTransactionsByAccountInRangeDate(Account account, LocalDate startDate,
+//                                                      LocalDate endDate) {
+//        return transactionDAO.getByAccountId(account.getId()).stream()
+//                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
+//                .sorted((comparing(Transaction::getDate).reversed()))
+//                .toList();
+//
+//    }
 
     public BigDecimal getTotalExpenseByLedger(Ledger ledger, LocalDate startDate, LocalDate endDate) {
-        return getTransactionsByLedgerInRangeDate(ledger, startDate, endDate).stream()
+        return transactionDAO.getByLedgerId(ledger.getId()).stream()
                 .filter(t -> t.getType() == TransactionType.EXPENSE)
+                .filter(t-> !t.isReimbursable()) //exclude reimbursable expenses
+                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
     }
 
     public BigDecimal getTotalIncomeByLedger(Ledger ledger, LocalDate startDate, LocalDate endDate) {
-        return getTransactionsByLedgerInRangeDate(ledger, startDate, endDate).stream()
+        return transactionDAO.getByLedgerId(ledger.getId()).stream()
                 .filter(t -> t.getType() == TransactionType.INCOME)
+                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public BigDecimal getTotalExpenseByAccount(Account account, LocalDate startDate, LocalDate endDate) {
-        return getTransactionsByAccountInRangeDate(account, startDate, endDate).stream()
+        return transactionDAO.getByAccountId(account.getId()).stream()
+                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
                 .filter(t -> t.getFromAccount() != null &&
                         t.getFromAccount().getId()==account.getId())
-
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public BigDecimal getTotalIncomeByAccount(Account account,LocalDate startDate, LocalDate endDate) {
-        return getTransactionsByAccountInRangeDate(account, startDate, endDate).stream()
+        return transactionDAO.getByAccountId(account.getId()).stream()
+                .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
                 .filter(t -> t.getToAccount() != null &&
                         t.getToAccount().getId() == account.getId())
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public List<BorrowingAccount> getVisibleBorrowingAccounts(User user) {
-        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(account -> account instanceof BorrowingAccount)
-                .map(account -> (BorrowingAccount) account)
-                .filter(account -> !account.getHidden())
-                .toList();
-    }
+//    public List<BorrowingAccount> getVisibleBorrowingAccounts(User user) {
+//        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+//                .filter(account -> account instanceof BorrowingAccount)
+//                .map(account -> (BorrowingAccount) account)
+//                .filter(account -> !account.getHidden())
+//                .toList();
+//    }
 
-    public List<LendingAccount> getVisibleLendingAccounts(User user) {
-        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
-            .filter(account -> account instanceof LendingAccount)
-            .map(account -> (LendingAccount) account)
-            .filter(account-> !account.getHidden())
-            .toList();
-    }
+//    public List<LendingAccount> getVisibleLendingAccounts(User user) {
+//        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+//            .filter(account -> account instanceof LendingAccount)
+//            .map(account -> (LendingAccount) account)
+//            .filter(account-> !account.getHidden())
+//            .toList();
+//    }
 
     public BigDecimal getTotalAssets(User user) {
         BigDecimal totalAssets = accountDAO.getAccountsByOwnerId(user.getId()).stream()
@@ -104,10 +109,7 @@ public class ReportController {
                 .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalLending = getVisibleLendingAccounts(user).stream()
-                .filter(Account::getIncludedInNetAsset)
-                .map(LendingAccount::getBalance)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalLending = getTotalLendingAmount(user);
         return totalAssets.add(totalLending);
     }
 
@@ -122,10 +124,7 @@ public class ReportController {
                 .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
                 .map(account -> ((LoanAccount) account).getRemainingAmount()) //get this.remainingAmount
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalBorrowing = getVisibleBorrowingAccounts(user).stream()
-                .filter(Account::getIncludedInNetAsset)
-                .map(BorrowingAccount::getRemainingAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalBorrowing = getTotalBorrowingAmount(user);
         BigDecimal totalInstallmentDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
                 .filter(account -> account instanceof CreditAccount)
                 .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
@@ -137,43 +136,63 @@ public class ReportController {
         return totalCreditDebt.add(totalUnpaidLoan).add(totalBorrowing).add(totalInstallmentDebt);
     }
 
-    public List<Account> getVisibleAccounts(User user) {
+    public BigDecimal getTotalBorrowingAmount(User user) {
         return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+                .filter(account -> account instanceof BorrowingAccount)
+                .map(account -> (BorrowingAccount) account)
                 .filter(account -> !account.getHidden())
-                .toList();
+                .filter(Account::getIncludedInNetAsset)
+                .map(BorrowingAccount::getRemainingAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public List<Ledger> getLedgersByUser(User user) {
-        return ledgerDAO.getLedgersByUserId(user.getId());
+    public BigDecimal getTotalLendingAmount(User user) {
+        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+                .filter(account -> account instanceof LendingAccount)
+                .map(account -> (LendingAccount) account)
+                .filter(account -> !account.getHidden())
+                .filter(Account::getIncludedInNetAsset)
+                .map(LendingAccount::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public List<Installment> getActiveInstallments(CreditAccount account) {
-        return installmentDAO.getByAccountId(account.getId()).stream()
-                .filter(plan -> plan.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
-                .toList();
-    }
+//    public List<Account> getVisibleAccounts(User user) {
+//        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+//                .filter(account -> !account.getHidden())
+//                .toList();
+//    }
 
-    public List<LedgerCategory> getLedgerCategoryTreeByLedger(Ledger ledger) {
-        return ledgerCategoryDAO.getTreeByLedgerId(ledger.getId());
-    }
+//    public List<Ledger> getLedgersByUser(User user) {
+//        return ledgerDAO.getLedgersByUserId(user.getId());
+//    }
 
-    public Budget getActiveBudgetByLedger(Ledger ledger, Budget.Period period) {
-        Budget budget = budgetDAO.getBudgetByLedgerId(ledger.getId(), period);
-        if(budget != null){
-            budget.refreshIfExpired();
-            budgetDAO.update(budget);
-        }
-        return budget;
-    }
+//    public List<Installment> getActiveInstallments(CreditAccount account) {
+//        return installmentDAO.getByAccountId(account.getId()).stream()
+//                .filter(plan -> plan.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
+//                .toList();
+//    }
 
-    public Budget getActiveBudgetByCategory(LedgerCategory category, Budget.Period period) {
-        Budget budget = budgetDAO.getBudgetByCategoryId(category.getId(), period);
-        if(budget != null){
-            budget.refreshIfExpired();
-            budgetDAO.update(budget);
-        }
-        return budget;
-    }
+//    public List<LedgerCategory> getLedgerCategoryTreeByLedger(Ledger ledger) {
+//        return ledgerCategoryDAO.getTreeByLedgerId(ledger.getId());
+//    }
+
+//    public Budget getActiveBudgetByLedger(Ledger ledger, Budget.Period period) {
+//        Budget budget = budgetDAO.getBudgetByLedgerId(ledger.getId(), period);
+//        if(budget != null){
+//            budget.refreshIfExpired();
+//            budgetDAO.update(budget);
+//        }
+//        return budget;
+//    }
+
+//    public Budget getActiveBudgetByCategory(LedgerCategory category, Budget.Period period) {
+//        Budget budget = budgetDAO.getBudgetByCategoryId(category.getId(), period);
+//        if(budget != null){
+//            budget.refreshIfExpired();
+//            budgetDAO.update(budget);
+//        }
+//        return budget;
+//    }
 
     public boolean isOverBudget(Budget budget) {
         budget.refreshIfExpired();

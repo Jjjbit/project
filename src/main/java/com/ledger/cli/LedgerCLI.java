@@ -1,10 +1,9 @@
 package com.ledger.cli;
 
-import com.ledger.business.LedgerController;
-import com.ledger.business.ReportController;
-import com.ledger.business.UserController;
+import com.ledger.business.*;
 import com.ledger.domain.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Scanner;
@@ -13,10 +12,15 @@ public class LedgerCLI {
     private final UserController userController;
     private final ReportController reportController;
     private final LedgerController ledgerController;
+    private final TransactionController transactionController;
+    private final LedgerCategoryController ledgerCategoryController;
     private final Scanner scanner = new Scanner(System.in);
 
     public LedgerCLI(UserController userController, ReportController reportController,
-                     LedgerController ledgerController) {
+                     LedgerController ledgerController, TransactionController transactionController,
+                     LedgerCategoryController ledgerCategoryController) {
+        this.ledgerCategoryController = ledgerCategoryController;
+        this.transactionController = transactionController;
         this.userController = userController;
         this.reportController = reportController;
         this.ledgerController = ledgerController;
@@ -41,7 +45,7 @@ public class LedgerCLI {
 
         System.out.println("\n === Your Ledgers ===");
 
-        List<Ledger> ledgers =reportController.getLedgersByUser(userController.getCurrentUser());
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(userController.getCurrentUser());
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found.");
             return;
@@ -90,13 +94,17 @@ public class LedgerCLI {
         }
 
 
+        BigDecimal totalIncome = reportController.getTotalIncomeByLedger(selectedLedger, startDate, endDate);
+        BigDecimal totalExpense = reportController.getTotalExpenseByLedger(selectedLedger, startDate, endDate);
+        BigDecimal restAmount = totalIncome.subtract(totalExpense);
         //display income and expense
         System.out.println("Ledger Name: " + selectedLedger.getName() + ", from " + startDate + " to " + endDate);
-        System.out.print("Total Income: " + reportController.getTotalIncomeByLedger(selectedLedger, startDate, endDate)
-                + ", Total Expense: " + reportController.getTotalExpenseByLedger(selectedLedger, startDate, endDate));
+        System.out.print("Total Income: " + totalIncome
+                + ", Total Expense: " + totalExpense
+                + ", Remaining Amount: " + restAmount);
 
         //show transaction
-        List<Transaction> transactions = reportController.getTransactionsByLedgerInRangeDate(
+        List<Transaction> transactions = transactionController.getTransactionsByLedgerInRangeDate(
                 selectedLedger, startDate, endDate);
         if(transactions.isEmpty()) {
             System.out.println("No transactions found for the selected period.");
@@ -108,9 +116,8 @@ public class LedgerCLI {
             count++;
             StringBuilder info = new StringBuilder();
 
-            info.append(String.format("%d. Type: %s, Amount: %s, Date: %s",
+            info.append(String.format("%d. Amount: %s, Date: %s",
                     count,
-                    tx.getType(),
                     tx.getAmount(),
                     tx.getDate()));
 
@@ -223,7 +230,7 @@ public class LedgerCLI {
             return;
         }
 
-        List<LedgerCategory> categories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
         if(categories.isEmpty()) {
             System.out.println("No categories found.");
             return;
@@ -273,7 +280,7 @@ public class LedgerCLI {
         return name;
     }
     private Ledger selectLedger() {
-        List<Ledger> ledgers =reportController.getLedgersByUser(userController.getCurrentUser());
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(userController.getCurrentUser());
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found.");
             return null;

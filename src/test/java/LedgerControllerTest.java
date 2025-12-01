@@ -25,6 +25,9 @@ public class LedgerControllerTest {
     private TransactionDAO transactionDAO;
     private LedgerDAO ledgerDAO;
     private BudgetDAO budgetDAO;
+    private ReimbursementRecordDAO reimbursementRecordDAO;
+    private ReimbursementDAO reimbursementDAO;
+    private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
 
     private LedgerController ledgerController;
     private TransactionController  transactionController;
@@ -46,10 +49,13 @@ public class LedgerControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+        reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
+        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
+        reimbursementRecordDAO = new ReimbursementRecordDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementRecordDAO, reimbursementDAO, reimbursementTxLinkDAO);
         AccountController accountController = new AccountController(accountDAO, transactionDAO);
 
         userController.register("test user", "password123"); // create test user and insert into db
@@ -204,7 +210,7 @@ public class LedgerControllerTest {
                 .toList();
 
         //create transactions
-        Transaction tx1=transactionController.createExpense(ledger, account, food, null, LocalDate.now(), BigDecimal.valueOf(10.00));
+        Transaction tx1=transactionController.createExpense(ledger, account, food, null, LocalDate.now(), BigDecimal.valueOf(10.00), false);
         Transaction tx2=transactionController.createIncome(ledger, account, salary, null, LocalDate.now(), BigDecimal.valueOf(1000.00));
 
         //delete ledger
@@ -334,5 +340,22 @@ public class LedgerControllerTest {
 
         boolean renamed = ledgerController.renameLedger(ledger, "", testUser);
         assertFalse(renamed);
+    }
+
+    //test getLedger
+    @Test
+    public void testGetLedgersByUser() {
+        //visible ledger is testLedger created in setup
+        //create second ledger
+        Ledger secondLedger = ledgerController.createLedger("Second Ledger", testUser);
+        assertNotNull(secondLedger);
+
+        //create ledger and delete it
+        Ledger deletedLedger = ledgerController.createLedger("Deleted Ledger", testUser);
+        assertNotNull(deletedLedger);
+        ledgerController.deleteLedger(deletedLedger);
+
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(testUser);
+        assertEquals(2, ledgers.size());
     }
 }

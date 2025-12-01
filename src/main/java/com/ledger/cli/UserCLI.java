@@ -2,8 +2,6 @@ package com.ledger.cli;
 
 import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
-import com.ledger.domain.Account;
-import com.ledger.domain.BorrowingAccount;
 import com.ledger.domain.User;
 
 import java.math.BigDecimal;
@@ -69,19 +67,12 @@ public class UserCLI {
     public void showCurrentUser() {
 
         User user = userController.getCurrentUser();
+
         BigDecimal totalAssets = reportController.getTotalAssets(user);
         BigDecimal totalLiabilities = reportController.getTotalLiabilities(user);
         BigDecimal netWorth = totalAssets.subtract(totalLiabilities);
-
-        BigDecimal totalBorrowing = reportController.getVisibleBorrowingAccounts(user).stream()
-                .filter(Account::getIncludedInNetAsset)
-                .map(BorrowingAccount::getRemainingAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalLending = reportController.getVisibleLendingAccounts(user).stream()
-                .filter(Account::getIncludedInNetAsset)
-                .map(Account::getBalance)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalBorrowing = reportController.getTotalBorrowingAmount(user);
+        BigDecimal totalLending = reportController.getTotalLendingAmount(user);
 
         System.out.println("\n=== Current User ===");
         System.out.print("\nUsername: " + user.getUsername());

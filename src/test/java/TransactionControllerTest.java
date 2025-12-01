@@ -1,7 +1,4 @@
-import com.ledger.business.AccountController;
-import com.ledger.business.LedgerController;
-import com.ledger.business.TransactionController;
-import com.ledger.business.UserController;
+import com.ledger.business.*;
 import com.ledger.domain.*;
 import com.ledger.orm.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,10 +29,13 @@ public class TransactionControllerTest {
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
     private LedgerCategoryDAO ledgerCategoryDAO;
+    private ReimbursementTxLinkDAO transactionTxLinkDAO;
+    private ReimbursementDAO reimbursementDAO;
 
     private TransactionController transactionController;
     private LedgerController ledgerController;
     private AccountController accountController;
+    ReimbursementController reimbursementController;
 
     @BeforeEach
     public void setUp() throws SQLException {
@@ -51,11 +51,17 @@ public class TransactionControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+        ReimbursementRecordDAO reimbursementRecordDAO = new ReimbursementRecordDAO(connection, transactionDAO);
+        reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
+        transactionTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementRecordDAO, reimbursementDAO, transactionTxLinkDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         accountController = new AccountController(accountDAO, transactionDAO);
+
+        reimbursementController = new ReimbursementController(transactionDAO,
+                reimbursementDAO, transactionTxLinkDAO, ledgerCategoryDAO, accountDAO);
 
         userController.register("test user", "password123");
         testUser = userController.login("test user", "password123");
@@ -145,7 +151,7 @@ public class TransactionControllerTest {
         Transaction expense=transactionController.createExpense(testLedger, testAccount, shopping,
                 "Grocery Shopping",
                 LocalDate.of(2024,6,25),
-                BigDecimal.valueOf(150.00));
+                BigDecimal.valueOf(150.00), false);
 
         assertNotNull(expense);
         assertNotNull(transactionDAO.getById(expense.getId()));
@@ -166,6 +172,93 @@ public class TransactionControllerTest {
         BasicAccount updatedAccount = (BasicAccount) accountDAO.getAccountById(testAccount.getId());
         assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(850.00))); //1000 - 150 = 850
     }
+
+    //create a reimbursable expense
+    @Test
+    public void testCreateReimbursableExpense(){
+        LedgerCategory food = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
+
+        Transaction expense = transactionController.createExpense(testLedger, testAccount, food,
+                "Business Trip",
+                LocalDate.of(2024,6,15),
+                BigDecimal.valueOf(300.00), true);
+
+        assertNotNull(expense);
+        assertTrue(expense.isReimbursable());
+
+        Reimbursement reimbursement = reimbursementController.getReimbursementByTransaction(expense);
+        assertNotNull(reimbursement);
+        assertEquals(expense.getId(), reimbursement.getOriginalTransaction().getId());
+
+        List<Transaction> txs= transactionTxLinkDAO.getTransactionsByReimbursement(reimbursement);
+        assertEquals(0, txs.size());
+
+        assertEquals(0, reimbursement.getAmount().compareTo(BigDecimal.valueOf(300.00)));
+        assertEquals(ReimbursableStatus.PENDING, reimbursement.getReimbursementStatus());
+
+        //verify account balance updated
+        BasicAccount updatedAccount = (BasicAccount) accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(700.00))); //1000 - 300 = 700
+    }
+
+    //set isReimbursable to false for an existing expense
+    @Test
+    public void testUnsetExpenseReimbursable() {
+        LedgerCategory food = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
+
+        Expense expense = transactionController.createExpense(testLedger, testAccount, food,
+                "Business Trip",
+                LocalDate.of(2024, 6, 15),
+                BigDecimal.valueOf(300.00), true);
+
+        assertNotNull(expense);
+        assertTrue(expense.isReimbursable());
+
+        boolean result = transactionController.resetIsReimbursable(expense);
+        assertTrue(result);
+
+        Expense updatedExpense = (Expense) transactionDAO.getById(expense.getId());
+        assertFalse(updatedExpense.isReimbursable());
+
+        Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+        assertNull(reimbursement);
+    }
+
+    //set isReimbursable to true for an existing expense
+    @Test
+    public void testSetExpenseReimbursable() {
+        LedgerCategory food = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
+
+        Expense expense = transactionController.createExpense(testLedger, testAccount, food,
+                "Business Trip",
+                LocalDate.of(2024, 6, 15),
+                BigDecimal.valueOf(300.00), false);
+
+        assertNotNull(expense);
+        assertFalse(expense.isReimbursable());
+
+        boolean result = transactionController.resetIsReimbursable(expense);
+        assertTrue(result);
+
+        Expense updatedExpense = (Expense) transactionDAO.getById(expense.getId());
+        assertTrue(updatedExpense.isReimbursable());
+
+        Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+        assertNotNull(reimbursement);
+    }
+
 
     @Test
     public void testCreateTransfer_Success() {
@@ -234,7 +327,7 @@ public class TransactionControllerTest {
         assertNotNull(shopping);
 
         Transaction expense=transactionController.createExpense(testLedger, testAccount, shopping, "Grocery Shopping",
-                LocalDate.of(2024,6,25), BigDecimal.valueOf(150.00));
+                LocalDate.of(2024,6,25), BigDecimal.valueOf(150.00), false);
         assertNotNull(expense);
 
         boolean deleted=transactionController.deleteTransaction(expense);
@@ -369,7 +462,7 @@ public class TransactionControllerTest {
 
         Expense expense=transactionController.createExpense(testLedger, testAccount, shopping,
                 "Grocery Shopping", LocalDate.of(2024,6,25),
-                BigDecimal.valueOf(150.00));
+                BigDecimal.valueOf(150.00), false);
 
         Account newAccount = accountController.createBasicAccount("New Account", BigDecimal.valueOf(500.00),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, "New Account Notes",
@@ -423,7 +516,7 @@ public class TransactionControllerTest {
 
         Expense expense=transactionController.createExpense(testLedger, testAccount, shopping,
                 "Grocery Shopping", LocalDate.of(2024,6,25),
-                BigDecimal.valueOf(150.00));
+                BigDecimal.valueOf(150.00), false);
 
         boolean result=transactionController.updateExpense(expense, null,
                 null, null, null, null, null);
@@ -505,5 +598,117 @@ public class TransactionControllerTest {
 
     }
     //test edit transfer: old fromAccount is not null and new fromAccount is null
+
+    @Test
+    public void testGetTransactionsByLedgerInRangeDate_Boundary() {
+        LocalDate startDate = LocalDate.now().withDayOfMonth(1);
+        LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+
+        LedgerCategory food = testCategories.stream()
+                .filter(c -> c.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+
+        transactionController.createExpense(testLedger, testAccount, food, "Dinner", startDate, BigDecimal.valueOf(30.00), false);
+        transactionController.createExpense(testLedger, testAccount, food, "Lunch", endDate, BigDecimal.valueOf(20.00), false);
+
+        List<Transaction> transactions = transactionController.getTransactionsByLedgerInRangeDate(testLedger, startDate, endDate);
+        assertEquals(2, transactions.size());
+
+        for (Transaction tx : transactions) {
+            StringBuilder info = new StringBuilder();
+
+            info.append(String.format("ID: %d, Type: %s, Amount: %s, Date: %s",
+                    tx.getId(),
+                    tx.getType(),
+                    tx.getAmount(),
+                    tx.getDate()));
+
+            if (tx.getCategory() != null) {
+                info.append(", Category: ").append(tx.getCategory().getName());
+            }
+
+            if (tx instanceof Transfer) {
+                if (tx.getFromAccount() != null) {
+                    info.append(", FROM: ").append(tx.getFromAccount().getName());
+                }
+                if (tx.getToAccount() != null) {
+                    info.append(", TO: ").append(tx.getToAccount().getName());
+                }
+            } else {
+                if (tx.getFromAccount() != null) {
+                    info.append(", From: ").append(tx.getFromAccount().getName());
+                } else if (tx.getToAccount() != null) {
+                    info.append(", To: ").append(tx.getToAccount().getName());
+                }
+            }
+
+            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info.append(", Note: ").append(tx.getNote());
+            }
+
+            System.out.println(info);
+        }
+    }
+
+    @Test
+    public void testGetTransactionsByAccountInRangeDate_Boundary() {
+        LocalDate startDate = LocalDate.now().withDayOfMonth(1);
+        LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+
+        LedgerCategory food = testCategories.stream()
+                .filter(c -> c.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        LedgerCategory salary = testCategories.stream()
+                .filter(c -> c.getName().equals("Salary"))
+                .findFirst()
+                .orElse(null);
+
+        transactionController.createExpense(testLedger, testAccount, food, "Dinner", startDate, BigDecimal.valueOf(30.00), false);
+        transactionController.createExpense(testLedger, testAccount, food, "Lunch", endDate, BigDecimal.valueOf(20.00), false);
+        transactionController.createTransfer(testLedger, testAccount, null, "Transfer to self", startDate, BigDecimal.valueOf(100.00));
+        transactionController.createTransfer(testLedger, null, testAccount, "Transfer from self", endDate, BigDecimal.valueOf(200.00));
+        transactionController.createIncome(testLedger, testAccount, salary, "Monthly Salary", startDate, BigDecimal.valueOf(3000.00));
+        transactionController.createIncome(testLedger, testAccount, salary, "Monthly Salary", endDate, BigDecimal.valueOf(3000.00));
+
+        List<Transaction> transactions = transactionController.getTransactionsByAccountInRangeDate(testAccount, startDate, endDate);
+        assertEquals(6, transactions.size());
+        for (Transaction tx : transactions) {
+            StringBuilder info = new StringBuilder();
+
+            info.append(String.format("ID: %d, Type: %s, Amount: %s, Date: %s",
+                    tx.getId(),
+                    tx.getType(),
+                    tx.getAmount(),
+                    tx.getDate()));
+
+            if (tx.getCategory() != null) {
+                info.append(", Category: ").append(tx.getCategory().getName());
+            }
+
+            if (tx instanceof Transfer) {
+                if (tx.getFromAccount() != null) {
+                    info.append(", FROM: ").append(tx.getFromAccount().getName());
+                }
+                if (tx.getToAccount() != null) {
+                    info.append(", TO: ").append(tx.getToAccount().getName());
+                }
+            } else {
+                if (tx.getFromAccount() != null) {
+                    info.append(", From: ").append(tx.getFromAccount().getName());
+                } else if (tx.getToAccount() != null) {
+                    info.append(", To: ").append(tx.getToAccount().getName());
+                }
+            }
+
+            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info.append(", Note: ").append(tx.getNote());
+            }
+
+            System.out.println(info);
+        }
+    }
+
 }
 

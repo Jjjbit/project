@@ -31,32 +31,35 @@ public class Main {
             InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
             CategoryDAO categoryDAO = new CategoryDAO(connection);
             BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+            ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
+            ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
+            ReimbursementRecordDAO reimbursementRecordDAO = new ReimbursementRecordDAO(connection, transactionDAO);
 
             // create Business layer
             UserController userController = new UserController(userDAO);
             AccountController accountController = new AccountController(accountDAO, transactionDAO);
             LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-            TransactionController transactionController = new TransactionController(transactionDAO, accountDAO);
+            TransactionController transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementRecordDAO, reimbursementDAO, reimbursementTxLinkDAO);
             InstallmentController installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
             LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
             BudgetController budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO);
-            ReportController reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO, installmentDAO, ledgerCategoryDAO);
+            ReportController reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO, installmentDAO, ledgerCategoryDAO, reimbursementTxLinkDAO);
+            ReimbursementController reimbursementController = new ReimbursementController(transactionDAO, reimbursementDAO, reimbursementTxLinkDAO, ledgerCategoryDAO, accountDAO);
 
             //  create CLI layer
             UserCLI userCLI = new UserCLI(userController, reportController);
-            AccountCLI accountCLI = new AccountCLI(accountController, userController, reportController);
-            LedgerCLI ledgerCLI = new LedgerCLI(userController, reportController, ledgerController);
-            TransactionCLI transactionCLI = new TransactionCLI(transactionController, reportController,userController);
-            InstallmentCLI installmentCLI = new InstallmentCLI(installmentController, userController,
-                    reportController);
-            BudgetCLI budgetCLI = new BudgetCLI(budgetController, reportController, userController);
-            BorrowingCLI borrowingCLI = new BorrowingCLI(reportController, accountController, userController);
-            LendingCLI lendingCLI = new LendingCLI(reportController, accountController, userController);
-            LedgerCategoryCLI ledgerCategoryCLI = new LedgerCategoryCLI(ledgerCategoryController, reportController, userController);
+            AccountCLI accountCLI = new AccountCLI(accountController, userController, reportController, transactionController, ledgerController);
+            LedgerCLI ledgerCLI = new LedgerCLI(userController, reportController, ledgerController, transactionController, ledgerCategoryController);
+            TransactionCLI transactionCLI = new TransactionCLI(transactionController, userController, accountController, ledgerController, ledgerCategoryController);
+            InstallmentCLI installmentCLI = new InstallmentCLI(installmentController, userController, accountController, ledgerController, ledgerCategoryController);
+            BudgetCLI budgetCLI = new BudgetCLI(budgetController, reportController, userController, ledgerController, ledgerCategoryController);
+            BorrowingCLI borrowingCLI = new BorrowingCLI(reportController, accountController, userController, ledgerController);
+            LendingCLI lendingCLI = new LendingCLI(reportController, accountController, userController, ledgerController);
+            LedgerCategoryCLI ledgerCategoryCLI = new LedgerCategoryCLI(ledgerCategoryController, reportController, userController, ledgerController);
+            ReimbursementCLI reimbursementCLI = new ReimbursementCLI(userController, reimbursementController, transactionController, ledgerController, accountController);
 
             // create MainCLI
-            MainCLI mainCLI = new MainCLI(userCLI, accountCLI, ledgerCLI, transactionCLI,
-                    installmentCLI, budgetCLI,ledgerCategoryCLI, borrowingCLI, lendingCLI);
+            MainCLI mainCLI = new MainCLI(userCLI, accountCLI, ledgerCLI, transactionCLI, installmentCLI, budgetCLI, ledgerCategoryCLI, borrowingCLI, lendingCLI, reimbursementCLI);
 
             //run application
             mainCLI.run();
