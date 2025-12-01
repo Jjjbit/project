@@ -32,6 +32,12 @@ public class AccountControllerTest {
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
     private InstallmentDAO installmentDAO;
+    private ReimbursementDAO reimbursementDAO;
+    private ReimbursementRecordDAO reimbursementRecordDAO;
+    private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
+
+    private ReimbursementController reimbursementController;
+    private ReimbursementRecordController reimbursementRecordController;
 
 
     @BeforeEach
@@ -49,10 +55,15 @@ public class AccountControllerTest {
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+        reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
+        reimbursementRecordDAO = new ReimbursementRecordDAO(connection, transactionDAO);
+        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
+        reimbursementController = new ReimbursementController(transactionDAO, reimbursementDAO, reimbursementTxLinkDAO, ledgerCategoryDAO, accountDAO);
+        reimbursementRecordController = new ReimbursementRecordController(transactionDAO, reimbursementRecordDAO, ledgerCategoryDAO, accountDAO);
 
         UserController userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, transactionDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementRecordDAO, reimbursementDAO, reimbursementTxLinkDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
 
@@ -390,7 +401,7 @@ public class AccountControllerTest {
         //create transactions linked to the account
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
         assertNotNull(tx1);
-        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
+        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60), false);
         assertNotNull(tx2);
 
         boolean result=accountController.deleteAccount(account, true);
@@ -431,7 +442,7 @@ public class AccountControllerTest {
         assertNotNull(transport);
 
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
-        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
+        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60), false);
 
         boolean result = accountController.deleteAccount(account, false);
         assertTrue(result);
@@ -492,7 +503,7 @@ public class AccountControllerTest {
         assertNotNull(transport);
 
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
-        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
+        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60), false);
 
         boolean result= accountController.deleteAccount(account, true);
         assertTrue(result);
@@ -534,7 +545,7 @@ public class AccountControllerTest {
         assertNotNull(transport);
 
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
-        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
+        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60), false);
 
         boolean result = accountController.deleteAccount(account, false);
         assertTrue(result);
@@ -1190,6 +1201,209 @@ public class AccountControllerTest {
         Account hiddenAccount = accountDAO.getAccountById(account.getId());
         assertNotNull(hiddenAccount);
         assertTrue(hiddenAccount.getHidden());
+    }
+
+    //test getVisibleBorrowingAccounts, getSelectableAccounts, getSelectableAccounts
+    @Test
+    public void testGetVisibleBorrowingAccounts() {
+        BasicAccount testAccount = accountController.createBasicAccount("Test Account",
+                BigDecimal.valueOf(1000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
+                true, true);
+
+        //create borrowing account not hidden
+        Account borrowingAccount1 = accountController.createBorrowingAccount(testUser, "Borrowing Account 1",
+                BigDecimal.valueOf(50.00), "Car loan account", true, false, testAccount,
+                LocalDate.now(), testLedger);
+        assertNotNull(borrowingAccount1);
+
+        //create hidden borrowing account
+        Account borrowingAccount2 = accountController.createBorrowingAccount(testUser, "Borrowing Account 2",
+                BigDecimal.valueOf(30.00), "Personal loan account", true, true,
+                testAccount, LocalDate.now(), testLedger);
+        assertNotNull(borrowingAccount2);
+        accountController.hideAccount(borrowingAccount2);
+
+        List<BorrowingAccount> activeBorrowingAccounts = accountController.getVisibleBorrowingAccounts(testUser);
+        assertEquals(1, activeBorrowingAccounts.size());
+        assertEquals("Borrowing Account 1", activeBorrowingAccounts.getFirst().getName());
+
+        List<Account> selectableAccounts = accountController.getSelectableAccounts(testUser);
+        assertEquals(1, selectableAccounts.size());
+        assertEquals("Test Account", selectableAccounts.getFirst().getName());
+    }
+
+    //test getVisibleLendingAccounts, getSelectableAccounts, getVisibleAccounts
+    @Test
+    public void testGetVisibleLendingAccounts() {
+        BasicAccount testAccount = accountController.createBasicAccount("Test Account",
+                BigDecimal.valueOf(1000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
+                true, true);
+
+        //create visible lending account
+        Account lendingAccount1 = accountController.createLendingAccount(testUser, "Lending Account 1",
+                BigDecimal.valueOf(100.00), "Mortgage account", true, true,
+                testAccount, LocalDate.now(), testLedger);
+        assertNotNull(lendingAccount1);
+
+        //create lending account hidden
+        Account lendingAccount2 = accountController.createLendingAccount(testUser, "Lending Account 2",
+                BigDecimal.valueOf(200.00), "Friend loan account",
+                true, true, testAccount, LocalDate.now(), testLedger);
+        assertNotNull(lendingAccount2);
+        accountController.hideAccount(lendingAccount2);
+
+        List<LendingAccount> activeLendingAccounts = accountController.getVisibleLendingAccounts(testUser);
+        assertEquals(1, activeLendingAccounts.size());
+        assertEquals("Lending Account 1", activeLendingAccounts.getFirst().getName());
+
+        List<Account> selectableAccounts = accountController.getSelectableAccounts(testUser);
+        assertEquals(2, selectableAccounts.size());
+    }
+
+    //test getVisibleAccount and getSelectableAccounts
+    @Test
+    public void testGetVisibleAccounts() {
+        BasicAccount testAccount = accountController.createBasicAccount("Test Account",
+                BigDecimal.valueOf(1000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
+                true, true); //visible
+
+        //create hidden BasicAccount
+        Account hiddenAccount = accountController.createBasicAccount("Hidden Account", BigDecimal.valueOf(300.00),
+                AccountType.CASH, AccountCategory.FUNDS, testUser, "Hidden account notes",
+                true, true);
+        assertNotNull(hiddenAccount);
+        accountController.hideAccount(hiddenAccount);
+
+        //create visible CreditAccount
+        Account creditAccount1 = accountController.createCreditAccount("Credit Account 1", "Credit account notes",
+                BigDecimal.valueOf(500.00), true, true, testUser,
+                AccountType.CREDIT_CARD, BigDecimal.valueOf(2000.00), BigDecimal.valueOf(150.00),
+                1, 5);
+        assertNotNull(creditAccount1);
+        //create hidden CreditAccount
+        Account creditAccount2 = accountController.createCreditAccount("Credit Account 2", "Another credit account notes",
+                BigDecimal.valueOf(400.00), true, true, testUser,
+                AccountType.CREDIT_CARD, BigDecimal.valueOf(1500.00), BigDecimal.valueOf(100.00),
+                1, 5);
+        assertNotNull(creditAccount2);
+        accountController.hideAccount(creditAccount2);
+
+        //create visible LoanAccount
+        Account loanAccount1 = accountController.createLoanAccount("Loan Account 1", "Loan account notes",
+                true, testUser, 36, 0,
+                BigDecimal.valueOf(1.00),  BigDecimal.valueOf(5000.00), testAccount, LocalDate.now(),
+                LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
+        assertNotNull(loanAccount1);
+        //create hidden LoanAccount
+        Account loanAccount2 = accountController.createLoanAccount("Loan Account 2", "Another loan account notes",
+                true, testUser, 24, 0,
+                BigDecimal.valueOf(1.50),  BigDecimal.valueOf(3000.00), testAccount, LocalDate.now(),
+                LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
+        assertNotNull(loanAccount2);
+        accountController.hideAccount(loanAccount2);
+
+        //create visible LendingAccount
+        Account lendingAccount1 = accountController.createLendingAccount(testUser, "Lending Account 1",
+                BigDecimal.valueOf(100.00), "Mortgage account", true, true,
+                testAccount, LocalDate.now(), testLedger);
+        assertNotNull(lendingAccount1);
+        //create hidden lending account
+        Account lendingAccount2 = accountController.createLendingAccount(testUser, "Lending Account 2",
+                BigDecimal.valueOf(200.00), "Friend loan account",
+                true, true, testAccount, LocalDate.now(), testLedger);
+        assertNotNull(lendingAccount2);
+        accountController.hideAccount(lendingAccount2);
+
+        //create visible BorrowingAccount
+        Account borrowingAccount1 = accountController.createBorrowingAccount(testUser, "Borrowing Account 1",
+                BigDecimal.valueOf(50.00), "Car loan account", true, true,
+                testAccount, LocalDate.now(), testLedger);
+        assertNotNull(borrowingAccount1);
+        //create hidden borrowing account
+        Account borrowingAccount2 = accountController.createBorrowingAccount(testUser, "Borrowing Account 2",
+                BigDecimal.valueOf(30.00), "Personal loan account",
+                true, false, testAccount, LocalDate.now(), testLedger);
+        assertNotNull(borrowingAccount2);
+        accountController.hideAccount(borrowingAccount2);
+
+        List<Account> selectableAccounts = accountController.getSelectableAccounts(testUser);
+        assertEquals(4, selectableAccounts.size());
+
+        List<Account> accountsNotHidden = accountController.getVisibleAccounts(testUser);
+        assertEquals(5, accountsNotHidden.size());
+
+        for( Account acc : accountsNotHidden) {
+            assertFalse(acc.getHidden());
+            System.out.println("Account ID: " + acc.getId() + ", class: " + acc.getClass().getSimpleName() +
+                    ", Name: " + acc.getName() + ", Type: " +acc.getType() +
+                    ", Category: " + acc.getCategory());
+        }
+    }
+
+    //test getVisibleLoanAccounts, getVisibleAccount, getSelectableAccounts
+    @Test
+    public void testGetLoanAccounts() {
+        BasicAccount testAccount = accountController.createBasicAccount("Test Account",
+                BigDecimal.valueOf(1000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
+                true, true);
+
+        //create visible loan account
+        Account loanAccount1 = accountController.createLoanAccount("Loan Account 1", "Loan account notes",
+                true, testUser, 36, 0,
+                BigDecimal.valueOf(1.00),  BigDecimal.valueOf(5000.00), testAccount, LocalDate.now(),
+                LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
+        assertNotNull(loanAccount1);
+
+        //create hidden loan account
+        Account loanAccount2 = accountController.createLoanAccount("Loan Account 2", "Another loan account notes",
+                true, testUser, 24, 0,
+                BigDecimal.valueOf(1.50),  BigDecimal.valueOf(3000.00), testAccount, LocalDate.now(),
+                LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
+        assertNotNull(loanAccount2);
+        accountController.hideAccount(loanAccount2);
+
+        List<LoanAccount> activeLoanAccounts = accountController.getVisibleLoanAccounts(testUser);
+        assertEquals(1, activeLoanAccounts.size());
+
+        List<Account> selectableAccounts = accountController.getSelectableAccounts(testUser);
+        assertEquals(1, selectableAccounts.size());
+        assertEquals("Test Account", selectableAccounts.getFirst().getName());
+    }
+
+    //test getCreditCardAccounts, getVisibleAccount, getSelectableAccounts
+    @Test
+    public void testGetCreditCardAccounts() {
+        //create visible credit card account
+        Account creditAccount1 = accountController.createCreditAccount("Credit Account 1", "Credit account notes",
+                BigDecimal.valueOf(500.00), true, true, testUser,
+                AccountType.CREDIT_CARD, BigDecimal.valueOf(2000.00), BigDecimal.valueOf(150.00),
+                1, 5);
+        assertNotNull(creditAccount1);
+
+        //create hidden credit card account
+        Account creditAccount2 = accountController.createCreditAccount("Credit Account 2", "Another credit account notes",
+                BigDecimal.valueOf(400.00), true, true, testUser,
+                AccountType.CREDIT_CARD, BigDecimal.valueOf(1500.00), BigDecimal.valueOf(100.00),
+                1, 5);
+        assertNotNull(creditAccount2);
+        accountController.hideAccount(creditAccount2);
+
+        //create visible credit card but not selectable
+        Account creditAccount3 = accountController.createCreditAccount("Credit Account 3", "Third credit account notes",
+                BigDecimal.valueOf(600.00), true, false, testUser,
+                AccountType.CREDIT_CARD, BigDecimal.valueOf(2500.00), BigDecimal.valueOf(200.00),
+                1, 5);
+        assertNotNull(creditAccount3);
+
+        List<CreditAccount> activeCreditAccounts = accountController.getCreditCardAccounts(testUser);
+        assertEquals(2, activeCreditAccounts.size());
+        assertEquals("Credit Account 1", activeCreditAccounts.getFirst().getName());
+
+        List<Account> accountsNotHidden = accountController.getVisibleAccounts(testUser);
+        assertEquals(2, accountsNotHidden.size());
+
+        List<Account> selectableAccounts = accountController.getSelectableAccounts(testUser);
+        assertEquals(1, selectableAccounts.size());
     }
 
 }

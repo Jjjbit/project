@@ -1,8 +1,6 @@
 package com.ledger.cli;
 
-import com.ledger.business.AccountController;
-import com.ledger.business.ReportController;
-import com.ledger.business.UserController;
+import com.ledger.business.*;
 import com.ledger.domain.*;
 
 import java.math.BigDecimal;
@@ -15,10 +13,15 @@ public class AccountCLI {
     private final AccountController accountController;
     private final UserController userController;
     private final ReportController reportController;
+    private final TransactionController transactionController;
+    private final LedgerController ledgerController;
     private final Scanner scanner = new Scanner(System.in);
 
     public AccountCLI(AccountController accountController, UserController userController,
-                      ReportController reportController) {
+                      ReportController reportController, TransactionController transactionController,
+                      LedgerController ledgerController) {
+        this.ledgerController = ledgerController;
+        this.transactionController = transactionController;
         this.reportController = reportController;
         this.accountController = accountController;
         this.userController = userController;
@@ -83,7 +86,7 @@ public class AccountCLI {
     public void showAllAccounts() {
         System.out.println("\n=== Show All Accounts ===");
 
-        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()); //select visible BasicAccount, LoanAccount, CreditAccount
+        List<Account> accounts = accountController.getVisibleAccounts(userController.getCurrentUser()); //select visible BasicAccount, LoanAccount, CreditAccount
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -111,7 +114,7 @@ public class AccountCLI {
         System.out.println("\n=== Update Account ===");
 
         System.out.println("\nSelect the account to update:");
-        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser());
+        List<Account> accounts = accountController.getVisibleAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -315,7 +318,7 @@ public class AccountCLI {
         //select account to delete
         System.out.println("\nSelect the account to delete:");
         Account accountToDelete;
-        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser());
+        List<Account> accounts = accountController.getVisibleAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -366,7 +369,7 @@ public class AccountCLI {
 
         //select account to hide
         System.out.println("\nSelect the account to hide:");
-        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser());
+        List<Account> accounts = accountController.getVisibleAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -406,11 +409,7 @@ public class AccountCLI {
         System.out.println("\n === Pay Debt ===");
 
         //select credit card
-        List<Account> creditAccounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
-                .filter(account -> account instanceof CreditAccount)
-                .filter(account -> account.getType().equals(AccountType.CREDIT_CARD))
-                .filter(account -> ((CreditAccount) account).getCurrentDebt().compareTo(BigDecimal.ZERO) > 0)
-                .toList();
+        List<CreditAccount> creditAccounts = accountController.getCreditCardAccounts(userController.getCurrentUser());
         if(creditAccounts.isEmpty()){
             System.out.println("No credit cards found.");
             return;
@@ -418,8 +417,8 @@ public class AccountCLI {
 
         System.out.println("Select credit card:");
         for (int i = 0; i < creditAccounts.size(); i++) {
-            Account account = creditAccounts.get(i);
-            System.out.println((i + 1) + ". " + account.getName() + " - Current Debt: " + ((CreditAccount) account).getCurrentDebt());
+            CreditAccount account = creditAccounts.get(i);
+            System.out.println((i + 1) + ". " + account.getName() + " - Current Debt: " + account.getCurrentDebt());
         }
 
         System.out.println("0. Cancel");
@@ -436,7 +435,7 @@ public class AccountCLI {
         }
 
         int accountIndex = choice - 1;
-        CreditAccount accountToPayDebt = (CreditAccount) creditAccounts.get(accountIndex);
+        CreditAccount accountToPayDebt = creditAccounts.get(accountIndex);
         System.out.println("Current debt: " + accountToPayDebt.getCurrentDebt());
 
         //input payment amount
@@ -468,20 +467,17 @@ public class AccountCLI {
         System.out.println("\n === Pay Loan ===");
 
         //select account to pay loan
-        List<Account> loanAccounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
-                .filter(account -> account instanceof LoanAccount)
-                .filter(account -> ((LoanAccount) account).getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
-                .toList();
+        List<LoanAccount> loanAccounts = accountController.getVisibleLoanAccounts(userController.getCurrentUser());
         if(loanAccounts.isEmpty()){
             System.out.println("No loan accounts found.");
             return;
         }
         System.out.println("Select the Loan:");
         for (int i = 0; i < loanAccounts.size(); i++) {
-            Account account = loanAccounts.get(i);
-            System.out.println((i + 1) + ". " + account.getName() + " - Remaining Loan Amount: " + ((LoanAccount) account).getRemainingAmount()+
-                    " | Next Amount: " + ((LoanAccount) account).getMonthlyRepayment(((LoanAccount) account).getRepaidPeriods() +1)+
-                    " | Repaid Periods: " + ((LoanAccount) account).getRepaidPeriods() + "/" + ((LoanAccount) account).getTotalPeriods());
+            LoanAccount account = loanAccounts.get(i);
+            System.out.println((i + 1) + ". " + account.getName() + " - Remaining Loan Amount: " + account.getRemainingAmount()+
+                    " | Next Amount: " + account.getMonthlyRepayment(account.getRepaidPeriods() +1)+
+                    " | Repaid Periods: " + account.getRepaidPeriods() + "/" + account.getTotalPeriods());
         }
         System.out.println("0. Cancel");
         System.out.print("Enter choice: ");
@@ -497,7 +493,7 @@ public class AccountCLI {
             return ;
         }
 
-        LoanAccount accountToPayLoan = (LoanAccount) loanAccounts.get(loanChoice - 1);
+        LoanAccount accountToPayLoan = loanAccounts.get(loanChoice - 1);
 
         Account fromAccount = getSelectableAccount();
 
@@ -550,7 +546,7 @@ public class AccountCLI {
             endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
         }
 
-        List<Transaction> transactions = reportController.getTransactionsByAccountInRangeDate(account, startDate, endDate);
+        List<Transaction> transactions = transactionController.getTransactionsByAccountInRangeDate(account, startDate, endDate);
         BigDecimal totalIncome = reportController.getTotalIncomeByAccount(account, startDate, endDate);
         BigDecimal totalExpense = reportController.getTotalExpenseByAccount(account, startDate, endDate);
         System.out.println("\nfrom " + startDate + " to " + endDate);
@@ -775,7 +771,7 @@ public class AccountCLI {
     }
 
     private Account getSelectableAccount(){
-        List<Account> userAccounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
+        List<Account> userAccounts = accountController.getSelectableAccounts(userController.getCurrentUser()).stream()
                 .filter(Account::getSelectable)
                 .toList();
 
@@ -804,7 +800,7 @@ public class AccountCLI {
     }
 
     private Account selectAccount() {
-        List<Account> userAccounts = reportController.getVisibleAccounts(userController.getCurrentUser());
+        List<Account> userAccounts = accountController.getVisibleAccounts(userController.getCurrentUser());
 
         if (userAccounts.isEmpty()) {
             System.out.println("No accounts found. Please create an account first.");
@@ -981,7 +977,7 @@ public class AccountCLI {
     }
 
     private Ledger selectLedger(User user) {
-        List<Ledger> ledgers = reportController.getLedgersByUser(user);
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(user);
 
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found for the user.");

@@ -17,11 +17,50 @@ public class AccountController {
         this.accountDAO = accountDAO;
     }
 
+    public List<Account> getVisibleAccounts(User user) {
+        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+                .filter(account -> !account.getHidden())
+                .toList();
+    }
+    public List<Account> getSelectableAccounts(User user) {
+        return getVisibleAccounts(user).stream()
+                .filter(Account::getSelectable)
+                .toList();
+    }
+
+    public List<BorrowingAccount> getVisibleBorrowingAccounts(User user) {
+        return getVisibleAccounts(user).stream()
+                .filter(account -> account instanceof BorrowingAccount)
+                .map(account -> (BorrowingAccount) account)
+                .toList();
+    }
+
+    public List<LendingAccount> getVisibleLendingAccounts(User user) {
+        return getVisibleAccounts(user).stream()
+                .filter(account -> account instanceof LendingAccount)
+                .map(account -> (LendingAccount) account)
+                .toList();
+    }
+
+    public List<CreditAccount> getCreditCardAccounts(User user) {
+        return getVisibleAccounts(user).stream()
+                .filter(account -> account instanceof CreditAccount)
+                .filter(account -> account.getType() == AccountType.CREDIT_CARD)
+                .map(account -> (CreditAccount) account)
+                .toList();
+    }
+    public List<LoanAccount> getVisibleLoanAccounts(User user) {
+        return getVisibleAccounts(user).stream()
+                .filter(account -> account instanceof LoanAccount)
+                .map(account -> (LoanAccount) account)
+                .toList();
+    }
+
     public BasicAccount createBasicAccount(String name, BigDecimal balance,
                                            AccountType type, AccountCategory category,
                                            User owner, String notes, boolean includedInNetWorth,
                                            boolean selectable) {
-        if (name == null || name.trim().isEmpty()) {
+        if (name == null || name.isEmpty()) {
             return null;
         }
 
@@ -59,7 +98,9 @@ public class AccountController {
                                              boolean includedInNetAsset, boolean selectable, User user,
                                              AccountType type, BigDecimal creditLimit, BigDecimal currentDebt,
                                              Integer billDate, Integer dueDate) {
-
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
         if (type == null) {
             return null;
         }
@@ -89,7 +130,9 @@ public class AccountController {
                                          int totalPeriods, int repaidPeriods, BigDecimal annualInterestRate,
                                          BigDecimal loanAmount, Account receivingAccount, LocalDate repaymentDate,
                                          LoanAccount.RepaymentType repaymentType, Ledger ledger) {
-
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
         if(totalPeriods <=0 || totalPeriods > 480){ //max 40 years
             return null;
         }
@@ -207,12 +250,7 @@ public class AccountController {
             for (Transaction tx : transactions) {
                 transactionDAO.delete(tx);
             }
-        } else {
-            for (Transaction tx : transactions) {
-                transactionDAO.update(tx);
-            }
         }
-
         return accountDAO.deleteAccount(account);
     }
 

@@ -781,7 +781,6 @@ public class AccountDAO {
                 stmt.setBigDecimal(3, borrowing.getBorrowingAmount());
                 stmt.setBigDecimal(4, borrowing.getRemainingAmount());
                 stmt.setLong(5, borrowing.getId());
-                //stmt.executeUpdate();
                 int rowsAffected = stmt.executeUpdate();
                 return rowsAffected > 0;
             }
@@ -802,17 +801,11 @@ public class AccountDAO {
             }
 
         } else if (account instanceof BasicAccount) {
-            /*String sqlBasic = "UPDATE basic_account SET id=? WHERE id=?";
-            try (PreparedStatement stmt = connection.prepareStatement(sqlBasic)) {
-                stmt.setLong(1, account.getId());
-                stmt.setLong(2, account.getId());
-                int rowsAffected = stmt.executeUpdate();
-                return rowsAffected > 0;
-            }*/
             return true;
         }
         return false;
     }
+
     @SuppressWarnings("SqlResolve")
     public boolean deleteAccount(Account account) {
         String sql = "DELETE FROM accounts WHERE id = ?";
