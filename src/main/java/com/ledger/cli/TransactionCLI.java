@@ -1,8 +1,6 @@
 package com.ledger.cli;
 
-import com.ledger.business.ReportController;
-import com.ledger.business.TransactionController;
-import com.ledger.business.UserController;
+import com.ledger.business.*;
 import com.ledger.domain.*;
 
 import java.math.BigDecimal;
@@ -12,14 +10,18 @@ import java.util.Scanner;
 
 public class TransactionCLI {
     private final TransactionController transactionController;
-    private final ReportController reportController;
     private final UserController userController;
+    private final AccountController accountController;
+    private final LedgerController ledgerController;
+    private final LedgerCategoryController ledgerCategoryController;
     private final Scanner scanner = new Scanner(System.in);
 
     public TransactionCLI(TransactionController transactionController,
-                          ReportController reportController,
-                          UserController userController) {
-        this.reportController = reportController;
+                          UserController userController, AccountController accountController,
+                          LedgerController ledgerController, LedgerCategoryController ledgerCategoryController) {
+        this.ledgerCategoryController = ledgerCategoryController;
+        this.ledgerController = ledgerController;
+        this.accountController = accountController;
         this.userController = userController;
         this.transactionController = transactionController;
     }
@@ -86,13 +88,20 @@ public class TransactionCLI {
         System.out.print("Enter the amount for the transaction: ");
         BigDecimal amount = inputAmount();
 
+        System.out.print("Is this expense reimbursable? (y/n, press Enter to skip): ");
+        String reimbursableInput = scanner.nextLine().trim().toLowerCase();
+        boolean isReimbursable = reimbursableInput.equals("y") || reimbursableInput.equals("yes");
+        if(reimbursableInput.isEmpty()){
+            isReimbursable = false;
+        }
+
         //add date
         System.out.print("Enter the date for the transaction (YYYY-MM-DD): ");
         LocalDate date = inputDate();
 
         //create transaction
         Expense expenseTransaction = transactionController.createExpense(selectedLedger, selectedAccount,
-                selectedCategory, note, date, amount);
+                selectedCategory, note, date, amount, isReimbursable);
         if(expenseTransaction==null){
             System.out.println("Failed to create expense transaction.");
             return;
@@ -112,9 +121,7 @@ public class TransactionCLI {
         Ledger selectedLedger = selectLedger(userController.getCurrentUser());
 
         //get selectable accounts
-        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
-                .filter(Account::getSelectable)
-                .toList();
+        List<Account> accounts = accountController.getSelectableAccounts(userController.getCurrentUser());
 
         if(accounts.isEmpty()){
             System.out.println("At least two selectable accounts are required to perform a transfer.");
@@ -206,7 +213,7 @@ public class TransactionCLI {
             return;
         }
 
-        List<Transaction> transactions = reportController.getTransactionsByLedgerInRangeDate(
+        List<Transaction> transactions = transactionController.getTransactionsByLedgerInRangeDate(
                 selectedLedger, LocalDate.MIN, LocalDate.MAX);
         if(transactions.isEmpty()){
             System.out.println("No transactions found in the selected ledger.");
@@ -239,7 +246,7 @@ public class TransactionCLI {
             return;
         }
 
-        List<Transaction> transactions = reportController.getTransactionsByLedgerInRangeDate(
+        List<Transaction> transactions = transactionController.getTransactionsByLedgerInRangeDate(
                 selectedLedger, LocalDate.MIN, LocalDate.MAX);
         if(transactions.isEmpty()){
             System.out.println("No transactions found in the selected ledger.");
@@ -343,9 +350,7 @@ public class TransactionCLI {
                         newCategory, note, date, amount, newLedger);
             }
             case TRANSFER -> {
-                List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser()).stream()
-                        .filter(Account::getSelectable)
-                        .toList();
+                List<Account> accounts = accountController.getSelectableAccounts(userController.getCurrentUser());
                 if (accounts.isEmpty()) {
                     System.out.println("At least two selectable accounts are required to perform a transfer.");
                     return;
@@ -509,7 +514,7 @@ public class TransactionCLI {
     }
 
     private Ledger selectLedger(User user) {
-        List<Ledger> ledgers = reportController.getLedgersByUser(user);
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(user);
 
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found for the user.");
@@ -531,7 +536,7 @@ public class TransactionCLI {
     }
 
     private Account selectAccount() {
-        List<Account> accounts = reportController.getVisibleAccounts(userController.getCurrentUser());
+        List<Account> accounts = accountController.getSelectableAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found for the user.");
             return null;
@@ -561,7 +566,7 @@ public class TransactionCLI {
     }
 
     private LedgerCategory selectCategory(Ledger ledger, CategoryType type) {
-        List<LedgerCategory> categories=reportController.getLedgerCategoryTreeByLedger(ledger);
+        List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(ledger);
 
         if(categories.isEmpty()) {
             System.out.println("No categories found in the selected ledger.");

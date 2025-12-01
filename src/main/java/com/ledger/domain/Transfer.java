@@ -12,7 +12,7 @@ public class Transfer extends Transaction{
                     Account to,
                     BigDecimal amount,
                     Ledger ledger) {
-        super(date, amount, description, from, to, ledger, null, TransactionType.TRANSFER);
+        super(date, amount, description, from, to, ledger, null, TransactionType.TRANSFER, false);
     }
 
 }

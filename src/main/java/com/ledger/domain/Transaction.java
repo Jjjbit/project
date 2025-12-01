@@ -13,6 +13,8 @@ public abstract class Transaction {
     protected Ledger ledger;
     protected LedgerCategory category;
     protected TransactionType type;
+    protected boolean is_reimbursable;
+//    protected ReimbursableStatus status;
 
     public Transaction() {}
     public Transaction(LocalDate date,
@@ -22,7 +24,10 @@ public abstract class Transaction {
                        Account toAccount,
                        Ledger ledger,
                        LedgerCategory category,
-                       TransactionType type) {
+                       TransactionType type,
+                       boolean is_reimbursable
+                       // , ReimbursableStatus status
+                       ) {
         this.date = date != null ? date : LocalDate.now();
         this.amount = amount;
         this.note = description;
@@ -31,7 +36,23 @@ public abstract class Transaction {
         this.ledger = ledger;
         this.category = category;
         this.type = type;
+        this.is_reimbursable = is_reimbursable;
+//        this.status = status;
     }
+
+    public boolean isReimbursable() {
+        return is_reimbursable;
+    }
+    public void setReimbursable(boolean reimbursable) {
+        is_reimbursable = reimbursable;
+    }
+//    public ReimbursableStatus getStatus() {
+//        return status;
+//    }
+//    public void setStatus(ReimbursableStatus status) {
+//        this.status = status;
+//    }
+
     public LedgerCategory getCategory() {
         return category;
     }
@@ -60,17 +81,10 @@ public abstract class Transaction {
         return ledger;
     }
     public void setAmount(BigDecimal amount) {
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be greater than zero.");
-        }
         this.amount = amount;
     }
     public void setDate(LocalDate date) {
-        if (date == null) {
-            this.date = LocalDate.now();
-        } else {
-            this.date = date;
-        }
+        this.date = date;
     }
     public void setType(TransactionType type) {
         this.type = type;
