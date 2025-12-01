@@ -8,6 +8,7 @@ import com.ledger.orm.TransactionDAO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 public class InstallmentController {
     private final InstallmentDAO installmentDAO;
@@ -19,6 +20,12 @@ public class InstallmentController {
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
         this.installmentDAO = installmentDAO;
+    }
+
+    public List<Installment> getActiveInstallments(CreditAccount account) {
+        return installmentDAO.getByAccountId(account.getId()).stream()
+                .filter(plan -> plan.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
     }
 
     public Installment createInstallment(CreditAccount creditAccount, String name, BigDecimal totalAmount,
@@ -98,7 +105,7 @@ public class InstallmentController {
                     "Record of already repaid installments for " + name,
                     creditAccount,
                     ledger,
-                    category
+                    category, false
             );
             transactionDAO.insert(tx); //insert transaction to db
             creditAccount.debit(repaidAmount); //reduce balance or increase debt
@@ -158,7 +165,7 @@ public class InstallmentController {
 
         Transaction tx = new Expense(LocalDate.now(), paymentAmount,
                 "Installment payment " + (plan.getPaidPeriods() + 1) + " " + plan.getName(),
-                account, ledger, category);
+                account, ledger, category, false);
         transactionDAO.insert(tx); //insert transaction to db
 
         plan.repayOnePeriod(); //update remaining amount and paid periods

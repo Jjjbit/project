@@ -1,8 +1,6 @@
 package com.ledger.cli;
 
-import com.ledger.business.InstallmentController;
-import com.ledger.business.ReportController;
-import com.ledger.business.UserController;
+import com.ledger.business.*;
 import com.ledger.domain.*;
 
 import java.math.BigDecimal;
@@ -14,16 +12,21 @@ import java.util.Scanner;
 public class InstallmentCLI {
     private final InstallmentController installmentController;
     private final UserController userController;
-    private final ReportController reportController;
-
-
+    //private final ReportController reportController;
+    private final AccountController accountController;
+    private final LedgerController ledgerController;
+    private final LedgerCategoryController ledgerCategoryController;
     private final Scanner scanner = new Scanner(System.in);
 
     public InstallmentCLI(InstallmentController installmentController,
                           UserController userController,
-                          ReportController reportController) {
-
-        this.reportController = reportController;
+                          //ReportController reportController,
+                          AccountController accountController,
+                          LedgerController ledgerController, LedgerCategoryController ledgerCategoryController) {
+        this.ledgerCategoryController = ledgerCategoryController;
+        this.ledgerController = ledgerController;
+        this.accountController = accountController;
+        //this.reportController = reportController;
         this.userController = userController;
         this.installmentController = installmentController;
     }
@@ -90,7 +93,7 @@ public class InstallmentCLI {
         if (creditAccount == null) return;
 
         //get all plan with remaining amount >0
-        List<Installment> plans = reportController.getActiveInstallments(creditAccount);
+        List<Installment> plans = installmentController.getActiveInstallments(creditAccount);
 
         if (plans.isEmpty()) {
             System.out.println("No installment plans found.");
@@ -114,7 +117,7 @@ public class InstallmentCLI {
         if (creditAccount == null) return;
 
         //get remaining > 0 installments
-        List<Installment> activePlans =reportController.getActiveInstallments(creditAccount);
+        List<Installment> activePlans = installmentController.getActiveInstallments(creditAccount);
 
         if (activePlans.isEmpty()) {
             System.out.println("No active installments found.");
@@ -164,7 +167,7 @@ public class InstallmentCLI {
         CreditAccount creditAccount = selectCreditCardAccount();
         if (creditAccount == null) return;
 
-        List<Installment> plans = reportController.getActiveInstallments(creditAccount);
+        List<Installment> plans = installmentController.getActiveInstallments(creditAccount);
 
         if (plans.isEmpty()) {
             System.out.println("No installments found.");
@@ -211,7 +214,7 @@ public class InstallmentCLI {
         CreditAccount creditAccount = selectCreditCardAccount();
         if (creditAccount == null) return;
 
-        List<Installment> plans = reportController.getActiveInstallments(creditAccount);
+        List<Installment> plans = installmentController.getActiveInstallments(creditAccount);
         if (plans.isEmpty()) {
             System.out.println("No installments found.");
             return;
@@ -256,13 +259,7 @@ public class InstallmentCLI {
 
     //private helper methods
     private CreditAccount selectCreditCardAccount(){
-        List<Account> userAccounts = reportController.getVisibleAccounts(userController.getCurrentUser());
-
-        List<CreditAccount> creditAccounts = userAccounts.stream()
-                .filter(account -> account instanceof CreditAccount)
-                .filter(account -> account.getType().equals(AccountType.CREDIT_CARD))
-                .map(account -> (CreditAccount) account)
-                .toList();
+        List<CreditAccount> creditAccounts = accountController.getCreditCardAccounts(userController.getCurrentUser());
 
         if (creditAccounts.isEmpty()) {
             System.out.println("No credit accounts found. Please create a credit account first.");
@@ -319,7 +316,7 @@ public class InstallmentCLI {
     }
 
     private Ledger selectLedger() {
-        List<Ledger> ledgers = reportController.getLedgersByUser(userController.getCurrentUser());
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(userController.getCurrentUser());
 
         if (ledgers.isEmpty()) {
             System.out.println("No ledgers found. Please create a ledger first.");
@@ -341,7 +338,7 @@ public class InstallmentCLI {
     }
 
     private LedgerCategory inputCategory(Ledger ledger) {
-        List<LedgerCategory> categories = reportController.getLedgerCategoryTreeByLedger(ledger);
+        List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(ledger);
 
         if (categories.isEmpty()) {
             System.out.println("No categories found in the selected ledger. Please create a category first.");

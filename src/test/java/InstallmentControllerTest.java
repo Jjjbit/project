@@ -33,6 +33,9 @@ public class InstallmentControllerTest {
     private InstallmentDAO installmentDAO;
 
     private InstallmentController installmentController;
+    private AccountController accountController;
+    private User testUser;
+    private List<LedgerCategory> testCategories;
 
     @BeforeEach
     public void setUp() throws SQLException {
@@ -51,7 +54,7 @@ public class InstallmentControllerTest {
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
 
         UserController userController = new UserController(userDAO);
-        AccountController accountController = new AccountController(accountDAO, transactionDAO);
+        accountController = new AccountController(accountDAO, transactionDAO);
         installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
 
@@ -70,7 +73,7 @@ public class InstallmentControllerTest {
         // Create a test ledger for the user
         testLedger = ledgerController.createLedger("Test Ledger", testUser);
 
-        List<LedgerCategory> testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+        testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
 
         // get a test ledger category
         category = testCategories.stream()
@@ -408,5 +411,70 @@ public class InstallmentControllerTest {
         CreditAccount updatedAccount = (CreditAccount) accountDAO.getAccountById(account.getId());
         assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(989.50))); //balance remains the same
         assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(135.50))); //current debt increased by 115.5
+    }
+
+    //test getInstallments
+    @Test
+    public void testGetInstallments() {
+        LedgerCategory electronics = testCategories.stream()
+                .filter(c -> c.getName().equals("Electronics"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(electronics);
+
+        //create CreditAccount
+        CreditAccount creditAccount = accountController.createCreditAccount("Credit Account", "Credit account notes",
+                BigDecimal.valueOf(500.00), //balance
+                true, true, testUser, AccountType.CREDIT_CARD,
+                BigDecimal.valueOf(2000.00), //credit limit
+                BigDecimal.valueOf(150.00), //current debt
+                1, 5);
+        assertNotNull(creditAccount);
+
+        //create active installment
+        Installment installment1 = installmentController.createInstallment(creditAccount, "Installment 1",
+                BigDecimal.valueOf(600.00), //total amount
+                6,
+                BigDecimal.valueOf(2.00),  //interest
+                Installment.Strategy.EVENLY_SPLIT,
+                LocalDate.now(), electronics, true, testLedger);
+        assertNotNull(installment1);
+        //create completed installment
+        Installment installmentCompleted = installmentController.createInstallment(creditAccount, "Completed Installment",
+                BigDecimal.valueOf(300.00), //total amount
+                3,
+                BigDecimal.valueOf(1.50),  //interest
+                Installment.Strategy.EVENLY_SPLIT,
+                LocalDate.now().minusMonths(4), //4 months ago
+                electronics, true, testLedger);
+        assertNotNull(installmentCompleted);
+
+        //create second credit account
+        CreditAccount creditAccount2 = accountController.createCreditAccount("Credit Account 2", "Another credit account notes",
+                BigDecimal.valueOf(400.00), //balance
+                true, true, testUser, AccountType.CREDIT_CARD,
+                BigDecimal.valueOf(1500.00), //credit limit
+                BigDecimal.valueOf(100.00), //current debt
+                1, 5);
+        assertNotNull(creditAccount2);
+        //create active installment for second credit account
+        Installment installment2 = installmentController.createInstallment(creditAccount2, "Installment 2",
+                BigDecimal.valueOf(300.00), //total amount
+                3,
+                BigDecimal.valueOf(1.50),  //interest
+                Installment.Strategy.EVENLY_SPLIT,
+                LocalDate.now(), electronics, true, testLedger);
+        assertNotNull(installment2);
+
+        List<Installment> installments = installmentController.getActiveInstallments(creditAccount);
+        assertEquals(1, installments.size());
+        for( Installment inst : installments) {
+            System.out.println("Installment ID: " + inst.getId() +
+                    ", Name: " + inst.getName() +
+                    ", Total Amount: " + inst.getTotalAmount() +
+                    ", Paid Periods: " + inst.getPaidPeriods() +
+                    ", Total Periods: " + inst.getTotalPeriods() +
+                    ", Category: " +inst.getCategory().getName());
+        }
     }
 }
