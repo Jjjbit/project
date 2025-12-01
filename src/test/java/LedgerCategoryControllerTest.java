@@ -31,6 +31,9 @@ public class LedgerCategoryControllerTest {
     private LedgerCategoryDAO ledgerCategoryDAO;
     private BudgetDAO budgetDAO;
     private TransactionDAO transactionDAO;
+    private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
+    private ReimbursementDAO reimbursementDAO;
+    private ReimbursementRecordDAO reimbursementRecordDAO;
 
     @BeforeEach
     public void setUp() throws SQLException {
@@ -46,11 +49,14 @@ public class LedgerCategoryControllerTest {
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+        reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
+        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
+        reimbursementRecordDAO = new ReimbursementRecordDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementRecordDAO, reimbursementDAO, reimbursementTxLinkDAO);
         AccountController accountController = new AccountController(accountDAO, transactionDAO);
 
         userController.register("test user", "password123");
@@ -712,5 +718,55 @@ public class LedgerCategoryControllerTest {
 
         boolean result = ledgerCategoryController.changeParent(food, entertainment);
         assertFalse(result);
+    }
+
+    //test LedgerCategory tree structure
+    @Test
+    public void testLedgerCategoryTreeStructure() {
+        List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(testLedger);
+        assertEquals(17, categories.size());
+
+        List<LedgerCategory> rootCategories = categories.stream()
+                .filter(c -> c.getParent() == null)
+                .toList();
+        assertEquals(12, rootCategories.size());
+
+        List<LedgerCategory> incomeRootCategories = rootCategories.stream()
+                .filter(c -> c.getType() == CategoryType.INCOME)
+                .toList();
+        assertEquals(3, incomeRootCategories.size());
+
+        List<LedgerCategory> expenseRootCategories = rootCategories.stream()
+                .filter(c -> c.getType() == CategoryType.EXPENSE)
+                .toList();
+        assertEquals(9, expenseRootCategories.size());
+
+        System.out.println("Expense Category Tree:");
+        for (LedgerCategory category : expenseRootCategories) {
+            System.out.println("Category ID: " + category.getId() +
+                    ", Name: " + category.getName() +
+                    ", Parent: " + (category.getParent() != null ? category.getParent().getName() : "null"));
+            for (LedgerCategory subcategory : categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == category.getId())
+                    .toList()) {
+                System.out.println("  Subcategory ID: " + subcategory.getId() +
+                        ", Name: " + subcategory.getName() +
+                        ", Parent: " + subcategory.getParent().getName() );
+            }
+        }
+
+        System.out.println("Income Category Tree:");
+        for( LedgerCategory category : incomeRootCategories) {
+            System.out.println("Category ID: " + category.getId() +
+                    ", Name: " + category.getName() +
+                    ", Parent: " + (category.getParent() != null ? category.getParent().getName() : "null"));
+            for (LedgerCategory subcategory : categories.stream()
+                    .filter(c -> c.getParent() != null && c.getParent().getId() == category.getId())
+                    .toList()) {
+                System.out.println("  Subcategory ID: " + subcategory.getId() +
+                        ", Name: " + subcategory.getName() +
+                        ", Parent: " +  subcategory.getParent().getName());
+            }
+        }
     }
 }

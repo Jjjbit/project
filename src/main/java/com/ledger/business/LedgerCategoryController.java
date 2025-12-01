@@ -20,6 +20,10 @@ public class LedgerCategoryController {
         this.ledgerCategoryDAO = ledgerCategoryDAO;
     }
 
+    public List<LedgerCategory> getLedgerCategoryTreeByLedger(Ledger ledger) {
+        return ledgerCategoryDAO.getTreeByLedgerId(ledger.getId());
+    }
+
     public LedgerCategory createCategory(String name, Ledger ledger, CategoryType type) {
         if(ledger == null){
             return null;

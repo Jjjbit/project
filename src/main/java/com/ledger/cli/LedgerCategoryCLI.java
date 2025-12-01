@@ -1,6 +1,7 @@
 package com.ledger.cli;
 
 import com.ledger.business.LedgerCategoryController;
+import com.ledger.business.LedgerController;
 import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
 import com.ledger.domain.CategoryType;
@@ -15,11 +16,13 @@ public class LedgerCategoryCLI {
     private final LedgerCategoryController ledgerCategoryController;
     private final ReportController reportController;
     private final UserController userController;
+    private final LedgerController ledgerController;
     private final Scanner scanner = new Scanner(System.in);
 
     public LedgerCategoryCLI(LedgerCategoryController ledgerCategoryController,
                              ReportController reportController,
-                             UserController userController) {
+                             UserController userController, LedgerController ledgerController) {
+        this.ledgerController = ledgerController;
         this.userController = userController;
         this.reportController = reportController;
         this.ledgerCategoryController = ledgerCategoryController;
@@ -75,10 +78,9 @@ public class LedgerCategoryCLI {
                 CategoryType.INCOME : CategoryType.EXPENSE;
 
         //select parent category
-        List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
         List<LedgerCategory> parentCategories = allCategories.stream()
-                .filter(cat -> cat.getType() == (categoryType)
-                        && cat.getParent() == null)
+                .filter(cat -> cat.getType() == (categoryType) && cat.getParent() == null)
                 .toList();
         System.out.println("Select a parent category for the new sub-category:");
         LedgerCategory parentCategory = selectCategory(parentCategories);
@@ -111,7 +113,7 @@ public class LedgerCategoryCLI {
         }
 
         //select category
-        List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
         System.out.println("\nSelect a category to rename:");
         LedgerCategory categoryToRename = selectCategoryWithTree(allCategories);
 
@@ -144,7 +146,7 @@ public class LedgerCategoryCLI {
         }
 
         //select category
-        List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
         System.out.println("Select a category to delete:");
         LedgerCategory categoryToDelete = selectCategoryWithTree(allCategories);
 
@@ -160,9 +162,8 @@ public class LedgerCategoryCLI {
             }
         }else {
             //delete category and migrate transactions
-            List<LedgerCategory> categories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
-                    .filter(cat -> cat.getId() != categoryToDelete.getId()
-                            && cat.getType() == categoryToDelete.getType())
+            List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
+                    .filter(cat -> cat.getId() != categoryToDelete.getId() && cat.getType() == categoryToDelete.getType())
                     .toList();
             System.out.println("Select a category to migrate transactions to:");
             LedgerCategory migrateCategory = selectCategoryWithTree(categories);
@@ -194,7 +195,7 @@ public class LedgerCategoryCLI {
                 CategoryType.INCOME : CategoryType.EXPENSE;
 
         //select sub-category
-        List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
+        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
                 .filter(cat -> cat.getType() == categoryType && cat.getParent() != null)
                 .toList();
         System.out.println("Select a sub-category to promote:");
@@ -231,7 +232,7 @@ public class LedgerCategoryCLI {
                 CategoryType.INCOME : CategoryType.EXPENSE;
 
         //select category
-        List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
+        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
                 .filter(cat -> cat.getType() == categoryType
                         && cat.getParent() == null)
                 .toList();
@@ -269,7 +270,7 @@ public class LedgerCategoryCLI {
         }
 
         //select sub-category
-        List<LedgerCategory> allCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
         List<LedgerCategory> subCategories = allCategories.stream()
                 .filter(cat -> cat.getParent() != null)
                 .toList();
@@ -307,7 +308,7 @@ public class LedgerCategoryCLI {
         return name;
     }
     private void printCategoryTree(Ledger selectedLedger) {
-        List<LedgerCategory> updatedCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> updatedCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
 
         List<LedgerCategory> expenseRoots = updatedCategories.stream()
                 .filter(cat -> cat.getParent() == null && cat.getType() == CategoryType.EXPENSE)
@@ -354,7 +355,7 @@ public class LedgerCategoryCLI {
          return categoryTypeInput;
     }
     private Ledger selectLedger(User user) {
-        List<Ledger> ledgers = reportController.getLedgersByUser(user);
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(user);
 
         if(ledgers.isEmpty()) {
             System.out.println("No ledgers found for the user.");
