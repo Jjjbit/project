@@ -323,4 +323,171 @@ public class BudgetControllerTest {
         assertEquals(originalStartDate, budget.getStartDate()); //start date should remain unchanged
         assertEquals(originalEndDate, budget.getEndDate()); //end date should remain unchanged
     }
+
+    //test getActiveBudgetsByLedger
+    @Test
+    public void testGetActiveBudgetsByLedger() {
+        //get monthly budget for ledger
+        Budget budget1 = budgetController.getActiveBudgetByLedger(testLedger, Budget.Period.MONTHLY);
+        assertNotNull(budget1);
+        assertEquals(Budget.Period.MONTHLY, budget1.getPeriod());
+        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.ZERO));
+
+        //get yearly budget for ledger
+        Budget budget2 = budgetController.getActiveBudgetByLedger(testLedger, Budget.Period.YEARLY);
+        assertNotNull(budget2);
+        assertEquals(Budget.Period.YEARLY, budget2.getPeriod());
+        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.ZERO));
+    }
+
+    //test getActiveBudgetsByLedger if budgets are expired
+    @Test
+    public void testGetActiveBudgetsByLedger_ExpiredBudgets() {
+        Budget budget = budgetDAO.getBudgetByLedgerId(testLedger.getId(), Budget.Period.MONTHLY);
+        assertNotNull(budget);
+        //set start and end date to past to simulate expired budget
+        budget.setStartDate(LocalDate.of(2025, 1, 1));
+        budget.setEndDate(LocalDate.of(2025, 1, 31));
+        //set amount to non-zero
+        budget.setAmount(BigDecimal.valueOf(500.00));
+        budgetDAO.update(budget); //persist changes
+
+        Budget activeBudget = budgetController.getActiveBudgetByLedger(testLedger, Budget.Period.MONTHLY);
+        assertNotNull(activeBudget);
+        assertEquals(Budget.Period.MONTHLY, activeBudget.getPeriod());
+        assertEquals(0, activeBudget.getAmount().compareTo(BigDecimal.ZERO));
+
+        Budget budget2 = budgetDAO.getBudgetByLedgerId(testLedger.getId(), Budget.Period.YEARLY);
+        assertNotNull(budget2);
+        //set start and end date to past to simulate expired budget
+        budget2.setStartDate(LocalDate.of(2023, 1, 1));
+        budget2.setEndDate(LocalDate.of(2023, 12, 31));
+        //set amount to non-zero
+        budget2.setAmount(BigDecimal.valueOf(2000.00));
+        budgetDAO.update(budget2); //persist changes
+
+        Budget activeBudget2 = budgetController.getActiveBudgetByLedger(testLedger, Budget.Period.YEARLY);
+        assertNotNull(activeBudget2);
+        assertEquals(Budget.Period.YEARLY, activeBudget2.getPeriod());
+        assertEquals(0, activeBudget2.getAmount().compareTo(BigDecimal.ZERO));
+    }
+
+    //test getActiveBudgetsByCategory
+    @Test
+    public void testGetActiveBudgetsByCategory() {
+        LedgerCategory food = testCategories.stream()
+                .filter(c -> c.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
+
+        //get monthly budget for food category
+        Budget budget1 = budgetController.getActiveBudgetByCategory(food, Budget.Period.MONTHLY);
+        assertNotNull(budget1);
+        assertEquals(Budget.Period.MONTHLY, budget1.getPeriod());
+        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.ZERO));
+
+        //get yearly budget for food category
+        Budget budget2 = budgetController.getActiveBudgetByCategory(food, Budget.Period.YEARLY);
+        assertNotNull(budget2);
+        assertEquals(Budget.Period.YEARLY, budget2.getPeriod());
+        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.ZERO));
+    }
+
+    //test getActiveBudgetsByCategory (first level) if budgets are expired
+    @Test
+    public void testGetActiveBudgetsByCategory_ExpiredBudgets() {
+        LedgerCategory food = testCategories.stream()
+                .filter(c -> c.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
+
+        Budget budget = budgetDAO.getBudgetByCategoryId(food.getId(), Budget.Period.MONTHLY);
+        assertNotNull(budget);
+        //set start and end date to past to simulate expired budget
+        budget.setStartDate(LocalDate.of(2025, 1, 1));
+        budget.setEndDate(LocalDate.of(2025, 1, 31));
+        //set amount to non-zero
+        budget.setAmount(BigDecimal.valueOf(300.00));
+        budgetDAO.update(budget); //persist changes
+
+        Budget activeBudget = budgetController.getActiveBudgetByCategory(food, Budget.Period.MONTHLY);
+        assertNotNull(activeBudget);
+        assertEquals(Budget.Period.MONTHLY, activeBudget.getPeriod());
+        assertEquals(0, activeBudget.getAmount().compareTo(BigDecimal.ZERO));
+
+        Budget budget2 = budgetDAO.getBudgetByCategoryId(food.getId(), Budget.Period.YEARLY);
+        assertNotNull(budget2);
+        //set start and end date to past to simulate expired budget
+        budget2.setStartDate(LocalDate.of(2023, 1, 1));
+        budget2.setEndDate(LocalDate.of(2023, 12, 31));
+        //set amount to non-zero
+        budget2.setAmount(BigDecimal.valueOf(1500.00));
+        budgetDAO.update(budget2); //persist changes
+
+        Budget activeBudget2 = budgetController.getActiveBudgetByCategory(food, Budget.Period.YEARLY);
+        assertNotNull(activeBudget2);
+        assertEquals(Budget.Period.YEARLY, activeBudget2.getPeriod());
+        assertEquals(0, activeBudget2.getAmount().compareTo(BigDecimal.ZERO));
+    }
+
+    //test getActiveBudgetsByCategory (second level)
+    @Test
+    public void testGetActiveBudgetsByCategory_SecondLevel() {
+        LedgerCategory lunch = testCategories.stream()
+                .filter(c -> c.getName().equals("Lunch"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(lunch);
+
+        //get monthly budget for lunch category
+        Budget budget1 = budgetController.getActiveBudgetByCategory(lunch, Budget.Period.MONTHLY);
+        assertNotNull(budget1);
+        assertEquals(Budget.Period.MONTHLY, budget1.getPeriod());
+        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.ZERO));
+
+        //get yearly budget for lunch category
+        Budget budget2 = budgetController.getActiveBudgetByCategory(lunch, Budget.Period.YEARLY);
+        assertNotNull(budget2);
+        assertEquals(Budget.Period.YEARLY, budget2.getPeriod());
+        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.ZERO));
+    }
+
+    //test getActiveBudgetsByCategory (second level) if budgets are expired
+    @Test
+    public void testGetActiveBudgetsByCategory_SecondLevel_ExpiredBudgets() {
+        LedgerCategory lunch = testCategories.stream()
+                .filter(c -> c.getName().equals("Lunch"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(lunch);
+        Budget budget = budgetDAO.getBudgetByCategoryId(lunch.getId(), Budget.Period.MONTHLY);
+        assertNotNull(budget);
+        //set start and end date to past to simulate expired budget
+        budget.setStartDate(LocalDate.of(2025, 1, 1));
+        budget.setEndDate(LocalDate.of(2025, 1, 31));
+        //set amount to non-zero
+        budget.setAmount(BigDecimal.valueOf(400.00));
+        budgetDAO.update(budget); //persist changes
+
+        Budget activeBudget = budgetController.getActiveBudgetByCategory(lunch, Budget.Period.MONTHLY);
+        assertNotNull(activeBudget);
+        assertEquals(Budget.Period.MONTHLY, activeBudget.getPeriod());
+        assertEquals(0, activeBudget.getAmount().compareTo(BigDecimal.ZERO));
+
+        Budget budget2 = budgetDAO.getBudgetByCategoryId(lunch.getId(), Budget.Period.YEARLY);
+        assertNotNull(budget2);
+        //set start and end date to past to simulate expired budget
+        budget2.setStartDate(LocalDate.of(2023, 1, 1));
+        budget2.setEndDate(LocalDate.of(2023, 12, 31));
+        //set amount to non-zero
+        budget2.setAmount(BigDecimal.valueOf(1800.00));
+        budgetDAO.update(budget2); //persist changes
+        Budget activeBudget2 = budgetController.getActiveBudgetByCategory(lunch, Budget.Period.YEARLY);
+        assertNotNull(activeBudget2);
+        assertEquals(Budget.Period.YEARLY, activeBudget2.getPeriod());
+        assertEquals(0, activeBudget2.getAmount().compareTo(BigDecimal.ZERO));
+    }
+
 }

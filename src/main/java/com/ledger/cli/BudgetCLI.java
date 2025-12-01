@@ -1,8 +1,6 @@
 package com.ledger.cli;
 
-import com.ledger.business.BudgetController;
-import com.ledger.business.ReportController;
-import com.ledger.business.UserController;
+import com.ledger.business.*;
 import com.ledger.domain.Budget;
 import com.ledger.domain.CategoryType;
 import com.ledger.domain.Ledger;
@@ -18,10 +16,15 @@ public class BudgetCLI {
     private final BudgetController budgetController;
     private final ReportController reportController;
     private final UserController userController;
+    private final LedgerController ledgerController;
+    private final LedgerCategoryController ledgerCategoryController;
     private final Scanner scanner = new Scanner(System.in);
 
     public BudgetCLI(BudgetController budgetController,
-                     ReportController reportController, UserController userController) {
+                     ReportController reportController, UserController userController,
+                     LedgerController ledgerController, LedgerCategoryController ledgerCategoryController) {
+        this.ledgerCategoryController = ledgerCategoryController;
+        this.ledgerController = ledgerController;
         this.userController = userController;
         this.reportController = reportController;
         this.budgetController = budgetController;
@@ -44,13 +47,13 @@ public class BudgetCLI {
         int[] counter = {1};
 
         System.out.println("\n=== Available Budgets by Category ===");
-        List<LedgerCategory> expenseCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
+        List<LedgerCategory> expenseCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
                 .toList();
 
         printCategoryBudgets(expenseCategories, period, counter, budgetMap);
 
-        Budget uncategorizedBudget = reportController.getActiveBudgetByLedger(selectedLedger, period);
+        Budget uncategorizedBudget = budgetController.getActiveBudgetByLedger(selectedLedger, period);
         if(uncategorizedBudget==null){
             System.out.println("No ledger budget found for the selected period.");
             return;
@@ -93,7 +96,7 @@ public class BudgetCLI {
         Budget.Period period = selectBudgetPeriod();
 
         //show budgets
-        Budget ledgerBudget = reportController.getActiveBudgetByLedger(selectedLedger, period);
+        Budget ledgerBudget = budgetController.getActiveBudgetByLedger(selectedLedger, period);
         if(ledgerBudget==null){
             System.out.println("No ledger budget found for the selected period.");
             return;
@@ -105,7 +108,7 @@ public class BudgetCLI {
                 (reportController.isOverBudget(ledgerBudget) ? ", [OVER BUDGET]" : ", within budget"));
 
 
-        List<LedgerCategory> categories = reportController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
         List<LedgerCategory> topCategories = categories.stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
                 .filter(c -> c.getParent() == null)
@@ -113,7 +116,7 @@ public class BudgetCLI {
 
         System.out.println("\n=== Categories' Budgets ===");
         for(LedgerCategory category : topCategories){
-            Budget categoryBudget = reportController.getActiveBudgetByCategory(category, period);
+            Budget categoryBudget = budgetController.getActiveBudgetByCategory(category, period);
             if(categoryBudget!=null){
                 System.out.println("Category: " + category.getName() + ", Amount: " + categoryBudget.getAmount() +
                         ", Period: " + categoryBudget.getPeriod() +
@@ -126,7 +129,7 @@ public class BudgetCLI {
                 continue;
             }
             for(LedgerCategory subcategory : children){
-                Budget subcategoryBudget = reportController.getActiveBudgetByCategory(subcategory, period);
+                Budget subcategoryBudget = budgetController.getActiveBudgetByCategory(subcategory, period);
                 if(subcategoryBudget!=null){
                     System.out.println(" SubCategory: " + subcategory.getName() + ", Amount: " + subcategoryBudget.getAmount() +
                             ", Period: " + subcategoryBudget.getPeriod() +
@@ -152,13 +155,13 @@ public class BudgetCLI {
         int[] counter = {1};
 
         System.out.println("\n=== Available Budgets by Category ===");
-        List<LedgerCategory> expenseCategories = reportController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
+        List<LedgerCategory> expenseCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
                 .toList();
         printAllCategoryBudgets(expenseCategories, period, counter, budgetMap);
 
         System.out.println("\n=== Uncategorized Budget ===");
-        Budget ledgerBudget = reportController.getActiveBudgetByLedger(selectedLedger, period);
+        Budget ledgerBudget = budgetController.getActiveBudgetByLedger(selectedLedger, period);
         if(ledgerBudget==null){
             System.out.println("No ledger budget found for the selected period.");
             return;
@@ -221,7 +224,7 @@ public class BudgetCLI {
     }
 
     private Ledger selectLedger() {
-        List<Ledger> ledgers=reportController.getLedgersByUser(userController.getCurrentUser());
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(userController.getCurrentUser());
 
         for(int i=0;i<ledgers.size();i++){
             System.out.println((i+1) + ". " + ledgers.get(i).getName());
@@ -249,7 +252,7 @@ public class BudgetCLI {
         for (LedgerCategory category : topCategories) {
 
             // print budgets for this category
-            Budget budget = reportController.getActiveBudgetByCategory(category, period);
+            Budget budget = budgetController.getActiveBudgetByCategory(category, period);
             if (budget == null) {
                 continue;
             }
@@ -269,7 +272,7 @@ public class BudgetCLI {
                     .toList();
             if (!children.isEmpty()) {
                 for(LedgerCategory subcategory : children){
-                    Budget subcategoryBudget = reportController.getActiveBudgetByCategory(subcategory, period);
+                    Budget subcategoryBudget = budgetController.getActiveBudgetByCategory(subcategory, period);
                     if(subcategoryBudget==null){
                         continue;
                     }
@@ -298,7 +301,7 @@ public class BudgetCLI {
             System.out.println();
 
             // print budgets for this category
-            Budget budget = reportController.getActiveBudgetByCategory(category, period);
+            Budget budget = budgetController.getActiveBudgetByCategory(category, period);
             if(budget==null){
                 continue;
             }
@@ -321,7 +324,7 @@ public class BudgetCLI {
                 continue;
             }
             for(LedgerCategory subcategory : children){
-                Budget subcategoryBudget = reportController.getActiveBudgetByCategory(subcategory, period);
+                Budget subcategoryBudget = budgetController.getActiveBudgetByCategory(subcategory, period);
                 if(subcategoryBudget==null){
                     continue;
                 }

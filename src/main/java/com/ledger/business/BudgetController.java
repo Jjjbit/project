@@ -1,9 +1,6 @@
 package com.ledger.business;
 
-import com.ledger.domain.Budget;
-import com.ledger.domain.CategoryType;
-import com.ledger.domain.Ledger;
-import com.ledger.domain.LedgerCategory;
+import com.ledger.domain.*;
 import com.ledger.orm.BudgetDAO;
 import com.ledger.orm.LedgerCategoryDAO;
 
@@ -19,6 +16,25 @@ public class BudgetController {
         this.ledgerCategoryDAO = ledgerCategoryDAO;
         this.budgetDAO = budgetDAO;
     }
+
+    public Budget getActiveBudgetByLedger(Ledger ledger, Budget.Period period) {
+        Budget budget = budgetDAO.getBudgetByLedgerId(ledger.getId(), period);
+        if(budget != null){
+            budget.refreshIfExpired();
+            budgetDAO.update(budget);
+        }
+        return budget;
+    }
+
+    public Budget getActiveBudgetByCategory(LedgerCategory category, Budget.Period period) {
+        Budget budget = budgetDAO.getBudgetByCategoryId(category.getId(), period);
+        if(budget != null){
+            budget.refreshIfExpired();
+            budgetDAO.update(budget);
+        }
+        return budget;
+    }
+
 
     public boolean editBudget(Budget budget, BigDecimal newAmount) {
         if(budget == null || newAmount == null) {
