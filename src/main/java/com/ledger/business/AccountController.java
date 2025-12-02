@@ -2,6 +2,7 @@ package com.ledger.business;
 
 import com.ledger.domain.*;
 import com.ledger.orm.AccountDAO;
+import com.ledger.orm.DebtPaymentDAO;
 import com.ledger.orm.TransactionDAO;
 
 import java.math.BigDecimal;
@@ -11,8 +12,10 @@ import java.util.List;
 public class AccountController {
     private final AccountDAO accountDAO;
     private final TransactionDAO transactionDAO;
+    private final DebtPaymentDAO  debtPaymentDAO;
 
-    public AccountController(AccountDAO accountDAO, TransactionDAO transactionDAO) {
+    public AccountController(AccountDAO accountDAO, TransactionDAO transactionDAO, DebtPaymentDAO debtPaymentDAO) {
+        this.debtPaymentDAO = debtPaymentDAO;
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
     }
@@ -376,6 +379,9 @@ public class AccountController {
             fromAccount.debit(amount);
             accountDAO.update(fromAccount); //update from account balance in db
         }
+
+        debtPaymentDAO.insert(creditAccount, tx); //insert debt payment record to db
+
         return accountDAO.update(creditAccount); //update credit account balance and current debt in db
     }
 

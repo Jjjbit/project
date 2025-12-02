@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS reimbursement_plan CASCADE;
 DROP TABLE IF EXISTS reimbursement_record CASCADE;
 DROP TABLE IF EXISTS reimbursement_tx_link CASCADE;
 DROP TABLE IF EXISTS installment_payments CASCADE;
+DROP TABLE IF EXISTS debt_payments CASCADE;
 DROP TABLE IF EXISTS global_categories CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
