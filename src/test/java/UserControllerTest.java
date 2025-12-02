@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,7 +21,7 @@ public class UserControllerTest {
     private UserController userController;
 
     @BeforeEach
-    public void setUp() throws SQLException {
+    public void setUp() {
         connection = ConnectionManager.getConnection();
         readResetScript();
         runSchemaScript();
