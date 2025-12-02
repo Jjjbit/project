@@ -43,7 +43,7 @@ public class CategoryDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<Category> getCategoriesByParentId(Long parentId) {
+    public List<Category> getCategoriesByParentId(long parentId) {
         List<Category> categories = new ArrayList<>();
 
         String sql = "SELECT id, name, parent_id, type FROM global_categories WHERE parent_id = ? ORDER BY id";
