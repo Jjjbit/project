@@ -33,13 +33,13 @@ public class Main {
             BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
             ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
             ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
-            ReimbursementRecordDAO reimbursementRecordDAO = new ReimbursementRecordDAO(connection, transactionDAO);
+            DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
 
             // create Business layer
             UserController userController = new UserController(userDAO);
-            AccountController accountController = new AccountController(accountDAO, transactionDAO);
+            AccountController accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
             LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-            TransactionController transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementRecordDAO, reimbursementDAO, reimbursementTxLinkDAO);
+            TransactionController transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO);
             InstallmentController installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
             LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
             BudgetController budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO);

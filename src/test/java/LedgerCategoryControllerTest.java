@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
@@ -33,10 +32,9 @@ public class LedgerCategoryControllerTest {
     private TransactionDAO transactionDAO;
     private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
     private ReimbursementDAO reimbursementDAO;
-    private ReimbursementRecordDAO reimbursementRecordDAO;
 
     @BeforeEach
-    public void setUp() throws SQLException {
+    public void setUp() {
         connection = ConnectionManager.getConnection();
         readResetScript();
         runSchemaScript();
@@ -51,13 +49,13 @@ public class LedgerCategoryControllerTest {
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
         reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
         reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
-        reimbursementRecordDAO = new ReimbursementRecordDAO(connection, transactionDAO);
+        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementRecordDAO, reimbursementDAO, reimbursementTxLinkDAO);
-        AccountController accountController = new AccountController(accountDAO, transactionDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO);
+        AccountController accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
 
         userController.register("test user", "password123");
         User testUser = userController.login("test user", "password123");

@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
@@ -33,15 +32,12 @@ public class AccountControllerTest {
     private TransactionDAO transactionDAO;
     private InstallmentDAO installmentDAO;
     private ReimbursementDAO reimbursementDAO;
-    private ReimbursementRecordDAO reimbursementRecordDAO;
     private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
-
     private ReimbursementController reimbursementController;
-    private ReimbursementRecordController reimbursementRecordController;
 
 
     @BeforeEach
-    public void setUp() throws SQLException {
+    public void setUp() {
         connection=ConnectionManager.getConnection();
         readResetScript();
         runSchemaScript();
@@ -56,14 +52,13 @@ public class AccountControllerTest {
         installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
         reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
-        reimbursementRecordDAO = new ReimbursementRecordDAO(connection, transactionDAO);
         reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
         reimbursementController = new ReimbursementController(transactionDAO, reimbursementDAO, reimbursementTxLinkDAO, ledgerCategoryDAO, accountDAO);
-        reimbursementRecordController = new ReimbursementRecordController(transactionDAO, reimbursementRecordDAO, ledgerCategoryDAO, accountDAO);
 
+        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
         UserController userController = new UserController(userDAO);
-        accountController = new AccountController(accountDAO, transactionDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementRecordDAO, reimbursementDAO, reimbursementTxLinkDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
 
@@ -401,7 +396,7 @@ public class AccountControllerTest {
         //create transactions linked to the account
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
         assertNotNull(tx1);
-        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60), false);
+        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
         assertNotNull(tx2);
 
         boolean result=accountController.deleteAccount(account, true);
@@ -442,7 +437,7 @@ public class AccountControllerTest {
         assertNotNull(transport);
 
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
-        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60), false);
+        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
 
         boolean result = accountController.deleteAccount(account, false);
         assertTrue(result);
@@ -503,7 +498,7 @@ public class AccountControllerTest {
         assertNotNull(transport);
 
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
-        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60), false);
+        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
 
         boolean result= accountController.deleteAccount(account, true);
         assertTrue(result);
@@ -545,7 +540,7 @@ public class AccountControllerTest {
         assertNotNull(transport);
 
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
-        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60), false);
+        Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
 
         boolean result = accountController.deleteAccount(account, false);
         assertTrue(result);

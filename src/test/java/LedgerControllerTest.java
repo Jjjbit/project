@@ -1,4 +1,7 @@
-import com.ledger.business.*;
+import com.ledger.business.AccountController;
+import com.ledger.business.LedgerController;
+import com.ledger.business.TransactionController;
+import com.ledger.business.UserController;
 import com.ledger.domain.*;
 import com.ledger.orm.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
@@ -25,7 +27,6 @@ public class LedgerControllerTest {
     private TransactionDAO transactionDAO;
     private LedgerDAO ledgerDAO;
     private BudgetDAO budgetDAO;
-    private ReimbursementRecordDAO reimbursementRecordDAO;
     private ReimbursementDAO reimbursementDAO;
     private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
 
@@ -36,7 +37,7 @@ public class LedgerControllerTest {
     private Account account;
 
     @BeforeEach
-    public void setUp() throws SQLException {
+    public void setUp() {
         connection=ConnectionManager.getConnection();
         readResetScript();
         runSchemaScript();
@@ -51,12 +52,12 @@ public class LedgerControllerTest {
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
         reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
         reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
-        reimbursementRecordDAO = new ReimbursementRecordDAO(connection, transactionDAO);
+        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementRecordDAO, reimbursementDAO, reimbursementTxLinkDAO);
-        AccountController accountController = new AccountController(accountDAO, transactionDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO);
+        AccountController accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
 
         userController.register("test user", "password123"); // create test user and insert into db
         testUser = userController.login("test user", "password123"); // login to set current user
@@ -210,7 +211,7 @@ public class LedgerControllerTest {
                 .toList();
 
         //create transactions
-        Transaction tx1=transactionController.createExpense(ledger, account, food, null, LocalDate.now(), BigDecimal.valueOf(10.00), false);
+        Transaction tx1=transactionController.createExpense(ledger, account, food, null, LocalDate.now(), BigDecimal.valueOf(10.00));
         Transaction tx2=transactionController.createIncome(ledger, account, salary, null, LocalDate.now(), BigDecimal.valueOf(1000.00));
 
         //delete ledger
