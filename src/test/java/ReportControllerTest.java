@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
@@ -29,7 +28,6 @@ public class ReportControllerTest {
     private BudgetDAO budgetDAO;
     private ReimbursementDAO reimbursementDAO;
     private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
-    private ReimbursementRecordDAO reimbursementRecordDAO;
 
     private AccountController accountController;
     private BudgetController budgetController;
@@ -40,7 +38,7 @@ public class ReportControllerTest {
     private ReimbursementController reimbursementController;
 
     @BeforeEach
-    public void setUp() throws SQLException{
+    public void setUp(){
         connection= ConnectionManager.getConnection();
         readResetScript();
         runSchemaScript();
@@ -56,13 +54,13 @@ public class ReportControllerTest {
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
         reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
         reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
-        reimbursementRecordDAO = new ReimbursementRecordDAO(connection, transactionDAO);
+        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
 
         budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementRecordDAO,
-                reimbursementDAO, reimbursementTxLinkDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO,
+                reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO);
         UserController userController = new UserController(userDAO);
-        accountController = new AccountController(accountDAO, transactionDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
         reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO,
                 installmentDAO, ledgerCategoryDAO, reimbursementTxLinkDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO,
@@ -371,9 +369,9 @@ public class ReportControllerTest {
                 .orElse(null);
 
         //transaction outside range
-        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.of(2024, 6, 1), BigDecimal.valueOf(50.00), false);
+        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.of(2024, 6, 1), BigDecimal.valueOf(50.00));
         //transactions within range
-        transactionController.createExpense(testLedger, testAccount, food, "Dinner", LocalDate.now(), BigDecimal.valueOf(30.00), false);
+        transactionController.createExpense(testLedger, testAccount, food, "Dinner", LocalDate.now(), BigDecimal.valueOf(30.00));
         transactionController.createTransfer(testLedger, testAccount, null, "Transfer to self", LocalDate.now(), BigDecimal.valueOf(100.00));
         transactionController.createIncome(testLedger, testAccount, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(3000.00));
         transactionController.createTransfer(testLedger, null, testAccount, "Transfer from self", LocalDate.now(), BigDecimal.valueOf(200.00));
@@ -402,9 +400,9 @@ public class ReportControllerTest {
                 .orElse(null);
 
         //transaction outside range
-        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.of(2024, 6, 1), BigDecimal.valueOf(50.00), false);
+        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.of(2024, 6, 1), BigDecimal.valueOf(50.00));
         //transactions within range
-        transactionController.createExpense(testLedger, testAccount, food, "Dinner", LocalDate.now(), BigDecimal.valueOf(30.00), false);
+        transactionController.createExpense(testLedger, testAccount, food, "Dinner", LocalDate.now(), BigDecimal.valueOf(30.00));
         transactionController.createTransfer(testLedger, testAccount, null, "Transfer to self", LocalDate.now(), BigDecimal.valueOf(100.00));
         transactionController.createIncome(testLedger, testAccount, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(3000.00));
         transactionController.createTransfer(testLedger, null, testAccount, "Transfer from self", LocalDate.now(), BigDecimal.valueOf(200.00));
@@ -1030,8 +1028,8 @@ public class ReportControllerTest {
         budgetController.editBudget(budget2, BigDecimal.valueOf(500.00)); //set monthly budget to 500
 
         //add transactions to exceed budget of food category
-        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now(), BigDecimal.valueOf(150.00), false);
-        transactionController.createExpense(testLedger, testAccount, lunch, "Grocery shopping", LocalDate.now(), BigDecimal.valueOf(150.00), false);
+        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now(), BigDecimal.valueOf(150.00));
+        transactionController.createExpense(testLedger, testAccount, lunch, "Grocery shopping", LocalDate.now(), BigDecimal.valueOf(150.00));
 
         boolean isOverBudget = reportController.isOverBudget(budget); //expense of food is 150+150=300 > 200
         assertTrue(isOverBudget);
@@ -1106,7 +1104,7 @@ public class ReportControllerTest {
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
 
-        transactionController.createExpense(testLedger, testAccount, entertainment, "Movie", LocalDate.of(2025, 1, 1), BigDecimal.valueOf(500.00), false);
+        transactionController.createExpense(testLedger, testAccount, entertainment, "Movie", LocalDate.of(2025, 1, 1), BigDecimal.valueOf(500.00));
 
         boolean isOverBudget = reportController.isOverBudget(budget);
         assertFalse(isOverBudget); //should be false as budget period is over
@@ -1127,8 +1125,8 @@ public class ReportControllerTest {
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(120.00));
 
-        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now().withDayOfMonth(1), BigDecimal.valueOf(100.00), false);
-        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()), BigDecimal.valueOf(21.00), false);
+        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now().withDayOfMonth(1), BigDecimal.valueOf(100.00));
+        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()), BigDecimal.valueOf(21.00));
 
         boolean isOverBudget = reportController.isOverBudget(budget);
         assertTrue(isOverBudget);
@@ -1138,8 +1136,8 @@ public class ReportControllerTest {
                 .filter(c -> c.getName().equals("Transport"))
                 .findFirst()
                 .orElse(null);
-        transactionController.createExpense(testLedger, testAccount, transport, "Bus ticket", LocalDate.now().withDayOfMonth(1), BigDecimal.valueOf(100.00), false);
-        transactionController.createExpense(testLedger, testAccount, transport, "Taxi", LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()), BigDecimal.valueOf(201.00), false);
+        transactionController.createExpense(testLedger, testAccount, transport, "Bus ticket", LocalDate.now().withDayOfMonth(1), BigDecimal.valueOf(100.00));
+        transactionController.createExpense(testLedger, testAccount, transport, "Taxi", LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()), BigDecimal.valueOf(201.00));
         assertTrue(reportController.isOverBudget(budget1));
     }
 
@@ -1158,10 +1156,12 @@ public class ReportControllerTest {
 
         // Create a reimbursable expense transaction
         Expense expense = transactionController.createExpense(testLedger, testAccount,
-                food, null, LocalDate.now(), BigDecimal.valueOf(200.00),
-                true);
+                food, null, LocalDate.now(), BigDecimal.valueOf(200.00));
 
-        Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+        //Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+        Reimbursement reimbursement = reimbursementDAO.getByLedger(testLedger).stream()
+                .findFirst()
+                .orElse(null);
         assertNotNull(reimbursement);
 
         // Claim full reimbursement
@@ -1187,10 +1187,12 @@ public class ReportControllerTest {
 
         // Create a reimbursable expense transaction
         Expense expense = transactionController.createExpense(testLedger, testAccount,
-                food, null, LocalDate.now(), BigDecimal.valueOf(500.00),
-                true);
+                food, null, LocalDate.now(), BigDecimal.valueOf(500.00));
 
-        Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+        //Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+        Reimbursement reimbursement = reimbursementDAO.getByLedger(testLedger).stream()
+                .findFirst()
+                .orElse(null);
         assertNotNull(reimbursement);
 
         // Claim partial reimbursement
@@ -1218,10 +1220,12 @@ public class ReportControllerTest {
 
         // Create a reimbursable expense transaction
         Expense expense = transactionController.createExpense(testLedger, testAccount,
-                food, null, LocalDate.now(), BigDecimal.valueOf(500.00),
-                true);
+                food, null, LocalDate.now(), BigDecimal.valueOf(500.00));
 
-        Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+        //Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+        Reimbursement reimbursement = reimbursementDAO.getByLedger(testLedger).stream()
+                .findFirst()
+                .orElse(null);
         assertNotNull(reimbursement);
 
         // Claim partial reimbursement
@@ -1248,10 +1252,12 @@ public class ReportControllerTest {
 
         // Create a reimbursable expense transaction
         Expense expense = transactionController.createExpense(testLedger, testAccount,
-                food, null, LocalDate.now(), BigDecimal.valueOf(300.00),
-                true);
+                food, null, LocalDate.now(), BigDecimal.valueOf(300.00));
 
-        Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+        //Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+        Reimbursement reimbursement = reimbursementDAO.getByLedger(testLedger).stream()
+                .findFirst()
+                .orElse(null);
         assertNotNull(reimbursement);
 
         // Attempt to claim more than the remaining amount

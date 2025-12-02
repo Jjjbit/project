@@ -12,16 +12,15 @@ import static java.util.Comparator.comparing;
 public class TransactionController {
     private final TransactionDAO transactionDAO;
     private final AccountDAO accountDAO;
-    private final ReimbursementRecordDAO reimbursementRecordDAO;
     private final ReimbursementDAO reimbursementDAO;
     private final ReimbursementTxLinkDAO reimbursementTxLinkDAO;
+    private final DebtPaymentDAO debtPaymentDAO;
 
     public TransactionController(TransactionDAO transactionDAO, AccountDAO accountDAO,
-                                 ReimbursementRecordDAO reimbursementRecordDAO,
                                  ReimbursementDAO reimbursementDAO,
-                                 ReimbursementTxLinkDAO reimbursementTxLinkDAO) {
+                                 ReimbursementTxLinkDAO reimbursementTxLinkDAO, DebtPaymentDAO debtPaymentDAO) {
+        this.debtPaymentDAO = debtPaymentDAO;
         this.reimbursementDAO = reimbursementDAO;
-        this.reimbursementRecordDAO = reimbursementRecordDAO;
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
         this.reimbursementTxLinkDAO = reimbursementTxLinkDAO;
@@ -35,7 +34,6 @@ public class TransactionController {
                                                                 LocalDate endDate){
         return transactionDAO.getByLedgerId(ledger.getId()).stream()
                 .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
-                //.filter(t -> !t.isReimbursable() || (t.getStatus() == ReimbursableStatus.FULL))
                 .sorted((comparing(Transaction::getDate).reversed()))
                 .toList();
     }
@@ -96,7 +94,6 @@ public class TransactionController {
 
     public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String description,
                                  LocalDate date, BigDecimal amount
-            , Boolean is_reimbursable
     ) {
         if (ledger == null) {
             return null;
@@ -117,10 +114,6 @@ public class TransactionController {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
-        if(is_reimbursable == null) {
-            is_reimbursable = false;
-        }
-        //ReimbursableStatus status = is_reimbursable ? ReimbursableStatus.PENDING : ReimbursableStatus.NONE;
 
         Expense expenseTransaction = new Expense(
                 date != null ? date : LocalDate.now(),
@@ -129,21 +122,10 @@ public class TransactionController {
                 fromAccount,
                 ledger,
                 category
-                , is_reimbursable
-                //, status
         );
         transactionDAO.insert(expenseTransaction);
         fromAccount.debit(amount);
         accountDAO.update(fromAccount); //update balance in database
-
-        if(is_reimbursable) {
-            Reimbursement reimbursement = new Reimbursement(
-                    expenseTransaction,
-                    amount,
-                    ReimbursableStatus.PENDING, ledger
-            );
-            reimbursementDAO.insert(reimbursement);
-        }
         return expenseTransaction;
     }
 
@@ -215,7 +197,13 @@ public class TransactionController {
                     accountDAO.update(fromAccount);
                 }
                 if (toAccount != null) {
-                    toAccount.debit(tx.getAmount());
+                    if(debtPaymentDAO.isDebtPaymentTransaction(tx.getId()) && toAccount instanceof CreditAccount) {
+                        ((CreditAccount) toAccount).setCurrentDebt(
+                                ((CreditAccount) toAccount).getCurrentDebt().add(tx.getAmount())
+                        );
+                    }else{
+                        toAccount.debit(tx.getAmount());
+                    }
                     accountDAO.update(toAccount);
                 }
                 break;
@@ -407,28 +395,25 @@ public class TransactionController {
         return transactionDAO.update(transfer);
     }
 
-    public boolean resetIsReimbursable(Expense expense) {
-        if (expense == null) {
-            return false;
-        }
-        if (expense.isReimbursable()) { //it's currently reimbursable
-            expense.setReimbursable(false);
-            //expense.setStatus(ReimbursableStatus.NONE);
-            //List<ReimbursementRecord> records = reimbursementDAO.getByOriginalTransaction(expense);
-            Reimbursement record = reimbursementDAO.getByOriginalTransactionId(expense.getId());
-            if (record != null) {
-                reimbursementDAO.delete(record);
-            }
-        }else{ //it's currently not reimbursable
-            expense.setReimbursable(true);
-            //expense.setStatus(ReimbursableStatus.PENDING);
-            Reimbursement newRecord = new Reimbursement(expense,
-                    expense.getAmount(),
-                    ReimbursableStatus.PENDING, expense.getLedger()
-            );
-            reimbursementDAO.insert(newRecord);
-        }
-        return transactionDAO.update(expense);
-    }
+//    public boolean resetIsReimbursable(Expense expense) {
+//        if (expense == null) {
+//            return false;
+//        }
+//        if (expense.isReimbursable()) { //it's currently reimbursable
+//            expense.setReimbursable(false);
+////            Reimbursement record = reimbursementDAO.getByOriginalTransactionId(expense.getId());
+////            if (record != null) {
+////                reimbursementDAO.delete(record);
+////            }
+//        }else{ //it's currently not reimbursable
+//            expense.setReimbursable(true);
+////            Reimbursement newRecord = new Reimbursement(expense,
+////                    expense.getAmount(),
+////                    ReimbursableStatus.PENDING, expense.getLedger()
+////            );
+//            //reimbursementDAO.insert(newRecord);
+//        }
+//        return transactionDAO.update(expense);
+//    }
 
 }
