@@ -10,7 +10,6 @@ DROP TABLE IF EXISTS budgets CASCADE;
 DROP TABLE IF EXISTS ledger_categories CASCADE;
 DROP TABLE IF EXISTS ledgers CASCADE;
 DROP TABLE IF EXISTS reimbursement_plan CASCADE;
-DROP TABLE IF EXISTS reimbursement_record CASCADE;
 DROP TABLE IF EXISTS reimbursement_tx_link CASCADE;
 DROP TABLE IF EXISTS installment_payments CASCADE;
 DROP TABLE IF EXISTS debt_payments CASCADE;
