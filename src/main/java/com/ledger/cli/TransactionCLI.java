@@ -88,20 +88,13 @@ public class TransactionCLI {
         System.out.print("Enter the amount for the transaction: ");
         BigDecimal amount = inputAmount();
 
-        System.out.print("Is this expense reimbursable? (y/n, press Enter to skip): ");
-        String reimbursableInput = scanner.nextLine().trim().toLowerCase();
-        boolean isReimbursable = reimbursableInput.equals("y") || reimbursableInput.equals("yes");
-        if(reimbursableInput.isEmpty()){
-            isReimbursable = false;
-        }
-
         //add date
         System.out.print("Enter the date for the transaction (YYYY-MM-DD): ");
         LocalDate date = inputDate();
 
         //create transaction
         Expense expenseTransaction = transactionController.createExpense(selectedLedger, selectedAccount,
-                selectedCategory, note, date, amount, isReimbursable);
+                selectedCategory, note, date, amount);
         if(expenseTransaction==null){
             System.out.println("Failed to create expense transaction.");
             return;
