@@ -8,86 +8,227 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class InstallmentUnitTest {
 
-    //full repayment flow with EVENLY_SPLIT - repayOnePeriod called multiple times until full repayment
     @Test
-    public void testFullRepaymentFlow_EvenlySplit() {
+    public void testPayments_EvenlySplit_Rounding1(){ //with interest
         Installment plan = new Installment(null,
-                BigDecimal.valueOf(1000.00),
-                5, BigDecimal.valueOf(5.00), 0,
+                BigDecimal.valueOf(2000.00),
+                12,
+                BigDecimal.valueOf(6.00), //6% interest
+                0,
                 Installment.Strategy.EVENLY_SPLIT,
                 null,
                 LocalDate.now(),
                 null, true);
+        //total with interest = 2000 + 120 = 2120
+        assertEquals(0, plan.getTotalPayment().compareTo(BigDecimal.valueOf(2120.00)));
 
+        for(int i=0; i < 11; i++) {
+            //before repayment
+            assertEquals(0, plan.getMonthlyPayment(plan.getPaidPeriods() + 1).compareTo(BigDecimal.valueOf(176.67)));
+            BigDecimal expectedRemaining = BigDecimal.valueOf(2120.00).subtract(BigDecimal.valueOf(176.67).multiply(BigDecimal.valueOf(plan.getPaidPeriods())));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemaining));
 
-        for (int i = 0; i < 5; i++) {
-            assertEquals(0, plan.getMonthlyPayment(plan.getPaidPeriods() + 1).compareTo(BigDecimal.valueOf(210.00)));
             plan.repayOnePeriod();
+
+            //after repayment
+            BigDecimal expectedRemainingAfter = BigDecimal.valueOf(2120.00).subtract(BigDecimal.valueOf(176.67).multiply(BigDecimal.valueOf(plan.getPaidPeriods())));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemainingAfter));
+            assertEquals(i + 1, plan.getPaidPeriods());
         }
 
-        assertEquals(5, plan.getPaidPeriods());
+        assertEquals(0, plan.getMonthlyPayment(12).compareTo(BigDecimal.valueOf(176.63)));
+        plan.repayOnePeriod();
         assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(12, plan.getPaidPeriods());
+
+
     }
 
-    //full repayment flow with UPFRONT strategy
     @Test
-    public void testFullRepaymentFlow_UpfrontStrategy() {
+    public void testPayments_EvenlySplit_Rounding2() {
         Installment plan = new Installment(null,
-                BigDecimal.valueOf(1000.00),
-                5,
-                BigDecimal.valueOf(10.00), // 10%
+                BigDecimal.valueOf(2000.00),
+                12,
+                BigDecimal.valueOf(4.00),
+                0,
+                Installment.Strategy.EVENLY_SPLIT,
+                null,
+                LocalDate.now(),
+                null, true);
+        //total with interest = 2000 + 80 = 2080
+        assertEquals(0, plan.getTotalPayment().compareTo(BigDecimal.valueOf(2080.00)));
+
+        for (int i = 0; i < 11; i++) {
+            //before repayment
+            assertEquals(0, plan.getMonthlyPayment(plan.getPaidPeriods() + 1).compareTo(BigDecimal.valueOf(173.33)));
+            BigDecimal expectedRemaining = BigDecimal.valueOf(2080.00).subtract(BigDecimal.valueOf(173.33).multiply(BigDecimal.valueOf(plan.getPaidPeriods())));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemaining));
+
+            plan.repayOnePeriod();
+
+            //after repayment
+            BigDecimal expectedRemainingAfter = BigDecimal.valueOf(2080.00).subtract(BigDecimal.valueOf(173.33).multiply(BigDecimal.valueOf(plan.getPaidPeriods())));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemainingAfter));
+            assertEquals(i + 1, plan.getPaidPeriods());
+        }
+
+        assertEquals(0, plan.getMonthlyPayment(12).compareTo(BigDecimal.valueOf(173.37)));
+        plan.repayOnePeriod();
+        assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(12, plan.getPaidPeriods());
+    }
+
+    @Test
+    public void testPayments_Upfront_Rounding1(){ //with interest
+        Installment plan = new Installment(null,
+                BigDecimal.valueOf(2000.00),
+                12,
+                BigDecimal.valueOf(6.00), //6% interest
                 0,
                 Installment.Strategy.UPFRONT,
                 null,
                 LocalDate.now(),
                 null, true);
+        //total with interest = 2000 + 120 = 2120
+        //166.67 base
+        assertEquals(0, plan.getTotalPayment().compareTo(BigDecimal.valueOf(2120.00)));
 
-        assertEquals(0, plan.getTotalPayment().compareTo(BigDecimal.valueOf(1100.00)));
-
-        // First payment should include the upfront fee
-        BigDecimal firstPayment = plan.getMonthlyPayment(plan.getPaidPeriods() + 1);
-        assertEquals(0, firstPayment.compareTo(BigDecimal.valueOf(300.00))); // 200 + 100 upfront fee
-        //repay first period
+        //first payment
+        assertEquals(0, plan.getMonthlyPayment(1).compareTo(BigDecimal.valueOf(286.67)));
         plan.repayOnePeriod();
+        assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.valueOf(1833.33)));
+        assertEquals(1, plan.getPaidPeriods());
 
-        //from second to fifth period
-        for(int i = 0; i < 5; i++) {
-            BigDecimal payment= plan.getMonthlyPayment(plan.getPaidPeriods() + 1);
-            assertEquals(0, payment.compareTo(BigDecimal.valueOf(200.00)));
+        for (int i = 1; i < 11; i++) {
+            //before repayment
+            assertEquals(0, plan.getMonthlyPayment(plan.getPaidPeriods() + 1).compareTo(BigDecimal.valueOf(166.67)));
+            BigDecimal expectedRemaining = BigDecimal.valueOf(1833.33).subtract(BigDecimal.valueOf(166.67).multiply(BigDecimal.valueOf(plan.getPaidPeriods()-1)));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemaining));
+
             plan.repayOnePeriod();
+
+            //after repayment
+            BigDecimal expectedRemainingAfter = BigDecimal.valueOf(1833.33).subtract(BigDecimal.valueOf(166.67).multiply(BigDecimal.valueOf(plan.getPaidPeriods()-1)));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemainingAfter));
+            assertEquals(i + 1, plan.getPaidPeriods());
         }
 
-        BigDecimal remaining = plan.getRemainingAmountWithRepaidPeriods();
-        assertEquals(0, remaining.compareTo(BigDecimal.ZERO));
+        assertEquals(0, plan.getMonthlyPayment(12).compareTo(BigDecimal.valueOf(166.63)));
+        plan.repayOnePeriod();
+        assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(12, plan.getPaidPeriods());
     }
 
-    //full repayment flow with FINAL strategy
     @Test
-    public void testFullRepaymentFlow_FinalStrategy() {
+    public void testPayments_Upfront_Rounding2() {
         Installment plan = new Installment(null,
-                BigDecimal.valueOf(1000.00),
-                5,
-                new BigDecimal("10.00"), // 10%
+                BigDecimal.valueOf(1450.00),
+                12,
+                BigDecimal.valueOf(4.00),
+                0,
+                Installment.Strategy.UPFRONT,
+                null,
+                LocalDate.now(),
+                null, true);
+        //total with interest = 1450+58=1508
+        //120.83 base
+        assertEquals(0, plan.getTotalPayment().compareTo(BigDecimal.valueOf(1508.00)));
+
+        //first payment
+        assertEquals(0, plan.getMonthlyPayment(1).compareTo(BigDecimal.valueOf(178.83)));
+        plan.repayOnePeriod();
+        assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.valueOf(1329.17)));
+        assertEquals(1, plan.getPaidPeriods());
+
+        for (int i = 1; i < 11; i++) {
+            //before repayment
+            assertEquals(0, plan.getMonthlyPayment(plan.getPaidPeriods() + 1).compareTo(BigDecimal.valueOf(120.83)));
+            BigDecimal expectedRemaining = BigDecimal.valueOf(1329.17).subtract(BigDecimal.valueOf(120.83).multiply(BigDecimal.valueOf(plan.getPaidPeriods()-1)));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemaining));
+
+            plan.repayOnePeriod();
+
+            //after repayment
+            BigDecimal expectedRemainingAfter = BigDecimal.valueOf(1329.17).subtract(BigDecimal.valueOf(120.83).multiply(BigDecimal.valueOf(plan.getPaidPeriods()-1)));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemainingAfter));
+            assertEquals(i + 1, plan.getPaidPeriods());
+        }
+
+        assertEquals(0, plan.getMonthlyPayment(12).compareTo(BigDecimal.valueOf(120.87)));
+        plan.repayOnePeriod();
+        assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(12, plan.getPaidPeriods());
+    }
+
+    @Test
+    public void testPayments_Final_Rounding1(){
+        Installment plan = new Installment(null,
+                BigDecimal.valueOf(2000.00),
+                12,
+                BigDecimal.valueOf(6.00), //6% interest
                 0,
                 Installment.Strategy.FINAL,
                 null,
                 LocalDate.now(),
                 null, true);
+        //total with interest = 2000 + 120 = 2120
+        //166.67 base
+        assertEquals(0, plan.getTotalPayment().compareTo(BigDecimal.valueOf(2120.00)));
 
-        for (int i = 0; i < 4; i++) {
-            BigDecimal payment = plan.getMonthlyPayment(plan.getPaidPeriods() + 1);
-            assertEquals(0, payment.compareTo(BigDecimal.valueOf(200.00)));
+        for (int i = 0; i < 11; i++) {
+            //before repayment
+            assertEquals(0, plan.getMonthlyPayment(plan.getPaidPeriods() + 1).compareTo(BigDecimal.valueOf(166.67)));
+            BigDecimal expectedRemaining = BigDecimal.valueOf(2120.00).subtract(BigDecimal.valueOf(166.67).multiply(BigDecimal.valueOf(plan.getPaidPeriods())));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemaining));
+
             plan.repayOnePeriod();
+
+            //after repayment
+            BigDecimal expectedRemainingAfter = BigDecimal.valueOf(2120.00).subtract(BigDecimal.valueOf(166.67).multiply(BigDecimal.valueOf(plan.getPaidPeriods())));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemainingAfter));
+            assertEquals(i + 1, plan.getPaidPeriods());
         }
 
-        //last period should include the final fee
-        BigDecimal lastPayment = plan.getMonthlyPayment(plan.getPaidPeriods() + 1);
-        assertEquals(plan.getRemainingAmount(), lastPayment); // 200 + 100 final fee
-
+        assertEquals(0, plan.getMonthlyPayment(12).compareTo(BigDecimal.valueOf(286.63)));
         plan.repayOnePeriod();
         assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(12, plan.getPaidPeriods());
     }
 
+    @Test
+    public void testPayments_Final_Rounding2() {
+        Installment plan = new Installment(null,
+                BigDecimal.valueOf(1450.00),
+                12,
+                BigDecimal.valueOf(4.00),
+                0,
+                Installment.Strategy.FINAL,
+                null,
+                LocalDate.now(),
+                null, true);
+        //total with interest = 1450+58=1508
+        //120.83 base
+        assertEquals(0, plan.getTotalPayment().compareTo(BigDecimal.valueOf(1508.00)));
+
+        for (int i = 0; i < 11; i++) {
+            //before repayment
+            assertEquals(0, plan.getMonthlyPayment(plan.getPaidPeriods() + 1).compareTo(BigDecimal.valueOf(120.83)));
+            BigDecimal expectedRemaining = BigDecimal.valueOf(1508.00).subtract(BigDecimal.valueOf(120.83).multiply(BigDecimal.valueOf(plan.getPaidPeriods())));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemaining));
+
+            plan.repayOnePeriod();
+
+            //after repayment
+            BigDecimal expectedRemainingAfter = BigDecimal.valueOf(1508.00).subtract(BigDecimal.valueOf(120.83).multiply(BigDecimal.valueOf(plan.getPaidPeriods())));
+            assertEquals(0, plan.getRemainingAmount().compareTo(expectedRemainingAfter));
+            assertEquals(i + 1, plan.getPaidPeriods());
+        }
+
+        assertEquals(0, plan.getMonthlyPayment(12).compareTo(BigDecimal.valueOf(178.87)));
+        plan.repayOnePeriod();
+        assertEquals(0, plan.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(12, plan.getPaidPeriods());
+    }
 
     // Boundary test for feeRate = 0
     @Test
