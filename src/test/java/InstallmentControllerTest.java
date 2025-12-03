@@ -12,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
@@ -38,7 +37,7 @@ public class InstallmentControllerTest {
     private List<LedgerCategory> testCategories;
 
     @BeforeEach
-    public void setUp() throws SQLException {
+    public void setUp() {
         connection = com.ledger.orm.ConnectionManager.getConnection();
         readResetScript();
         runSchemaScript();
@@ -52,15 +51,17 @@ public class InstallmentControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
+        InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
 
         UserController userController = new UserController(userDAO);
-        accountController = new AccountController(accountDAO, transactionDAO);
-        installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
+        installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO, installmentPaymentDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
 
         // Create a test user
         userController.register("test user", "password123");
-        User testUser = userController.login("test user", "password123");
+        testUser = userController.login("test user", "password123");
 
         // Create a test credit account for the user
         account = accountController.createCreditAccount("Test Credit Account", "Credit Account Note",
@@ -263,7 +264,7 @@ public class InstallmentControllerTest {
     }
 
     @Test
-    public void testDeleteInstallment_WithPaidPeriods_Success() {
+    public void testDeleteInstallment_WithPayments_Success() {
         Installment plan = installmentController.createInstallment(account, "Test Installment Plan",
                 BigDecimal.valueOf(120.00), 12,
                 BigDecimal.valueOf(5.00), // interest
@@ -271,20 +272,22 @@ public class InstallmentControllerTest {
                 LocalDate.now().minusMonths(3), // 3 months ago
                 category, true, testLedger);
         installmentController.payInstallment(plan, account); //pay once
+        installmentController.payInstallment(plan, account); //pay twice
         //total repayment = 120 + 5% = 126
-        //remaining amount = 126 - (126/12 * 4) = 84.0
-        //repaid amount = 126/12 *4 =42.0
+        //remaining amount = 126 - (10.5 * 5) = 73.5
+        //repaid amount = 10.5 *5 =52.5
 
         boolean deleted = installmentController.deleteInstallment(plan, account);
         assertTrue(deleted);
 
         assertNull(installmentDAO.getById(plan.getId()));
         assertEquals(0, installmentDAO.getByAccountId(account.getId()).size());
-        assertEquals(2, transactionDAO.getByAccountId(account.getId()).size());
-        assertEquals(2, transactionDAO.getByCategoryId(category.getId()).size());
+        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
+        assertEquals(0, transactionDAO.getByCategoryId(category.getId()).size());
+
         CreditAccount updatedAccount = (CreditAccount) accountDAO.getAccountById(account.getId());
-        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(958.00))); //balance of account remains unchanged
-        assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(20.00))); //current debt decreased by remaining amount 84.0
+        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
+        assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(20.00)));
     }
 
     //test pay installment

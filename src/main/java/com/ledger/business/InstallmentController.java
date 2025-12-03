@@ -3,6 +3,7 @@ package com.ledger.business;
 import com.ledger.domain.*;
 import com.ledger.orm.AccountDAO;
 import com.ledger.orm.InstallmentDAO;
+import com.ledger.orm.InstallmentPaymentDAO;
 import com.ledger.orm.TransactionDAO;
 
 import java.math.BigDecimal;
@@ -14,9 +15,11 @@ public class InstallmentController {
     private final InstallmentDAO installmentDAO;
     private final TransactionDAO transactionDAO;
     private final AccountDAO accountDAO;
+    private final InstallmentPaymentDAO installmentPaymentDAO;
 
     public InstallmentController(InstallmentDAO installmentDAO, TransactionDAO transactionDAO,
-                                 AccountDAO accountDAO) {
+                                 AccountDAO accountDAO, InstallmentPaymentDAO installmentPaymentDAO) {
+        this.installmentPaymentDAO = installmentPaymentDAO;
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
         this.installmentDAO = installmentDAO;
@@ -99,23 +102,25 @@ public class InstallmentController {
         if(repaidPeriods > 0){
             BigDecimal remainingAmount = plan.getRemainingAmountWithRepaidPeriods();
             BigDecimal repaidAmount = plan.getTotalPayment().subtract(remainingAmount);
-            Transaction tx = new Expense(
+            Expense tx = new Expense(
                     LocalDate.now(),
                     repaidAmount,
                     "Record of already repaid installments for " + name,
                     creditAccount,
                     ledger,
-                    category, false
+                    category
             );
             transactionDAO.insert(tx); //insert transaction to db
             creditAccount.debit(repaidAmount); //reduce balance or increase debt
             accountDAO.update(creditAccount); //update balance and current debt in db
+            installmentPaymentDAO.insert(plan, tx); //link transaction and installment plan
         }
 
         return plan;
 
     }
 
+    //installment, all linked transactions will be deleted and amounts refunded
     public boolean deleteInstallment(Installment plan, CreditAccount account) {
         if (plan == null) {
             return false;
@@ -125,6 +130,18 @@ public class InstallmentController {
             BigDecimal oldDebt = account.getCurrentDebt();
             account.setCurrentDebt(oldDebt.subtract(plan.getRemainingAmount()));
             accountDAO.update(account); //update current debt in db
+        }
+
+
+        List<Transaction> linkedTransactions = installmentPaymentDAO.getTransactionsByInstallment(plan);
+        for (Transaction tx : linkedTransactions) {
+            Account fromAccount = tx.getFromAccount();
+            if(fromAccount != null) {
+                Account cached = accountDAO.getAccountById(fromAccount.getId());
+                cached.credit(tx.getAmount()); //refund the amount
+                accountDAO.update(cached); //update balance in db
+            }
+            transactionDAO.delete(tx); //delete linked transactions
         }
 
         return installmentDAO.delete(plan);
@@ -158,15 +175,19 @@ public class InstallmentController {
         if (plan.getPaidPeriods() >= plan.getTotalPeriods()) {
             return false; //all periods already paid
         }
+        if(plan.getLinkedAccount().getId() != account.getId()){
+            return false;
+        }
 
         BigDecimal paymentAmount = plan.getMonthlyPayment(plan.getPaidPeriods() + 1);
         LedgerCategory category = plan.getCategory();
         Ledger ledger = category.getLedger();
 
-        Transaction tx = new Expense(LocalDate.now(), paymentAmount,
+        Expense tx = new Expense(LocalDate.now(), paymentAmount,
                 "Installment payment " + (plan.getPaidPeriods() + 1) + " " + plan.getName(),
-                account, ledger, category, false);
+                account, ledger, category);
         transactionDAO.insert(tx); //insert transaction to db
+        installmentPaymentDAO.insert(plan, tx); //link transaction and installment plan
 
         plan.repayOnePeriod(); //update remaining amount and paid periods
         account.debit(paymentAmount); //reduce balance or increase debt
