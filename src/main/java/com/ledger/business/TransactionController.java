@@ -190,7 +190,6 @@ public class TransactionController {
         if (tx.getToAccount() != null) {
             toAccount = accountDAO.getAccountById(tx.getToAccount().getId());
         }
-
         Account fromAccount = null;
         if (tx.getFromAccount() != null) {
             fromAccount = accountDAO.getAccountById(tx.getFromAccount().getId());
@@ -198,6 +197,9 @@ public class TransactionController {
 
         switch (tx.getType()) {
             case INCOME:
+                if(toAccount == null) {
+                    return false;
+                }
                 if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
                     Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
                     reimbursement.setRemainingAmount(
@@ -209,6 +211,9 @@ public class TransactionController {
                 accountDAO.update(toAccount);
                 break;
             case EXPENSE:
+                if(fromAccount == null) {
+                    return false;
+                }
                 if(installmentPaymentDAO.isInstallmentPaymentTransaction(tx)) {
                     Installment installment = installmentPaymentDAO.getInstallmentByTransaction(tx);
                     installment.setPaidPeriods(installment.getPaidPeriods() - 1);
