@@ -13,8 +13,11 @@ import java.util.List;
 public class ReimbursementTxLinkDAO {
     private final Connection connection;
     private final TransactionDAO transactionDAO;
+    private final ReimbursementDAO reimbursementDAO;
 
-    public ReimbursementTxLinkDAO(Connection connection, TransactionDAO transactionDAO) {
+    public ReimbursementTxLinkDAO(Connection connection, TransactionDAO transactionDAO,
+                                  ReimbursementDAO reimbursementDAO) {
+        this.reimbursementDAO = reimbursementDAO;
         this.transactionDAO = transactionDAO;
         this.connection = connection;
     }
@@ -56,6 +59,40 @@ public class ReimbursementTxLinkDAO {
             System.err.println("SQL Exception during getTransactionsByReimbursementId: " + e.getMessage());
         }
         return transactions;
+    }
+
+    @SuppressWarnings("SqlResolve")
+    public boolean isTransactionReimbursed(Transaction transaction) {
+        String sql = "SELECT 1 FROM reimbursement_tx_link WHERE reimbursement_transaction_id = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setLong(1, transaction.getId());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during isTransactionReimbursed: " + e.getMessage());
+        }
+        return false;
+    }
+
+    @SuppressWarnings("SqlResolve")
+    public Reimbursement getReimbursementByTransaction(Transaction transaction) {
+        String sql = "SELECT reimbursement_plan_id FROM reimbursement_tx_link WHERE reimbursement_transaction_id = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setLong(1, transaction.getId());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return reimbursementDAO.getById(rs.getLong("reimbursement_plan_id"));
+                }
+            }
+        }catch (SQLException e){
+            System.err.println("SQL Exception during getReimbursementByTransactionId: " + e.getMessage());
+        }
+        return null;
     }
 
 }
