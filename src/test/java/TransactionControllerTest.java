@@ -177,7 +177,7 @@ public class TransactionControllerTest {
     //test delete a record of reimbursement over claim
     @Test
     public void testDelete_ReimbursementOverClaimTransaction() {
-        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(800.00), testAccount, testLedger);
+        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(800.00), testAccount, testLedger, "Business Trip");
         assertNotNull(record);
 
         CreditAccount creditCardAccount = accountController.createCreditAccount("Visa Credit Card", null,
