@@ -10,7 +10,7 @@ INSERT INTO global_categories (name, parent_id, type) VALUES
                                                           ('Housing', NULL, 'EXPENSE'),
                                                           ('Salary', NULL, 'INCOME'),
                                                           ('Freelance', NULL, 'INCOME'),
-                                                          ('Bonus', NULL, 'INCOME');
+                                                          ('Bonus', NULL, 'INCOME'), ('Claim Income', NULL, 'INCOME');
 
 
 
