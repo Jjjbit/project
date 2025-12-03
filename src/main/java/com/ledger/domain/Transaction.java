@@ -13,8 +13,6 @@ public abstract class Transaction {
     protected Ledger ledger;
     protected LedgerCategory category;
     protected TransactionType type;
-    protected boolean is_reimbursable;
-//    protected ReimbursableStatus status;
 
     public Transaction() {}
     public Transaction(LocalDate date,
@@ -24,9 +22,7 @@ public abstract class Transaction {
                        Account toAccount,
                        Ledger ledger,
                        LedgerCategory category,
-                       TransactionType type,
-                       boolean is_reimbursable
-                       // , ReimbursableStatus status
+                       TransactionType type
                        ) {
         this.date = date != null ? date : LocalDate.now();
         this.amount = amount;
@@ -36,22 +32,7 @@ public abstract class Transaction {
         this.ledger = ledger;
         this.category = category;
         this.type = type;
-        this.is_reimbursable = is_reimbursable;
-//        this.status = status;
     }
-
-    public boolean isReimbursable() {
-        return is_reimbursable;
-    }
-    public void setReimbursable(boolean reimbursable) {
-        is_reimbursable = reimbursable;
-    }
-//    public ReimbursableStatus getStatus() {
-//        return status;
-//    }
-//    public void setStatus(ReimbursableStatus status) {
-//        this.status = status;
-//    }
 
     public LedgerCategory getCategory() {
         return category;
