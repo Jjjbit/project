@@ -103,7 +103,11 @@ public class InstallmentDAO {
                     plan.setRepaymentStartDate(rs.getDate("repayment_start_date").toLocalDate());
                     plan.setName(rs.getString("name"));
                     plan.setIncludedInCurrentDebts(rs.getBoolean("included_in_current_debt"));
+                    //set linked account
+                    AccountDAO accountDAO = new AccountDAO(connection);
+                    plan.setLinkedAccount(accountDAO.getAccountById(rs.getLong("linked_account_id")));
 
+                    //set category
                     plan.setCategory(categoryDAO.getById(rs.getLong("category_id")));
 
                     return plan;
