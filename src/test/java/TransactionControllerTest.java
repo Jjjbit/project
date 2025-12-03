@@ -28,11 +28,16 @@ public class TransactionControllerTest {
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
     private LedgerCategoryDAO ledgerCategoryDAO;
+    private InstallmentPaymentDAO installmentPaymentDAO;
+    private InstallmentDAO installmentDAO;
+    private ReimbursementTxLinkDAO transactionTxLinkDAO;
+    private ReimbursementDAO reimbursementDAO;
 
     private TransactionController transactionController;
     private LedgerController ledgerController;
     private AccountController accountController;
-    ReimbursementController reimbursementController;
+    private ReimbursementController reimbursementController;
+    private InstallmentController installmentController;
 
     @BeforeEach
     public void setUp() {
@@ -48,17 +53,20 @@ public class TransactionControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
-        ReimbursementTxLinkDAO transactionTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
+        reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
+        transactionTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
+        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
+        installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
 
         UserController userController = new UserController(userDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, transactionTxLinkDAO, debtPaymentDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO,
+                transactionTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
-
         reimbursementController = new ReimbursementController(transactionDAO,
                 reimbursementDAO, transactionTxLinkDAO, ledgerCategoryDAO, accountDAO);
+        installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO, installmentPaymentDAO);
 
         userController.register("test user", "password123");
         testUser = userController.login("test user", "password123");
@@ -101,6 +109,112 @@ public class TransactionControllerTest {
         } catch (Exception e) {
             throw new RuntimeException("Failed to execute " + filePath, e);
         }
+    }
+
+    //test delete a payment of installment of a credit card
+    @Test
+    public void testDelete_PaymentOfInstallment(){
+        CreditAccount creditCardAccount = accountController.createCreditAccount("MasterCard Credit Card", null,
+                BigDecimal.valueOf(2000.00),   //balance
+                true, true, testUser,
+                AccountType.CREDIT_CARD,
+                BigDecimal.valueOf(3000.00), //credit limit
+                BigDecimal.valueOf(1000.00), //current debt
+                10, 20);
+
+        LedgerCategory electronics = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Electronics"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(electronics);
+
+        Installment installment = installmentController.createInstallment(creditCardAccount, "Laptop Purchase",
+                BigDecimal.valueOf(2000.00), 12, BigDecimal.ZERO, Installment.Strategy.EVENLY_SPLIT,
+                 LocalDate.now(), electronics, true, testLedger);
+        assertNotNull(installment);
+        assertEquals(1, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
+        //current debt 1000+(2000-166.67)=2833.33
+        //balance 2000- 166.67=1833.33
+        //remaining amount 2000- 166.67 =1833.33
+        assertEquals(0, creditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2833.33)));
+        assertEquals(0, creditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1833.33)));
+        assertEquals(0, installment.getRemainingAmount().compareTo(BigDecimal.valueOf(1833.33)));
+
+        boolean payed = installmentController.payInstallment(installment, creditCardAccount);
+        assertTrue(payed);
+        //current debt 2833.33-166.67=2666.66
+        //balance 1833.33 - 166.67 = 1666.66
+        //remaining amount 1833.33 - 166.67 = 1666.66
+        assertEquals(0, installment.getRemainingAmount().compareTo(BigDecimal.valueOf(1666.66)));
+        assertEquals(0, creditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1666.66)));
+        assertEquals(0, creditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2666.66)));
+        assertEquals(2, installment.getPaidPeriods());
+        assertEquals(2, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
+
+        List<Transaction> installmentPayments = installmentPaymentDAO.getTransactionsByInstallment(installment);
+
+        boolean deleted = transactionController.deleteTransaction(installmentPayments.get(1)); //delete the payment just made
+        assertTrue(deleted);
+        //current debt should be back to 2833.33
+        //balance back to 1833.33
+        //installment remaining amount back to 1833.33  and paid periods back to 1
+
+        assertEquals(1, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
+        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
+        assertEquals(1, installmentPaymentDAO.getTransactionsByInstallment(installment).size());
+
+        //verify credit card account updated
+        CreditAccount updatedToAccount = (CreditAccount) accountDAO.getAccountById(creditCardAccount.getId());
+        assertEquals(0, updatedToAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2833.33)));
+        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(1833.33)));
+
+        //verify installment updated
+        Installment updatedInstallment = installmentDAO.getById(installment.getId());
+        assertEquals(0, updatedInstallment.getRemainingAmount().compareTo(BigDecimal.valueOf(1833.33)));
+        assertEquals(1, updatedInstallment.getPaidPeriods());
+    }
+
+    //test delete a record of reimbursement over claim
+    @Test
+    public void testDelete_ReimbursementOverClaimTransaction() {
+        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(800.00), testAccount, testLedger);
+        assertNotNull(record);
+
+        CreditAccount creditCardAccount = accountController.createCreditAccount("Visa Credit Card", null,
+                BigDecimal.valueOf(1000.00), true, true, testUser,
+                AccountType.CREDIT_CARD, BigDecimal.valueOf(5000.00), BigDecimal.valueOf(500.00),
+                15, 25);
+
+        reimbursementController.claim(record, BigDecimal.valueOf(850.00), true, creditCardAccount, LocalDate.now());
+
+        List<Transaction> reimbursementClaims = transactionTxLinkDAO.getTransactionsByReimbursement(record);
+        assertEquals(2, reimbursementClaims.size());
+
+        boolean deleted = transactionController.deleteTransaction(reimbursementClaims.getFirst()); //delete the valid claim transaction
+        assertTrue(deleted);
+        assertEquals(1, transactionTxLinkDAO.getTransactionsByReimbursement(record).size());
+        assertEquals(1, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
+        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
+
+        Reimbursement updatedRecord = reimbursementDAO.getById(record.getId());
+        assertEquals(0, updatedRecord.getRemainingAmount().compareTo(BigDecimal.valueOf(750.00)));
+        assertFalse(updatedRecord.isEnded());
+        Account updatedCreditCardAccount = accountDAO.getAccountById(creditCardAccount.getId());
+        assertEquals(0, updatedCreditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1050.00)));
+
+
+        boolean deleted2 = transactionController.deleteTransaction(reimbursementClaims.get(1)); //delete the over claim transaction
+        assertTrue(deleted2);
+        assertEquals(0, transactionTxLinkDAO.getTransactionsByReimbursement(record).size());
+        assertEquals(0, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
+        assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
+
+        Reimbursement finalRecord = reimbursementDAO.getById(record.getId());
+        assertEquals(0, finalRecord.getRemainingAmount().compareTo(BigDecimal.valueOf(800.00)));
+        assertFalse(finalRecord.isEnded());
+
+        Account updatedCreditCardAccount2 = accountDAO.getAccountById(creditCardAccount.getId());
+        assertEquals(0, updatedCreditCardAccount2.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
     }
 
     //test delete a payment of debt of a credit card
