@@ -11,8 +11,9 @@ public class Expense extends Transaction {
                    String description,
                    Account account,
                    Ledger ledger,
-                   LedgerCategory category, boolean isReimbursable) {
-        super(date, amount, description, account, null, ledger, category, TransactionType.EXPENSE, isReimbursable);
+                   LedgerCategory category
+    ) {
+        super(date, amount, description, account, null, ledger, category, TransactionType.EXPENSE);
     }
 
 

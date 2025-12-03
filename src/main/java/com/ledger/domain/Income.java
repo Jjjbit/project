@@ -10,7 +10,7 @@ public class Income extends Transaction {
                     Account account,
                     Ledger ledger,
                     LedgerCategory category) {
-        super(date, amount, description, null, account, ledger, category, TransactionType.INCOME, false);
+        super(date, amount, description, null, account, ledger, category, TransactionType.INCOME);
     }
 
     public Income() {}
