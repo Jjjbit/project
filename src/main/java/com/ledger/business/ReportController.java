@@ -54,7 +54,6 @@ public class ReportController {
     public BigDecimal getTotalExpenseByLedger(Ledger ledger, LocalDate startDate, LocalDate endDate) {
         return transactionDAO.getByLedgerId(ledger.getId()).stream()
                 .filter(t -> t.getType() == TransactionType.EXPENSE)
-                .filter(t-> !t.isReimbursable()) //exclude reimbursable expenses
                 .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
