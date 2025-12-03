@@ -4,22 +4,40 @@ import java.math.BigDecimal;
 
 public class Reimbursement {
     private long id;
-    private Transaction originalTransaction;
     private BigDecimal amount;
     private BigDecimal remainingAmount;
-    private ReimbursableStatus status;
+    private boolean isEnded;
     private Ledger ledger;
+    private Account fromAccount;
+    private String name;
 
-    public Reimbursement(Transaction originalTransaction,
-                         BigDecimal amount, ReimbursableStatus status, Ledger ledger) {
+    public Reimbursement(
+            BigDecimal amount,
+            boolean isEnded,
+            Account fromAccount,
+            Ledger ledger, String name
+    ) {
+        this.fromAccount = fromAccount;
         this.ledger = ledger;
-        this.originalTransaction = originalTransaction;
         this.amount = amount;
-        this.status = status;
+        this.isEnded = isEnded;
         this.remainingAmount = amount;
+        this.name = name;
     }
     public Reimbursement() {}
 
+    public String getName() {
+        return name;
+    }
+    public void setName(String name) {
+        this.name = name;
+    }
+    public Account getFromAccount() {
+        return fromAccount;
+    }
+    public void setFromAccount(Account fromAccount) {
+        this.fromAccount = fromAccount;
+    }
     public void setRemainingAmount(BigDecimal remainingAmount) {
         this.remainingAmount = remainingAmount;
     }
@@ -33,12 +51,13 @@ public class Reimbursement {
         this.ledger = ledger;
     }
 
-    public ReimbursableStatus getReimbursementStatus() {
-        return status;
+    public boolean isEnded() {
+        return isEnded;
     }
-    public void setStatus(ReimbursableStatus status) {
-        this.status = status;
+    public void setEnded(boolean ended) {
+        isEnded = ended;
     }
+
     public BigDecimal getAmount() {
         return amount;
     }
@@ -51,12 +70,6 @@ public class Reimbursement {
     }
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
-    }
-    public Transaction getOriginalTransaction() {
-        return originalTransaction;
-    }
-    public void setOriginalTransaction(Transaction originalTransaction) {
-        this.originalTransaction = originalTransaction;
     }
 
 }
