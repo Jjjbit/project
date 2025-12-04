@@ -12,21 +12,21 @@ import java.util.Scanner;
 public class InstallmentCLI {
     private final InstallmentController installmentController;
     private final UserController userController;
-    //private final ReportController reportController;
     private final AccountController accountController;
     private final LedgerController ledgerController;
     private final LedgerCategoryController ledgerCategoryController;
+    private final TransactionController transactionController;
     private final Scanner scanner = new Scanner(System.in);
 
     public InstallmentCLI(InstallmentController installmentController,
                           UserController userController,
-                          //ReportController reportController,
                           AccountController accountController,
-                          LedgerController ledgerController, LedgerCategoryController ledgerCategoryController) {
+                          LedgerController ledgerController, LedgerCategoryController ledgerCategoryController,
+                          TransactionController transactionController) {
+        this.transactionController = transactionController;
         this.ledgerCategoryController = ledgerCategoryController;
         this.ledgerController = ledgerController;
         this.accountController = accountController;
-        //this.reportController = reportController;
         this.userController = userController;
         this.installmentController = installmentController;
     }
@@ -254,6 +254,74 @@ public class InstallmentCLI {
         System.out.println("Installment edited successfully!");
         System.out.println(formatInstallment(selectedPlan));
         System.out.println("Update Credit Card current debt: " + creditAccount.getCurrentDebt());
+    }
+
+    public void showInstallmentDetails() {
+        System.out.println("\n=== Installment Details ===");
+
+        //select credit account
+        System.out.println("Select credit card account:");
+        CreditAccount creditAccount = selectCreditCardAccount();
+        if (creditAccount == null) return;
+        List<Installment> plans = installmentController.getActiveInstallments(creditAccount);
+        if (plans.isEmpty()) {
+            System.out.println("No installments found.");
+            return;
+        }
+        System.out.println("\nSelect installment to view details:");
+        for (int i = 0; i < plans.size(); i++) {
+            Installment plan = plans.get(i);
+            System.out.println((i + 1) + ". " + formatInstallment(plan));
+        }
+        System.out.print("Enter choice (or press 0 to cancel): ");
+        String inputPlan = scanner.nextLine().trim();
+        int choice = Integer.parseInt(inputPlan);
+        if(choice==0) return;
+        if (choice < 0 || choice > plans.size()) {
+            System.out.println("Invalid choice!");
+            return;
+        }
+        Installment installment = plans.get(choice - 1);
+
+        System.out.println("\nRepayment Schedule:");
+        List<Transaction> schedule = transactionController.getTransactionsByInstallment(installment);
+        int count = 0;
+        for(Transaction tx : schedule){
+            count++;
+            StringBuilder info = new StringBuilder();
+
+            info.append(String.format("%d. Amount: %s, Date: %s",
+                    count,
+                    tx.getType() == TransactionType.EXPENSE
+                            ? tx.getAmount().negate()
+                            : tx.getAmount(),
+                    tx.getDate()));
+
+            if (tx.getCategory() != null) {
+                info.append(", Category: ").append(tx.getCategory().getName());
+            }
+
+            if (tx instanceof Transfer) {
+                if (tx.getFromAccount() != null) {
+                    info.append(", FROM: ").append(tx.getFromAccount().getName());
+                }
+                if (tx.getToAccount() != null) {
+                    info.append(", TO: ").append(tx.getToAccount().getName());
+                }
+            } else {
+                if (tx.getFromAccount() != null) {
+                    info.append(", From: ").append(tx.getFromAccount().getName());
+                } else if (tx.getToAccount() != null) {
+                    info.append(", To: ").append(tx.getToAccount().getName());
+                }
+            }
+
+            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info.append(", Note: ").append(tx.getNote());
+            }
+
+            System.out.println(info);
+        }
     }
 
 
