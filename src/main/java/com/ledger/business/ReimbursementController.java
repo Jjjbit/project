@@ -222,11 +222,9 @@ public class ReimbursementController {
         } else { //new amount is greater than or equal to already reimbursed amount
             BigDecimal newRemaining = newAmount.subtract(reimbursedAmount);
             record.setRemainingAmount(newRemaining);
-            if(newRemaining.compareTo(BigDecimal.ZERO) == 0) {
-                record.setEnded(true);
-            } else {
-                record.setEnded(false);
-            }
+
+            boolean isEnded = newRemaining.compareTo(BigDecimal.ZERO) == 0;
+            record.setEnded(isEnded);
         }
 
         record.setAmount(newAmount);
