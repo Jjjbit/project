@@ -172,7 +172,7 @@ public class InstallmentController {
         if (plan == null) {
             return false;
         }
-        if (plan.getPaidPeriods() >= plan.getTotalPeriods()) {
+        if (plan.getPaidPeriods() >= plan.getTotalPeriods() || plan.getRemainingAmount().compareTo(BigDecimal.ZERO) <= 0) {
             return false; //all periods already paid
         }
         if(plan.getLinkedAccount().getId() != account.getId()){
