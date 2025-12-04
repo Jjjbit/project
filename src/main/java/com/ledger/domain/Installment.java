@@ -194,6 +194,16 @@ public class Installment {
         }
         return total;
     }
+
+    public void recalculatePaidPeriods() {
+        int count = 0;
+        for (int i = 1; i <= totalPeriods; i++) {
+            BigDecimal p = getMonthlyPayment(i);
+            if (remainingAmount.compareTo(p) < 0) break;
+            count++;
+        }
+        this.paidPeriods = count;
+    }
 }
 
 
