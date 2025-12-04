@@ -425,9 +425,10 @@ public class TransactionCLI {
     private String showTransactionInfo(Transaction tx){
         StringBuilder info = new StringBuilder();
 
-        info.append(String.format("-Type: %s, Amount: %s, Date: %s",
-                tx.getType(),
-                tx.getAmount(),
+        info.append(String.format("- Amount: %s, Date: %s",
+                tx.getType() == TransactionType.EXPENSE
+                        ? tx.getAmount().negate()
+                        : tx.getAmount(),
                 tx.getDate()));
 
         if (tx.getCategory() != null) {
@@ -460,10 +461,11 @@ public class TransactionCLI {
             Transaction tx = transactions.get(i);
             StringBuilder info = new StringBuilder();
 
-            info.append(String.format("%d. Type: %s, Amount: %s, Date: %s",
+            info.append(String.format("%d. Amount: %s, Date: %s",
                     (i + 1),
-                    tx.getType(),
-                    tx.getAmount(),
+                    tx.getType() == TransactionType.EXPENSE
+                            ? tx.getAmount().negate()
+                            : tx.getAmount(),
                     tx.getDate()));
 
             if (tx.getCategory() != null) {

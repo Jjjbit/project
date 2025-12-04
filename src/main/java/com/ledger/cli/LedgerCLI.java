@@ -118,7 +118,9 @@ public class LedgerCLI {
 
             info.append(String.format("%d. Amount: %s, Date: %s",
                     count,
-                    tx.getAmount(),
+                    tx.getType() == TransactionType.EXPENSE
+                            ? tx.getAmount().negate()
+                            : tx.getAmount(),
                     tx.getDate()));
 
             if (tx.getCategory() != null) {
