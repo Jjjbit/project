@@ -93,8 +93,12 @@ public class AccountController {
                 type,
                 category,
                 owner);
-        accountDAO.createBasicAccount(account);
-        return account;
+        boolean result = accountDAO.createBasicAccount(account);
+        if(result){
+            return account;
+        } else {
+            return null;
+        }
     }
 
     public CreditAccount createCreditAccount(String name, String notes, BigDecimal balance,
@@ -125,8 +129,12 @@ public class AccountController {
 
         CreditAccount account = new CreditAccount(name, balance, user, notes, includedInNetAsset, selectable,
                 creditLimit, currentDebt, billDate, dueDate, type);
-        accountDAO.createCreditAccount(account);
-        return account;
+        boolean result = accountDAO.createCreditAccount(account);
+        if(result){
+            return account;
+        } else {
+            return null;
+        }
     }
 
     public LoanAccount createLoanAccount(String name, String notes, boolean includedInNetAsset, User user,
@@ -158,7 +166,7 @@ public class AccountController {
         }
         LoanAccount account = new LoanAccount(name, user, notes, includedInNetAsset, totalPeriods, repaidPeriods,
                 annualInterestRate, loanAmount, repaymentDate, repaymentType);
-        accountDAO.createLoanAccount(account); //insert loan account to db
+        boolean result = accountDAO.createLoanAccount(account); //insert loan account to db
 
         Transaction tx = new Transfer(LocalDate.now(),
                 "Loan disbursement",
@@ -173,7 +181,11 @@ public class AccountController {
             accountDAO.update(receivingAccount); //update balance in db
         }
 
-        return account;
+        if(result){
+            return account;
+        } else {
+            return null;
+        }
     }
 
     public BorrowingAccount createBorrowingAccount(User user, String name, BigDecimal amount, String note,
@@ -189,7 +201,7 @@ public class AccountController {
                 selectable,
                 user,
                 transactionDate);
-        accountDAO.createBorrowingAccount(borrowingAccount); //insert borrowing account to db
+        boolean result = accountDAO.createBorrowingAccount(borrowingAccount); //insert borrowing account to db
 
         String description = toAccount != null
                 ? borrowingAccount.getName() + " to " + toAccount.getName()
@@ -208,8 +220,11 @@ public class AccountController {
             accountDAO.update(toAccount); //update balance in db
         }
 
-        return borrowingAccount;
-
+        if(result){
+            return borrowingAccount;
+        } else {
+            return null;
+        }
     }
 
     public LendingAccount createLendingAccount(User user, String name, BigDecimal amount,
@@ -224,7 +239,7 @@ public class AccountController {
                 selectable,
                 user,
                 transactionDate);
-        accountDAO.createLendingAccount(lendingAccount); //insert lending account to db
+        boolean result = accountDAO.createLendingAccount(lendingAccount); //insert lending account to db
 
         String description = fromAccount != null
                 ? fromAccount.getName() + " to " + lendingAccount.getName()
@@ -243,7 +258,11 @@ public class AccountController {
             accountDAO.update(fromAccount); //update balance in db
         }
 
-        return lendingAccount;
+        if(result){
+            return lendingAccount;
+        } else {
+            return null;
+        }
     }
 
     public boolean deleteAccount(Account account, boolean deleteTransactions) {
