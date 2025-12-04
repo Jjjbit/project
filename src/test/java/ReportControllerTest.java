@@ -52,20 +52,21 @@ public class ReportControllerTest {
         InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
-        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
+        reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO);
+        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
+        InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
 
         budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO,
-                reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO);
+                reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, ledgerCategoryDAO);
         UserController userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
         reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO,
                 installmentDAO, ledgerCategoryDAO, reimbursementTxLinkDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO,
                 accountDAO, budgetDAO);
-        installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
+        installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO, installmentPaymentDAO);
         reimbursementController = new ReimbursementController(transactionDAO, reimbursementDAO,
                 reimbursementTxLinkDAO, ledgerCategoryDAO, accountDAO);
 

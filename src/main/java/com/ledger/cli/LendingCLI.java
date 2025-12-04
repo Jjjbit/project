@@ -2,7 +2,6 @@ package com.ledger.cli;
 
 import com.ledger.business.AccountController;
 import com.ledger.business.LedgerController;
-import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
 import com.ledger.domain.Account;
 import com.ledger.domain.Ledger;
@@ -16,17 +15,15 @@ import java.util.Scanner;
 
 public class LendingCLI {
     private final Scanner scanner = new java.util.Scanner(System.in);
-    private final ReportController reportController;
     private final AccountController accountController;
     private final UserController userController;
     private final LedgerController ledgerController;
 
-    public LendingCLI(ReportController reportController, AccountController accountController,
+    public LendingCLI(AccountController accountController,
                       UserController userController, LedgerController ledgerController) {
         this.ledgerController = ledgerController;
         this.userController = userController;
         this.accountController = accountController;
-        this.reportController = reportController;
     }
     public void addLending() {
         System.out.println("\n ===Adding a new lending ===");

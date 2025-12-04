@@ -47,14 +47,16 @@ public class LedgerCategoryControllerTest {
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
-        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
+        reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO);
+        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
+        InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
+        InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
 
         UserController userController = new UserController(userDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, ledgerCategoryDAO);
         AccountController accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
 
         userController.register("test user", "password123");

@@ -2,7 +2,6 @@ package com.ledger.cli;
 
 import com.ledger.business.LedgerCategoryController;
 import com.ledger.business.LedgerController;
-import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
 import com.ledger.domain.CategoryType;
 import com.ledger.domain.Ledger;
@@ -14,17 +13,14 @@ import java.util.Scanner;
 
 public class LedgerCategoryCLI {
     private final LedgerCategoryController ledgerCategoryController;
-    private final ReportController reportController;
     private final UserController userController;
     private final LedgerController ledgerController;
     private final Scanner scanner = new Scanner(System.in);
 
     public LedgerCategoryCLI(LedgerCategoryController ledgerCategoryController,
-                             ReportController reportController,
                              UserController userController, LedgerController ledgerController) {
         this.ledgerController = ledgerController;
         this.userController = userController;
-        this.reportController = reportController;
         this.ledgerCategoryController = ledgerCategoryController;
     }
 

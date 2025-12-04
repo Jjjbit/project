@@ -2,9 +2,11 @@ package com.ledger.cli;
 
 import com.ledger.business.AccountController;
 import com.ledger.business.LedgerController;
-import com.ledger.business.ReportController;
 import com.ledger.business.UserController;
-import com.ledger.domain.*;
+import com.ledger.domain.Account;
+import com.ledger.domain.BorrowingAccount;
+import com.ledger.domain.Ledger;
+import com.ledger.domain.User;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -12,18 +14,16 @@ import java.util.List;
 import java.util.Scanner;
 
 public class BorrowingCLI {
-    private final ReportController reportController;
     private final AccountController accountController;
     private final UserController userController;
     private final LedgerController ledgerController;
     private final Scanner scanner = new Scanner(System.in);
 
-    public BorrowingCLI(ReportController reportController, AccountController accountController,
+    public BorrowingCLI(AccountController accountController,
                         UserController userController, LedgerController ledgerController) {
         this.ledgerController = ledgerController;
         this.userController = userController;
         this.accountController = accountController;
-        this.reportController = reportController;
     }
 
     public void addBorrowing() {

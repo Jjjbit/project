@@ -51,16 +51,17 @@ public class AccountControllerTest {
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
-        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO);
-        reimbursementController = new ReimbursementController(transactionDAO, reimbursementDAO, reimbursementTxLinkDAO, ledgerCategoryDAO, accountDAO);
-
+        reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO);
+        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
+        InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
+
+        reimbursementController = new ReimbursementController(transactionDAO, reimbursementDAO, reimbursementTxLinkDAO, ledgerCategoryDAO, accountDAO);
         UserController userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, ledgerCategoryDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO);
+        installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO, installmentPaymentDAO);
 
         userController.register("test user", "password123"); // create test user and insert into db
         testUser=userController.login("test user", "password123"); // login to set current user

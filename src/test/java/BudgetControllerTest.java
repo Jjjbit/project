@@ -1,5 +1,10 @@
-import com.ledger.business.*;
-import com.ledger.domain.*;
+import com.ledger.business.BudgetController;
+import com.ledger.business.LedgerController;
+import com.ledger.business.UserController;
+import com.ledger.domain.Budget;
+import com.ledger.domain.Ledger;
+import com.ledger.domain.LedgerCategory;
+import com.ledger.domain.User;
 import com.ledger.orm.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,7 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
@@ -29,7 +33,7 @@ public class BudgetControllerTest {
     private BudgetController budgetController;
 
     @BeforeEach
-    public void setUp() throws SQLException {
+    public void setUp() {
         connection = ConnectionManager.getConnection();
         readResetScript();
         runSchemaScript();
