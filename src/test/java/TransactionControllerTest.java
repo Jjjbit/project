@@ -53,7 +53,7 @@ public class TransactionControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
+        reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO);
         transactionTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
         installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
@@ -61,7 +61,7 @@ public class TransactionControllerTest {
 
         UserController userController = new UserController(userDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO,
-                transactionTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO);
+                transactionTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, ledgerCategoryDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
         reimbursementController = new ReimbursementController(transactionDAO,
@@ -110,6 +110,13 @@ public class TransactionControllerTest {
             throw new RuntimeException("Failed to execute " + filePath, e);
         }
     }
+
+    //test edit income of reimbursement
+    //test edit expense of installment
+    //test edit expense of reimbursement
+
+    //test edit transfer of reimbursement
+    //test edit transfer of payment of debt
 
     //test delete a payment of installment of a credit card
     @Test
@@ -177,7 +184,13 @@ public class TransactionControllerTest {
     //test delete a record of reimbursement over claim
     @Test
     public void testDelete_ReimbursementOverClaimTransaction() {
-        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(800.00), testAccount, testLedger, "Business Trip");
+        LedgerCategory food = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
+
+        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(800.00), testAccount, testLedger, food);
         assertNotNull(record);
 
         CreditAccount creditCardAccount = accountController.createCreditAccount("Visa Credit Card", null,
@@ -215,6 +228,37 @@ public class TransactionControllerTest {
 
         Account updatedCreditCardAccount2 = accountDAO.getAccountById(creditCardAccount.getId());
         assertEquals(0, updatedCreditCardAccount2.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
+    }
+
+    //delete an expense of reimbursement
+    @Test
+    public void testDelete_ReimbursementExpense(){
+        LedgerCategory food = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
+
+        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount, testLedger, food);
+        assertNotNull(record);
+
+        reimbursementController.claim(record, BigDecimal.valueOf(200.00), true, testAccount, LocalDate.now());
+        //remaining amount 300
+        List<Transaction> reimbursementClaims = transactionTxLinkDAO.getTransactionsByReimbursement(record);
+        assertEquals(1, reimbursementClaims.size());
+
+        Transaction expense = reimbursementClaims.getFirst();
+
+        boolean  deleted = transactionController.deleteTransaction(expense);
+        assertTrue(deleted);
+        assertEquals(0, transactionTxLinkDAO.getTransactionsByReimbursement(record).size());
+        assertEquals(0, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
+        assertEquals(0, transactionDAO.getByCategoryId(food.getId()).size());
+
+        Reimbursement updatedRecord = reimbursementDAO.getById(record.getId());
+        assertEquals(0, updatedRecord.getRemainingAmount().compareTo(BigDecimal.valueOf(500.00)));
+        assertFalse(updatedRecord.isEnded());
     }
 
     //test delete a payment of debt of a credit card
