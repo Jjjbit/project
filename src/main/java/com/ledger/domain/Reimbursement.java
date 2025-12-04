@@ -9,28 +9,28 @@ public class Reimbursement {
     private boolean isEnded;
     private Ledger ledger;
     private Account fromAccount;
-    private String name;
+    private LedgerCategory ledgerCategory;
 
     public Reimbursement(
             BigDecimal amount,
             boolean isEnded,
             Account fromAccount,
-            Ledger ledger, String name
+            Ledger ledger, LedgerCategory ledgerCategory
     ) {
         this.fromAccount = fromAccount;
         this.ledger = ledger;
         this.amount = amount;
         this.isEnded = isEnded;
         this.remainingAmount = amount;
-        this.name = name;
+        this.ledgerCategory = ledgerCategory;
     }
     public Reimbursement() {}
 
-    public String getName() {
-        return name;
+    public LedgerCategory getLedgerCategory() {
+        return ledgerCategory;
     }
-    public void setName(String name) {
-        this.name = name;
+    public void setLedgerCategory(LedgerCategory ledgerCategory) {
+        this.ledgerCategory = ledgerCategory;
     }
     public Account getFromAccount() {
         return fromAccount;
