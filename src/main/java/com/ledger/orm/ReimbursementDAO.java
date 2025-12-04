@@ -12,16 +12,16 @@ import java.util.List;
 
 public class ReimbursementDAO {
     private final Connection connection;
-    private final TransactionDAO transactionDAO;
+    private final LedgerCategoryDAO ledgerCategoryDAO;
 
-    public ReimbursementDAO(Connection connection, TransactionDAO transactionDAO) {
-        this.transactionDAO = transactionDAO;
+    public ReimbursementDAO(Connection connection, LedgerCategoryDAO ledgerCategoryDAO) {
+        this.ledgerCategoryDAO = ledgerCategoryDAO;
         this.connection = connection;
     }
 
     @SuppressWarnings("SqlResolve")
     public List<Reimbursement> getByLedger(Ledger ledger) {
-        String sql = "SELECT id, amount, is_ended, remaining_amount, from_account_id FROM reimbursement_plan "
+        String sql = "SELECT id, amount, is_ended, remaining_amount, from_account_id, ledger_category_id FROM reimbursement_plan "
                 + "WHERE ledger_id = ?";
         List<Reimbursement> reimbursements = new ArrayList<>();
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -33,6 +33,8 @@ public class ReimbursementDAO {
                     reimbursement.setAmount(rs.getBigDecimal("amount"));
                     reimbursement.setEnded(rs.getBoolean("is_ended"));
                     reimbursement.setRemainingAmount(rs.getBigDecimal("remaining_amount"));
+                    //set category
+                    reimbursement.setLedgerCategory(ledgerCategoryDAO.getById(rs.getLong("ledger_category_id")));
                     reimbursements.add(reimbursement);
                 }
             }
@@ -44,7 +46,7 @@ public class ReimbursementDAO {
 
     @SuppressWarnings("SqlResolve")
     public Reimbursement getById(long id) {
-        String sql = "SELECT id, amount, is_ended, remaining_amount, from_account_id, name FROM reimbursement_plan WHERE id = ?";
+        String sql = "SELECT id, amount, is_ended, remaining_amount, from_account_id, ledger_category_id FROM reimbursement_plan WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -54,7 +56,8 @@ public class ReimbursementDAO {
                     reimbursement.setAmount(rs.getBigDecimal("amount"));
                     reimbursement.setEnded(rs.getBoolean("is_ended"));
                     reimbursement.setRemainingAmount(rs.getBigDecimal("remaining_amount"));
-                    reimbursement.setName(rs.getString("name"));
+                    //set category
+                    reimbursement.setLedgerCategory(ledgerCategoryDAO.getById(rs.getLong("ledger_category_id")));
                     return reimbursement;
                 }
             }
@@ -66,14 +69,14 @@ public class ReimbursementDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean insert(Reimbursement claim) {
-        String sql = "INSERT INTO reimbursement_plan (amount, is_ended, ledger_id, remaining_amount, from_account_id, name) VALUES ( ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO reimbursement_plan (amount, is_ended, ledger_id, remaining_amount, from_account_id, ledger_category_id) VALUES ( ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
             stmt.setBigDecimal(1, claim.getAmount());
             stmt.setBoolean(2, claim.isEnded());
             stmt.setLong(3, claim.getLedger().getId());
             stmt.setBigDecimal(4, claim.getRemainingAmount());
             stmt.setLong(5, claim.getFromAccount().getId());
-            stmt.setString(6, claim.getName());
+            stmt.setLong(6, claim.getLedgerCategory().getId());
 
             int affected = stmt.executeUpdate();
             if (affected > 0) {
@@ -92,12 +95,12 @@ public class ReimbursementDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean update(Reimbursement claim) {
-        String sql = "UPDATE reimbursement_plan SET amount = ?, is_ended = ?, remaining_amount = ?, name = ? WHERE id = ?";
+        String sql = "UPDATE reimbursement_plan SET amount = ?, is_ended = ?, remaining_amount = ?, ledger_category_id = ? WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setBigDecimal(1, claim.getAmount());
             stmt.setBoolean(2, claim.isEnded());
             stmt.setBigDecimal(3, claim.getRemainingAmount());
-            stmt.setString(4, claim.getName());
+            stmt.setLong(4, claim.getLedgerCategory().getId());
             stmt.setLong(5, claim.getId());
 
             int affected = stmt.executeUpdate();

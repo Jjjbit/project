@@ -154,7 +154,8 @@ CREATE TABLE IF NOT EXISTS reimbursement_plan (
     ledger_id BIGINT NOT NULL,
     remaining_amount DECIMAL(15,2) NOT NULL,
     from_account_id BIGINT NOT NULL,
-    name VARCHAR(500) NOT NULL,
+    ledger_category_id BIGINT NOT NULL,
+    FOREIGN KEY (ledger_category_id) REFERENCES ledger_categories(id) ON DELETE CASCADE,
     FOREIGN KEY (from_account_id) REFERENCES accounts(id) ON DELETE CASCADE,
     FOREIGN KEY (ledger_id) REFERENCES ledgers(id) ON DELETE CASCADE
 );

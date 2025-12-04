@@ -24,19 +24,32 @@ public class ReimbursementController {
         this.reimbursementDAO = reimbursementDAO;
     }
 
-//    public Reimbursement getReimbursementByTransaction (Transaction transaction) {
-//        return reimbursementDAO.getByOriginalTransactionId(transaction.getId());
-//    }
-
     public List<Reimbursement> getReimbursementsByLedger (Ledger ledger) {
         return reimbursementDAO.getByLedger(ledger);
     }
 
-    public Reimbursement create(BigDecimal amount, Account fromAccount, Ledger ledger, String name) {
-        if(name == null || name.isEmpty()) {
-            name = "Reimbursement Plan";
+    public BigDecimal getTotalPending(Ledger ledger) {
+        return getReimbursementsByLedger(ledger).stream()
+                .filter(r -> !r.isEnded())
+                .map(Reimbursement::getRemainingAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal getTotalReimbursed(Ledger ledger) {
+        return getReimbursementsByLedger(ledger).stream()
+                .filter(Reimbursement::isEnded)
+                .map(r -> r.getAmount().subtract(r.getRemainingAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public Reimbursement create(BigDecimal amount, Account fromAccount, Ledger ledger, LedgerCategory category) {
+        if(category == null) {
+            return null;
         }
         if(amount == null) {
+            return null;
+        }
+        if(amount.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
         if(fromAccount == null) {
@@ -46,7 +59,7 @@ public class ReimbursementController {
             return null;
         }
 
-        Reimbursement reimbursement = new Reimbursement(amount, false, fromAccount, ledger, name);
+        Reimbursement reimbursement = new Reimbursement(amount, false, fromAccount, ledger, category);
 
         fromAccount.debit(amount);
         accountDAO.update(fromAccount);
@@ -96,18 +109,19 @@ public class ReimbursementController {
         } else if(amount.compareTo(record.getRemainingAmount()) < 0) { //partial claim
             BigDecimal diff = record.getRemainingAmount().subtract(amount);
             if(isFinalClaim) { //it's final claim
-                Transfer transfer = new Transfer(date,
-                        "Reimbursement Claim",
-                        null,
-                        toAccount,
-                        amount,
-                        record.getLedger());
-                transactionDAO.insert(transfer);
+                Expense expense = new Expense(
+                        date,
+                        diff,
+                        "Expense Reimbursement",
+                        record.getFromAccount(),
+                        record.getLedger(),
+                        ledgerCategoryDAO.getByNameAndLedger(record.getLedgerCategory().getName(), record.getLedger()));
+                transactionDAO.insert(expense);
 
                 record.setRemainingAmount(diff);
                 record.setEnded(true);
 
-                reimbursementTxLinkDAO.insert(record.getId(), transfer.getId());
+                reimbursementTxLinkDAO.insert(record.getId(), expense.getId());
             } else { //partial
                 Transfer transfer = new Transfer(date,
                         "Reimbursement Claim",
@@ -153,8 +167,8 @@ public class ReimbursementController {
     }
 
     //edit only pending reimbursement
-    //it can change from account, total reimbursed amount, isEnded
-    public boolean editReimbursement(Reimbursement record, BigDecimal newAmount, String newName) {
+    //it can change from account, total reimbursed amount, category
+    public boolean editReimbursement(Reimbursement record, BigDecimal newAmount) {
         if(record == null) {
             return false;
         }
@@ -166,9 +180,6 @@ public class ReimbursementController {
         }
         if(newAmount == null){
             newAmount = record.getAmount();
-        }
-        if(newName != null && !newName.isEmpty()) {
-            record.setName(newName);
         }
 
         record.getFromAccount().credit(record.getAmount());
