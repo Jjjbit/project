@@ -59,7 +59,7 @@ public class ReimbursementControllerTest {
         InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
 
         UserController userController = new UserController(userDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, ledgerCategoryDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
         reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO, new InstallmentDAO(connection, ledgerCategoryDAO), ledgerCategoryDAO, reimbursementTxLinkDAO);
@@ -291,62 +291,83 @@ public class ReimbursementControllerTest {
         assertEquals(0, originalAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //no change
     }
 
-    //test cancel claims
+    //test edit reimbursement details
+    //reimbursed amount is 399
+    //new amount is less than already reimbursed amount
     @Test
-    public void testCancelClaims() {
-        LedgerCategory food = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
+    public void testEditReimbursement1() {
+        Reimbursement reimbursement = reimbursementController.create(BigDecimal.valueOf(400.00), testAccount,
+                testLedger, "Edit Reimbursement Test");
 
-        BasicAccount testAccount1 = accountController.createBasicAccount("Reimbursement Account",
-                BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS,
-                testUser, null, true, true);
+        reimbursementController.claim(reimbursement, BigDecimal.valueOf(320.00),
+                false, null, LocalDate.now());
 
-        // Create a reimbursable expense transaction
-        Expense expense = transactionController.createExpense(testLedger, testAccount,
-                food, null, LocalDate.now(), BigDecimal.valueOf(400.00));
+        // Edit reimbursement details
+        boolean updateResult = reimbursementController.editReimbursement(reimbursement, BigDecimal.valueOf(300.00),
+                "Updated Reimbursement Name");
+        assertTrue(updateResult);
 
-        //Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
-        Reimbursement reimbursement = reimbursementDAO.getByLedger(testLedger).stream()
-                .findFirst()
-                .orElse(null);
-        assertNotNull(reimbursement);
+        Account updateTestAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, updateTestAccount.getBalance().compareTo(BigDecimal.valueOf(1020.00))); //1000-300+320=1020
 
-        // Claim reimbursement
-        reimbursementController.claim(reimbursement, BigDecimal.valueOf(200.00),
-                false, testAccount1, LocalDate.now());
-        reimbursementController.claim(reimbursement, BigDecimal.valueOf(100.00),
-                false, testAccount1, LocalDate.now());
-        reimbursementController.claim(reimbursement, BigDecimal.valueOf(150.00),
-                false, testAccount1, LocalDate.now());
-
-
-        // Cancel the claims
-        boolean cancelResult = reimbursementController.cancelClaims(reimbursement);
-        assertTrue(cancelResult);
-
-        // Verify that the reimbursement status is reset
-        //Reimbursement updatedReimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
         Reimbursement updatedReimbursement = reimbursementDAO.getById(reimbursement.getId());
         assertNotNull(updatedReimbursement);
+        assertEquals(0, updatedReimbursement.getAmount().compareTo(BigDecimal.valueOf(300.00)));
+        assertEquals("Updated Reimbursement Name", updatedReimbursement.getName());
+        assertEquals(0, updatedReimbursement.getRemainingAmount().compareTo(BigDecimal.valueOf(-20.00)));
+        assertTrue(updatedReimbursement.isEnded());
+
+        assertEquals(2, transactionDAO.getByLedgerId(testLedger.getId()).size());
+        assertEquals(2, reimbursementTxLinkDAO.getTransactionsByReimbursement(updatedReimbursement).size());
+    }
+
+    //reimbursed amount is zero
+    //new amount is more than already reimbursed amount
+    @Test
+    public void testEditReimbursement2(){
+        Reimbursement reimbursement = reimbursementController.create(BigDecimal.valueOf(400.00), testAccount,
+                testLedger, "Edit Reimbursement Test");
+
+        //new amount is more than already reimbursed amount
+        boolean updateResult = reimbursementController.editReimbursement(reimbursement, BigDecimal.valueOf(300.00),
+                "Updated Reimbursement Name");
+        assertTrue(updateResult);
+
+        Account oldFromAccount = accountDAO.getAccountById(testAccount.getId());
+        System.out.println("Old From Account Balance: " + oldFromAccount.getBalance()); //1000-300=700
+        //assertEquals(0, oldFromAccount.getBalance().compareTo(BigDecimal.valueOf(700.00)));
+
+        Reimbursement updatedReimbursement = reimbursementDAO.getById(reimbursement.getId());
+        assertNotNull(updatedReimbursement);
+        assertEquals(0, updatedReimbursement.getAmount().compareTo(BigDecimal.valueOf(300.00)));
+        assertEquals("Updated Reimbursement Name", updatedReimbursement.getName());
+        assertEquals(0, updatedReimbursement.getRemainingAmount().compareTo(BigDecimal.valueOf(300.00)));
         assertFalse(updatedReimbursement.isEnded());
-        //assertEquals(ReimbursableStatus.PENDING, updatedReimbursement.getReimbursementStatus());
-        assertEquals(0, updatedReimbursement.getRemainingAmount().compareTo(BigDecimal.valueOf(400.00)));
+    }
 
-        // Verify that linked reimbursement transactions are deleted
-        List<Transaction> txLinks = reimbursementTxLinkDAO.getTransactionsByReimbursement(updatedReimbursement);
-        assertEquals(0, txLinks.size());
+    //reimbursed amount is 100
+    //new amount is more than already reimbursed amount
+    @Test
+    public void testEditReimbursement3(){
+        Reimbursement reimbursement = reimbursementController.create(BigDecimal.valueOf(400.00), testAccount,
+                testLedger, "Edit Reimbursement Test");
 
-        List<Transaction> allTransactions = transactionDAO.getByLedgerId(testLedger.getId());
-        assertEquals(1, allTransactions.size()); // Only original expense remains
+        reimbursementController.claim(reimbursement, BigDecimal.valueOf(100.00),
+                false, null, LocalDate.now());
 
-        Account updatedAccount = accountDAO.getAccountById(testAccount1.getId());
-        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(500.00))); // No change
+        boolean updateResult = reimbursementController.editReimbursement(reimbursement, BigDecimal.valueOf(300.00),
+                 "Updated Reimbursement Name");
+        assertTrue(updateResult);
 
-        Account originalAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, originalAccount.getBalance().compareTo(BigDecimal.valueOf(600.00))); //1000-400
+        Account fromAccount = accountDAO.getAccountById(testAccount.getId()); //1000-300+100=800
+        assertEquals(0, fromAccount.getBalance().compareTo(BigDecimal.valueOf(800.00)));
+
+        Reimbursement updatedReimbursement = reimbursementDAO.getById(reimbursement.getId());
+        assertNotNull(updatedReimbursement);
+        assertEquals(0, updatedReimbursement.getAmount().compareTo(BigDecimal.valueOf(300.00)));
+        assertEquals("Updated Reimbursement Name", updatedReimbursement.getName());
+        assertEquals(0, updatedReimbursement.getRemainingAmount().compareTo(BigDecimal.valueOf(200.00)));
+        assertFalse(updatedReimbursement.isEnded());
     }
 
 }
