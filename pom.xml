@@ -4,13 +4,6 @@
          https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.4</version>
-        <relativePath/> <!-- lookup parent from repository -->
-    </parent>
-
     <groupId>com.ledger</groupId>
     <artifactId>ledger-app</artifactId>
     <version>1.0-SNAPSHOT</version>
@@ -21,54 +14,16 @@
         <maven.compiler.target>21</maven.compiler.target>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>central</id>
-            <name>Maven Central Repository</name>
-            <url>https://repo.maven.apache.org/maven2</url>
-        </repository>
-    </repositories>
-
 
     <dependencies>
-        <dependency>
-            <groupId>jakarta.validation</groupId>
-            <artifactId>jakarta.validation-api</artifactId>
-            <version>3.0.2</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.hibernate.validator</groupId>
-            <artifactId>hibernate-validator</artifactId>
-            <version>8.0.1.Final</version>
-        </dependency>
-
+        <!-- jBCrypt for Password Hashing -->
         <dependency>
             <groupId>org.mindrot</groupId>
             <artifactId>jbcrypt</artifactId>
             <version>0.4</version>
         </dependency>
 
-
-
-        <!-- 1. Spring Context  -->
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-            <version>6.0.11</version>
-        </dependency>
-
-        <!-- 2. Spring Test  @Test-->
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-test</artifactId>
-            <version>6.0.11</version>
-            <scope>test</scope>
-        </dependency>
-
-
-
-        <!-- 3. JUnit for Unit Testing -->
+        <!-- JUnit for Unit Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -76,34 +31,14 @@
             <scope>test</scope>
         </dependency>
 
-
-        <!-- 4. Spring JDBC -->
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-jdbc</artifactId>
-            <version>6.0.11</version>
-        </dependency>
-
-        <!-- 5. Jakarta Persistence -->
-        <dependency>
-            <groupId>jakarta.persistence</groupId>
-            <artifactId>jakarta.persistence-api</artifactId>
-            <version>3.1.0</version>
-        </dependency>
-
-
+        <!-- PostgreSQL JDBC Driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.7.2</version>
         </dependency>
 
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.4.5</version>
-        </dependency>
-
+        <!-- SLF4J for Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
@@ -114,14 +49,14 @@
 
     <build>
         <plugins>
-            <!-- Use Java 17+ -->
+            <!-- Use Java 21 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.10.1</version>
                 <configuration>
-                    <source>17</source>
-                    <target>17</target>
+                    <source>21</source>
+                    <target>21</target>
                 </configuration>
             </plugin>
         </plugins>
