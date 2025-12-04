@@ -241,7 +241,7 @@ public class TransactionController {
                     accountDAO.update(fromAccount);
                 }
                 if (toAccount != null) {
-                    if(debtPaymentDAO.isDebtPaymentTransaction(tx.getId()) && toAccount instanceof CreditAccount) {
+                    if(debtPaymentDAO.isDebtPaymentTransaction(tx) && toAccount instanceof CreditAccount) {
                         ((CreditAccount) toAccount).setCurrentDebt(
                                 ((CreditAccount) toAccount).getCurrentDebt().add(tx.getAmount())
                         );
@@ -482,8 +482,18 @@ public class TransactionController {
                 if(newRemaining.compareTo(BigDecimal.ZERO) == 0) {
                     reimbursement.setEnded(true);
                 }
+                reimbursementDAO.update(reimbursement);
             }
-            reimbursementDAO.update(reimbursement);
+        }
+
+        if(debtPaymentDAO.isDebtPaymentTransaction(transfer)) {
+            CreditAccount creditAccount = (CreditAccount) transfer.getToAccount();
+            BigDecimal amountToSet = amount != null ? amount : oldAmount;
+            if(amountToSet.compareTo(oldAmount) != 0) {
+                BigDecimal currentDebtBefore = creditAccount.getCurrentDebt().add(oldAmount);
+                creditAccount.setCurrentDebt(currentDebtBefore.subtract(amountToSet));
+                accountDAO.update(creditAccount);
+            }
         }
 
         transfer.setAmount(amount != null ? amount : oldAmount);
