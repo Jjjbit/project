@@ -580,10 +580,11 @@ public class AccountCLI {
         for (Transaction tx : transactions) {
             StringBuilder info = new StringBuilder();
 
-            info.append(String.format("%d. Type: %s, Amount: %s, Date: %s",
+            info.append(String.format("%d. Amount: %s, Date: %s",
                     (i + 1),
-                    tx.getType(),
-                    tx.getAmount(),
+                    tx.getType() == TransactionType.EXPENSE
+                            ? tx.getAmount().negate()
+                            : tx.getAmount(),
                     tx.getDate()));
 
             if (tx.getCategory() != null) {
