@@ -24,17 +24,12 @@ public class ReimbursementControllerTest {
     private User testUser;
     private Ledger testLedger;
     private BasicAccount testAccount;
-    private List<LedgerCategory> testCategories;
 
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
-    private LedgerCategoryDAO ledgerCategoryDAO;
     private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
     private ReimbursementDAO reimbursementDAO;
 
-    private TransactionController transactionController;
-    private LedgerController ledgerController;
-    private ReportController reportController;
     private AccountController accountController;
     ReimbursementController reimbursementController;
 
@@ -47,7 +42,7 @@ public class ReimbursementControllerTest {
 
         UserDAO userDAO = new UserDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
-        ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
         accountDAO = new AccountDAO(connection);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
@@ -55,15 +50,10 @@ public class ReimbursementControllerTest {
         reimbursementDAO = new ReimbursementDAO(connection, transactionDAO);
         reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
-        InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
-        InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
 
         UserController userController = new UserController(userDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, ledgerCategoryDAO);
-        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
+        LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
-        reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO, new InstallmentDAO(connection, ledgerCategoryDAO), ledgerCategoryDAO, reimbursementTxLinkDAO);
-
         reimbursementController = new ReimbursementController(transactionDAO,
                 reimbursementDAO, reimbursementTxLinkDAO, ledgerCategoryDAO, accountDAO);
 
@@ -71,8 +61,6 @@ public class ReimbursementControllerTest {
         testUser = userController.login("test user", "password123");
 
         testLedger = ledgerController.createLedger("Test Ledger", testUser);
-
-        testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
 
         testAccount = accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000.00),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
