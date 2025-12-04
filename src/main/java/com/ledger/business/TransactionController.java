@@ -17,11 +17,14 @@ public class TransactionController {
     private final DebtPaymentDAO debtPaymentDAO;
     private final InstallmentPaymentDAO installmentPaymentDAO;
     private final InstallmentDAO installmentDAO;
+    private final LedgerCategoryDAO ledgerCategoryDAO;
 
     public TransactionController(TransactionDAO transactionDAO, AccountDAO accountDAO,
                                  ReimbursementDAO reimbursementDAO,
                                  ReimbursementTxLinkDAO reimbursementTxLinkDAO, DebtPaymentDAO debtPaymentDAO,
-                                 InstallmentPaymentDAO installmentPaymentDAO, InstallmentDAO installmentDAO) {
+                                 InstallmentPaymentDAO installmentPaymentDAO, InstallmentDAO installmentDAO,
+                                 LedgerCategoryDAO ledgerCategoryDAO) {
+        this.ledgerCategoryDAO = ledgerCategoryDAO;
         this.installmentDAO = installmentDAO;
         this.installmentPaymentDAO = installmentPaymentDAO;
         this.debtPaymentDAO = debtPaymentDAO;
@@ -220,6 +223,7 @@ public class TransactionController {
                     installment.setRemainingAmount(
                             installment.getRemainingAmountWithRepaidPeriods());
                     installmentDAO.update(installment);
+
                     if(installment.isIncludedInCurrentDebts()) {
                         CreditAccount creditAccount = (CreditAccount) fromAccount;
                         creditAccount.setCurrentDebt(
@@ -305,6 +309,12 @@ public class TransactionController {
             accountDAO.update(toAccount);
         }
 
+        if(reimbursementTxLinkDAO.isTransactionReimbursed(income)) {
+            Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(income);
+            reimbursement.setRemainingAmount(amount != null ? amount :oldAmount);
+            reimbursementDAO.update(reimbursement);
+        }
+
         income.setAmount(amount != null ? amount : oldAmount);
         income.setDate(date != null ? date : income.getDate());
         income.setNote(note);
@@ -351,6 +361,18 @@ public class TransactionController {
             fromAccount.debit(amount != null ? amount : oldAmount);
             expense.setFromAccount(fromAccount);
             accountDAO.update(fromAccount);
+        }
+
+        if(installmentPaymentDAO.isInstallmentPaymentTransaction(expense)) {
+            Installment installment = installmentPaymentDAO.getInstallmentByTransaction(expense);
+            //rollback remaining amount
+            BigDecimal remainingBefore = installment.getRemainingAmount().add(oldAmount);
+            //apply new remaining amount
+            installment.setRemainingAmount(remainingBefore.subtract(amount != null ? amount : oldAmount));
+            //recalculate paid periods
+            installment.recalculatePaidPeriods();
+
+            installmentDAO.update(installment);
         }
 
         expense.setAmount(amount != null ? amount : oldAmount);
@@ -434,31 +456,40 @@ public class TransactionController {
             transfer.setToAccount(newToAccount); //apply new toAccount (can be null)
         }
 
+        if(reimbursementTxLinkDAO.isTransactionReimbursed(transfer)) {
+            Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(transfer);
+            BigDecimal amountToSet = amount != null ? amount : oldAmount;
+            if(amountToSet.compareTo(oldAmount) != 0){
+
+                BigDecimal newRemaining = reimbursement.getRemainingAmount().subtract(
+                        amountToSet.subtract(oldAmount)
+                );
+                reimbursement.setRemainingAmount(newRemaining);
+
+                if(newRemaining.compareTo(BigDecimal.ZERO) < 0) {
+                    reimbursement.setEnded(true);
+                    Income income = new Income(
+                            LocalDate.now(),
+                            newRemaining.abs(),
+                            "Reimbursement Income",
+                            reimbursement.getFromAccount(),
+                            reimbursement.getLedger(),
+                            ledgerCategoryDAO.getByNameAndLedger("Claim Income", reimbursement.getLedger()));
+                    transactionDAO.insert(income);
+                    reimbursementTxLinkDAO.insert(reimbursement.getId(), income.getId()
+                    );
+                }
+                if(newRemaining.compareTo(BigDecimal.ZERO) == 0) {
+                    reimbursement.setEnded(true);
+                }
+            }
+            reimbursementDAO.update(reimbursement);
+        }
+
         transfer.setAmount(amount != null ? amount : oldAmount);
         transfer.setDate(date != null ? date : transfer.getDate());
         transfer.setNote(note);
         return transactionDAO.update(transfer);
     }
-
-//    public boolean resetIsReimbursable(Expense expense) {
-//        if (expense == null) {
-//            return false;
-//        }
-//        if (expense.isReimbursable()) { //it's currently reimbursable
-//            expense.setReimbursable(false);
-////            Reimbursement record = reimbursementDAO.getByOriginalTransactionId(expense.getId());
-////            if (record != null) {
-////                reimbursementDAO.delete(record);
-////            }
-//        }else{ //it's currently not reimbursable
-//            expense.setReimbursable(true);
-////            Reimbursement newRecord = new Reimbursement(expense,
-////                    expense.getAmount(),
-////                    ReimbursableStatus.PENDING, expense.getLedger()
-////            );
-//            //reimbursementDAO.insert(newRecord);
-//        }
-//        return transactionDAO.update(expense);
-//    }
 
 }
