@@ -34,6 +34,10 @@ public class TransactionController {
         this.reimbursementTxLinkDAO = reimbursementTxLinkDAO;
     }
 
+    public List<Transaction> getTransactionsByInstallment(Installment installment) {
+        return installmentPaymentDAO.getTransactionsByInstallment(installment);
+    }
+
     public List<Transaction> getTransactionsByReimbursement(Reimbursement reimbursement) {
         return reimbursementTxLinkDAO.getTransactionsByReimbursement(reimbursement);
     }
@@ -50,7 +54,6 @@ public class TransactionController {
                                                                  LocalDate endDate) {
         return transactionDAO.getByAccountId(account.getId()).stream()
                 .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
-                //.filter(t -> !t.isReimbursable() || (t.getStatus() == ReimbursableStatus.FULL))
                 .sorted((comparing(Transaction::getDate).reversed()))
                 .toList();
 
@@ -187,8 +190,6 @@ public class TransactionController {
             return false;
         }
 
-//        Account fromAccount = tx.getFromAccount();
-//        Account toAccount = tx.getToAccount();
         Account toAccount = null;
         if (tx.getToAccount() != null) {
             toAccount = accountDAO.getAccountById(tx.getToAccount().getId());
@@ -231,9 +232,15 @@ public class TransactionController {
                         );
                     }
                 }
+                if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
+                    Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
+                    reimbursement.setRemainingAmount(reimbursement.getAmount());
+                    reimbursement.setEnded(false);
+                    reimbursementDAO.update(reimbursement);
+                }
+
                 fromAccount.credit(tx.getAmount());
                 accountDAO.update(fromAccount);
-
                 break;
             case TRANSFER:
                 if (fromAccount != null) {
@@ -373,6 +380,14 @@ public class TransactionController {
             installment.recalculatePaidPeriods();
 
             installmentDAO.update(installment);
+        }
+        if(reimbursementTxLinkDAO.isTransactionReimbursed(expense)) {
+            Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(expense);
+            reimbursement.setRemainingAmount(amount != null ? amount : oldAmount);
+            if(reimbursement.getRemainingAmount().compareTo(reimbursement.getAmount()) != 0) {
+                reimbursement.setAmount(reimbursement.getRemainingAmount());
+            }
+            reimbursementDAO.update(reimbursement);
         }
 
         expense.setAmount(amount != null ? amount : oldAmount);
