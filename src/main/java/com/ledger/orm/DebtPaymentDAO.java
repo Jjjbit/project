@@ -38,11 +38,11 @@ public class DebtPaymentDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean isDebtPaymentTransaction(long transactionId) {
+    public boolean isDebtPaymentTransaction(Transaction transaction) {
         String sql = "SELECT 1 FROM debt_payments WHERE transaction_id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, transactionId);
+            stmt.setLong(1, transaction.getId());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next();
