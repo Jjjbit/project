@@ -112,6 +112,70 @@ public class TransactionControllerTest {
     }
 
     //test edit income of reimbursement
+    @Test
+    public void testEdit_IncomeOfReimbursement(){
+        LedgerCategory food = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
+
+        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount, testLedger, food);
+        assertNotNull(record);
+
+        reimbursementController.claim(record, BigDecimal.valueOf(550.00), true, testAccount, LocalDate.now());
+
+        List<Transaction> reimbursementClaims = transactionTxLinkDAO.getTransactionsByReimbursement(record);
+        Income income = (Income) reimbursementClaims.stream()
+                .filter(tx -> tx.getType() == TransactionType.INCOME)
+                .findFirst()
+                .orElse(null);
+        assertNotNull(income);
+
+        Account newAccount = accountController.createBasicAccount("New Account", BigDecimal.valueOf(500.00),
+                AccountType.CASH, AccountCategory.FUNDS, testUser, "New Account Notes",
+                true, true);
+
+        Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
+        List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedgerId(newLedger.getId());
+
+        LedgerCategory newCategory = newLedgerCategories.stream()
+                .filter(cat -> cat.getName().equals("Bonus"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(newCategory);
+
+        boolean result=transactionController.updateIncome(income, newAccount,
+                newCategory, "Updated Reimbursement Income", LocalDate.now(),
+                BigDecimal.valueOf(250.00), newLedger);
+        assertTrue(result);
+
+        //verify account balance updated
+        BasicAccount updatedOldAccount = (BasicAccount) accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, updatedOldAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
+
+        BasicAccount updatedNewAccount = (BasicAccount) accountDAO.getAccountById(newAccount.getId());
+        assertEquals(0, updatedNewAccount.getBalance().compareTo(BigDecimal.valueOf(750.00))); //500 + 250 - 200 (old income) = 550
+
+        assertEquals(1, transactionDAO.getByAccountId(newAccount.getId()).size());
+        assertEquals(1, transactionDAO.getByLedgerId(newLedger.getId()).size());
+        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
+        assertEquals(1, transactionDAO.getByCategoryId(newCategory.getId()).size());
+        assertEquals(0, transactionDAO.getByCategoryId(food.getId()).size());
+        assertEquals(2, transactionTxLinkDAO.getTransactionsByReimbursement(record).size());
+
+        Transaction updatedIncome = transactionDAO.getById(income.getId());
+        assertEquals("Updated Reimbursement Income", updatedIncome.getNote());
+        assertEquals(0, updatedIncome.getAmount().compareTo(BigDecimal.valueOf(250.00)));
+        assertEquals(newAccount.getId(), updatedIncome.getToAccount().getId());
+        assertEquals(newCategory.getId(), updatedIncome.getCategory().getId());
+        assertEquals(newLedger.getId(), updatedIncome.getLedger().getId());
+
+        //verify reimbursement updated
+        Reimbursement updatedRecord = reimbursementDAO.getById(record.getId());
+        assertEquals(0, updatedRecord.getRemainingAmount().compareTo(BigDecimal.valueOf(-250.00)));
+    }
+
     //test edit expense of installment
     //test edit expense of reimbursement
 
@@ -359,93 +423,6 @@ public class TransactionControllerTest {
         BasicAccount updatedAccount = (BasicAccount) accountDAO.getAccountById(testAccount.getId());
         assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(850.00))); //1000 - 150 = 850
     }
-
-    //create a reimbursable expense
-//    @Test
-//    public void testCreateReimbursableExpense(){
-//        LedgerCategory food = testCategories.stream()
-//                .filter(cat -> cat.getName().equals("Food"))
-//                .findFirst()
-//                .orElse(null);
-//        assertNotNull(food);
-//
-//        Transaction expense = transactionController.createExpense(testLedger, testAccount, food,
-//                "Business Trip",
-//                LocalDate.of(2024,6,15),
-//                BigDecimal.valueOf(300.00), true);
-//
-//        assertNotNull(expense);
-//        assertTrue(expense.isReimbursable());
-//
-//        Reimbursement reimbursement = reimbursementController.getReimbursementByTransaction(expense);
-//        assertNotNull(reimbursement);
-//        assertEquals(expense.getId(), reimbursement.getOriginalTransaction().getId());
-//
-//        List<Transaction> txs= transactionTxLinkDAO.getTransactionsByReimbursement(reimbursement);
-//        assertEquals(0, txs.size());
-//
-//        assertEquals(0, reimbursement.getAmount().compareTo(BigDecimal.valueOf(300.00)));
-//        assertEquals(ReimbursableStatus.PENDING, reimbursement.getReimbursementStatus());
-//
-//        //verify account balance updated
-//        BasicAccount updatedAccount = (BasicAccount) accountDAO.getAccountById(testAccount.getId());
-//        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(700.00))); //1000 - 300 = 700
-//    }
-
-    //set isReimbursable to false for an existing expense
-//    @Test
-//    public void testUnsetExpenseReimbursable() {
-//        LedgerCategory food = testCategories.stream()
-//                .filter(cat -> cat.getName().equals("Food"))
-//                .findFirst()
-//                .orElse(null);
-//        assertNotNull(food);
-//
-//        Expense expense = transactionController.createExpense(testLedger, testAccount, food,
-//                "Business Trip",
-//                LocalDate.of(2024, 6, 15),
-//                BigDecimal.valueOf(300.00), true);
-//
-//        assertNotNull(expense);
-//        assertTrue(expense.isReimbursable());
-//
-//        boolean result = transactionController.resetIsReimbursable(expense);
-//        assertTrue(result);
-//
-//        Expense updatedExpense = (Expense) transactionDAO.getById(expense.getId());
-//        assertFalse(updatedExpense.isReimbursable());
-//
-//        Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
-//        assertNull(reimbursement);
-//    }
-
-    //set isReimbursable to true for an existing expense
-//    @Test
-//    public void testSetExpenseReimbursable() {
-//        LedgerCategory food = testCategories.stream()
-//                .filter(cat -> cat.getName().equals("Food"))
-//                .findFirst()
-//                .orElse(null);
-//        assertNotNull(food);
-//
-//        Expense expense = transactionController.createExpense(testLedger, testAccount, food,
-//                "Business Trip",
-//                LocalDate.of(2024, 6, 15),
-//                BigDecimal.valueOf(300.00), false);
-//
-//        assertNotNull(expense);
-//        assertFalse(expense.isReimbursable());
-//
-//        boolean result = transactionController.resetIsReimbursable(expense);
-//        assertTrue(result);
-//
-//        Expense updatedExpense = (Expense) transactionDAO.getById(expense.getId());
-//        assertTrue(updatedExpense.isReimbursable());
-//
-//        Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
-//        assertNotNull(reimbursement);
-//    }
-
 
     @Test
     public void testCreateTransfer_Success() {

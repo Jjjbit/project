@@ -318,7 +318,7 @@ public class TransactionController {
 
         if(reimbursementTxLinkDAO.isTransactionReimbursed(income)) {
             Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(income);
-            reimbursement.setRemainingAmount(amount != null ? amount :oldAmount);
+            reimbursement.setRemainingAmount(amount != null ? amount.negate() :oldAmount.negate());
             reimbursementDAO.update(reimbursement);
         }
 
