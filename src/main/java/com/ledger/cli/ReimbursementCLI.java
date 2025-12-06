@@ -390,7 +390,7 @@ public class ReimbursementCLI {
     //private helper methods
     private LedgerCategory selectCategory(Ledger ledger) {
         List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(ledger).stream()
-                .filter(cat -> cat.getType().toString().equals("EXPENSE"))
+                .filter(cat -> cat.getType().equals(CategoryType.EXPENSE))
                 .toList();
 
         if(categories.isEmpty()) {
@@ -403,7 +403,7 @@ public class ReimbursementCLI {
                 .toList();
 
         for(int i = 0; i < parentCategories.size(); i++) {
-            //dispaly parent category
+            //display parent category
             LedgerCategory parent = parentCategories.get(i);
             System.out.println((i + 1) + ". " + "Name: " + parent.getName());
 

@@ -77,6 +77,7 @@ public class LedgerCategoryCLI {
         List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
         List<LedgerCategory> parentCategories = allCategories.stream()
                 .filter(cat -> cat.getType() == (categoryType) && cat.getParent() == null)
+                .filter(cat -> !cat.getName().equals("Claim Income"))
                 .toList();
         System.out.println("Select a parent category for the new sub-category:");
         LedgerCategory parentCategory = selectCategory(parentCategories);
@@ -193,6 +194,7 @@ public class LedgerCategoryCLI {
         //select sub-category
         List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
                 .filter(cat -> cat.getType() == categoryType && cat.getParent() != null)
+                .filter(cat -> !cat.getName().equals("Claim Income"))
                 .toList();
         System.out.println("Select a sub-category to promote:");
         LedgerCategory subCategoryToPromote = selectCategory(allCategories);
@@ -231,6 +233,7 @@ public class LedgerCategoryCLI {
         List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
                 .filter(cat -> cat.getType() == categoryType
                         && cat.getParent() == null)
+                .filter(cat -> !cat.getName().equals("Claim Income"))
                 .toList();
         System.out.println("Select a first-level category to demote:");
         LedgerCategory categoryToDemote = selectCategory(allCategories);
@@ -277,6 +280,7 @@ public class LedgerCategoryCLI {
                 .filter(cat -> cat.getId() != subCategoryToChange.getId()
                         && cat.getType() == subCategoryToChange.getType()
                         && cat.getParent() == null)
+                .filter(cat -> !cat.getName().equals("Claim Income"))
                 .toList();
         LedgerCategory newParentCategory = selectCategory(potentialParents);
 
@@ -311,6 +315,7 @@ public class LedgerCategoryCLI {
                 .toList();
         List<LedgerCategory> incomeRoots = updatedCategories.stream()
                 .filter(cat -> cat.getParent() == null && cat.getType() == CategoryType.INCOME)
+                .filter(cat-> !cat.getName().equals("Claim Income"))
                 .toList();
         System.out.println("Category Tree for Ledger: " + selectedLedger.getName());
         System.out.println("Expense categories: ");
@@ -375,6 +380,7 @@ public class LedgerCategoryCLI {
     private LedgerCategory selectCategoryWithTree(List<LedgerCategory> categories) {
         List<LedgerCategory> rootCategories = categories.stream()
                 .filter(cat -> cat.getParent() == null)
+                .filter(cat -> !cat.getName().equals("Claim Income"))
                 .toList();
         for (int i = 0; i < rootCategories.size(); i++) {
             //display parent category

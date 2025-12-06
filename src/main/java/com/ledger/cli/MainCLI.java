@@ -340,7 +340,7 @@ public class MainCLI {
 
     private void showCategoryMenu()  {
         System.out.println("\n=== Category Management ===");
-        System.out.println("1. Add Category of first level"); //after adding, show category tree and ask if want to add subcategory
+        System.out.println("1. Add Category of first level");
         System.out.println("2. Add category of second level");
         System.out.println("3. Rename Category");
         System.out.println("4. Promote category of secondo level to first level");

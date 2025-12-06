@@ -246,6 +246,7 @@ public class LedgerCLI {
         List<LedgerCategory> incomeRoot = categories.stream()
                 .filter(cat -> cat.getType() == CategoryType.INCOME)
                 .filter(cat -> cat.getParent() == null)
+                .filter(cat -> !cat.getName().equalsIgnoreCase("Claim Income")) // Exclude "Claim Income" category
                 .toList();
 
         System.out.println("Expense Categories:");

@@ -580,6 +580,7 @@ public class TransactionCLI {
         //get only parent categories
         List<LedgerCategory> parentCategories = filteredCategories.stream()
                 .filter(category -> category.getParent() == null)
+                .filter(category -> !category.getName().equals("Claim Income")) //exclude "Claim Income" category
                 .toList();
 
         for (int i = 0; i < parentCategories.size(); i++) {
