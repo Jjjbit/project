@@ -24,7 +24,6 @@ public class ReimbursementControllerTest {
     private User testUser;
     private Ledger testLedger;
     private BasicAccount testAccount;
-    private List<LedgerCategory> testCategories;
     private LedgerCategory food;
 
     private AccountDAO accountDAO;
@@ -64,7 +63,7 @@ public class ReimbursementControllerTest {
 
         testLedger = ledgerController.createLedger("Test Ledger", testUser);
 
-        testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+        List<LedgerCategory> testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
         food= testCategories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
@@ -235,7 +234,7 @@ public class ReimbursementControllerTest {
 
         // Attempt to claim more than the remaining amount
         boolean claimResult = reimbursementController.claim(reimbursement, BigDecimal.valueOf(300.00),
-                false, testAccount1, null);
+                true, testAccount1, null);
         assertTrue(claimResult);
 
         Reimbursement updatedReimbursement = reimbursementDAO.getById(reimbursement.getId());

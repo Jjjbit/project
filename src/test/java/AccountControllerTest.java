@@ -31,10 +31,6 @@ public class AccountControllerTest {
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
     private InstallmentDAO installmentDAO;
-    private ReimbursementDAO reimbursementDAO;
-    private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
-    private ReimbursementController reimbursementController;
-
 
     @BeforeEach
     public void setUp() {
@@ -51,15 +47,14 @@ public class AccountControllerTest {
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO);
-        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
+        ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO);
+        ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
         InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
 
-        reimbursementController = new ReimbursementController(transactionDAO, reimbursementDAO, reimbursementTxLinkDAO, ledgerCategoryDAO, accountDAO);
         UserController userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, ledgerCategoryDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO, installmentPaymentDAO);
 

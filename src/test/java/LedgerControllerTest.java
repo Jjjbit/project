@@ -27,8 +27,6 @@ public class LedgerControllerTest {
     private TransactionDAO transactionDAO;
     private LedgerDAO ledgerDAO;
     private BudgetDAO budgetDAO;
-    private ReimbursementDAO reimbursementDAO;
-    private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
 
     private LedgerController ledgerController;
     private TransactionController  transactionController;
@@ -50,15 +48,15 @@ public class LedgerControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO);
-        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
+        ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO);
+        ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
         InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
 
         UserController userController = new UserController(userDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, ledgerCategoryDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO);
         AccountController accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
 
         userController.register("test user", "password123"); // create test user and insert into db

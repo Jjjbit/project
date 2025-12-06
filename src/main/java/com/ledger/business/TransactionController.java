@@ -17,14 +17,11 @@ public class TransactionController {
     private final DebtPaymentDAO debtPaymentDAO;
     private final InstallmentPaymentDAO installmentPaymentDAO;
     private final InstallmentDAO installmentDAO;
-    private final LedgerCategoryDAO ledgerCategoryDAO;
 
     public TransactionController(TransactionDAO transactionDAO, AccountDAO accountDAO,
                                  ReimbursementDAO reimbursementDAO,
                                  ReimbursementTxLinkDAO reimbursementTxLinkDAO, DebtPaymentDAO debtPaymentDAO,
-                                 InstallmentPaymentDAO installmentPaymentDAO, InstallmentDAO installmentDAO,
-                                 LedgerCategoryDAO ledgerCategoryDAO) {
-        this.ledgerCategoryDAO = ledgerCategoryDAO;
+                                 InstallmentPaymentDAO installmentPaymentDAO, InstallmentDAO installmentDAO) {
         this.installmentDAO = installmentDAO;
         this.installmentPaymentDAO = installmentPaymentDAO;
         this.debtPaymentDAO = debtPaymentDAO;

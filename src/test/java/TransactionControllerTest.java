@@ -61,7 +61,7 @@ public class TransactionControllerTest {
 
         UserController userController = new UserController(userDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO,
-                transactionTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, ledgerCategoryDAO);
+                transactionTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
         reimbursementController = new ReimbursementController(transactionDAO,

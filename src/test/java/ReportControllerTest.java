@@ -26,14 +26,11 @@ public class ReportControllerTest {
     private List<LedgerCategory> testCategories;
 
     private BudgetDAO budgetDAO;
-    private ReimbursementDAO reimbursementDAO;
-    private ReimbursementTxLinkDAO reimbursementTxLinkDAO;
 
     private AccountController accountController;
     private BudgetController budgetController;
     private TransactionController transactionController;
     private ReportController reportController;
-    private LedgerController ledgerController;
     private InstallmentController  installmentController;
     private ReimbursementController reimbursementController;
 
@@ -52,19 +49,19 @@ public class ReportControllerTest {
         InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO);
-        reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
+        ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO);
+        ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
         InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
 
         budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO,
-                reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, ledgerCategoryDAO);
+                reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO);
         UserController userController = new UserController(userDAO);
         accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
         reportController = new ReportController(transactionDAO, accountDAO, ledgerDAO, budgetDAO,
                 installmentDAO, ledgerCategoryDAO, reimbursementTxLinkDAO);
-        ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO,
+        LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO,
                 accountDAO, budgetDAO);
         installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO, installmentPaymentDAO);
         reimbursementController = new ReimbursementController(transactionDAO, reimbursementDAO,
@@ -1155,15 +1152,8 @@ public class ReportControllerTest {
                 BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS,
                 testUser, null, true, true);
 
-        // Create a reimbursable expense transaction
-        Expense expense = transactionController.createExpense(testLedger, testAccount,
-                food, null, LocalDate.now(), BigDecimal.valueOf(200.00));
-
-        //Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
-        Reimbursement reimbursement = reimbursementDAO.getByLedger(testLedger).stream()
-                .findFirst()
-                .orElse(null);
-        assertNotNull(reimbursement);
+        Reimbursement reimbursement = reimbursementController.create(BigDecimal.valueOf(200.00), testAccount,
+                testLedger, food);
 
         // Claim full reimbursement
         boolean claimResult = reimbursementController.claim(reimbursement, BigDecimal.valueOf(200.00),
@@ -1186,15 +1176,8 @@ public class ReportControllerTest {
                 BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS,
                 testUser, null, true, true);
 
-        // Create a reimbursable expense transaction
-        Expense expense = transactionController.createExpense(testLedger, testAccount,
-                food, null, LocalDate.now(), BigDecimal.valueOf(500.00));
-
-        //Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
-        Reimbursement reimbursement = reimbursementDAO.getByLedger(testLedger).stream()
-                .findFirst()
-                .orElse(null);
-        assertNotNull(reimbursement);
+        Reimbursement reimbursement = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount,
+                testLedger, food);
 
         // Claim partial reimbursement
         boolean claimResult = reimbursementController.claim(reimbursement, BigDecimal.valueOf(200.00),
@@ -1203,7 +1186,6 @@ public class ReportControllerTest {
 
         assertEquals(0, reportController.getTotalExpenseByLedger(testLedger, LocalDate.now().withDayOfMonth(1), LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth())).compareTo(BigDecimal.ZERO));
         assertEquals(0, reportController.getTotalIncomeByLedger(testLedger, LocalDate.now().withDayOfMonth(1), LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth())).compareTo(BigDecimal.ZERO));
-
     }
 
     //test partial reimbursement claim but is final claim
@@ -1219,15 +1201,8 @@ public class ReportControllerTest {
                 BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS,
                 testUser, null, true, true);
 
-        // Create a reimbursable expense transaction
-        Expense expense = transactionController.createExpense(testLedger, testAccount,
-                food, null, LocalDate.now(), BigDecimal.valueOf(500.00));
-
-        //Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
-        Reimbursement reimbursement = reimbursementDAO.getByLedger(testLedger).stream()
-                .findFirst()
-                .orElse(null);
-        assertNotNull(reimbursement);
+        Reimbursement reimbursement = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount,
+                testLedger, food);
 
         // Claim partial reimbursement
         boolean claimResult = reimbursementController.claim(reimbursement, BigDecimal.valueOf(200.00),
@@ -1251,22 +1226,15 @@ public class ReportControllerTest {
                 BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS,
                 testUser, null, true, true);
 
-        // Create a reimbursable expense transaction
-        Expense expense = transactionController.createExpense(testLedger, testAccount,
-                food, null, LocalDate.now(), BigDecimal.valueOf(300.00));
-
-        //Reimbursement reimbursement = reimbursementDAO.getByOriginalTransactionId(expense.getId());
-        Reimbursement reimbursement = reimbursementDAO.getByLedger(testLedger).stream()
-                .findFirst()
-                .orElse(null);
-        assertNotNull(reimbursement);
+        Reimbursement reimbursement = reimbursementController.create(BigDecimal.valueOf(200.00), testAccount,
+                testLedger, food);
 
         // Attempt to claim more than the remaining amount
         boolean claimResult = reimbursementController.claim(reimbursement, BigDecimal.valueOf(400.00),
-                false, testAccount1, null);
+                true, testAccount1, null);
         assertTrue(claimResult);
 
         assertEquals(0, reportController.getTotalExpenseByLedger(testLedger, LocalDate.now().withDayOfMonth(1), LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth())).compareTo(BigDecimal.ZERO));
-        assertEquals(0, reportController.getTotalIncomeByLedger(testLedger, LocalDate.now().withDayOfMonth(1), LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth())).compareTo(BigDecimal.valueOf(100.00)));
+        assertEquals(0, reportController.getTotalIncomeByLedger(testLedger, LocalDate.now().withDayOfMonth(1), LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth())).compareTo(BigDecimal.valueOf(200.00)));
     }
 }
