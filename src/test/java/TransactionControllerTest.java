@@ -148,39 +148,228 @@ public class TransactionControllerTest {
         boolean result=transactionController.updateIncome(income, newAccount,
                 newCategory, "Updated Reimbursement Income", LocalDate.now(),
                 BigDecimal.valueOf(250.00), newLedger);
-        assertTrue(result);
-
-        //verify account balance updated
-        BasicAccount updatedOldAccount = (BasicAccount) accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedOldAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
-
-        BasicAccount updatedNewAccount = (BasicAccount) accountDAO.getAccountById(newAccount.getId());
-        assertEquals(0, updatedNewAccount.getBalance().compareTo(BigDecimal.valueOf(750.00))); //500 + 250 - 200 (old income) = 550
-
-        assertEquals(1, transactionDAO.getByAccountId(newAccount.getId()).size());
-        assertEquals(1, transactionDAO.getByLedgerId(newLedger.getId()).size());
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
-        assertEquals(1, transactionDAO.getByCategoryId(newCategory.getId()).size());
-        assertEquals(0, transactionDAO.getByCategoryId(food.getId()).size());
-        assertEquals(2, transactionTxLinkDAO.getTransactionsByReimbursement(record).size());
-
-        Transaction updatedIncome = transactionDAO.getById(income.getId());
-        assertEquals("Updated Reimbursement Income", updatedIncome.getNote());
-        assertEquals(0, updatedIncome.getAmount().compareTo(BigDecimal.valueOf(250.00)));
-        assertEquals(newAccount.getId(), updatedIncome.getToAccount().getId());
-        assertEquals(newCategory.getId(), updatedIncome.getCategory().getId());
-        assertEquals(newLedger.getId(), updatedIncome.getLedger().getId());
-
-        //verify reimbursement updated
-        Reimbursement updatedRecord = reimbursementDAO.getById(record.getId());
-        assertEquals(0, updatedRecord.getRemainingAmount().compareTo(BigDecimal.valueOf(-250.00)));
+        assertFalse(result);
     }
 
     //test edit expense of installment
+    //new from account is not a credit card
+    @Test
+    public void testEdit_ExpenseOfInstallment1(){
+        CreditAccount creditCardAccount = accountController.createCreditAccount("MasterCard Credit Card", null,
+                BigDecimal.valueOf(2000.00),   //balance
+                true, true, testUser,
+                AccountType.CREDIT_CARD,
+                BigDecimal.valueOf(3000.00), //credit limit
+                BigDecimal.valueOf(1000.00), //current debt
+                10, 20);
+
+        LedgerCategory electronics = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Electronics"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(electronics);
+
+        Installment installment = installmentController.createInstallment(creditCardAccount, "Laptop Purchase",
+                BigDecimal.valueOf(2000.00), 12, BigDecimal.ZERO, Installment.Strategy.EVENLY_SPLIT,
+                 LocalDate.now(), electronics, true, testLedger);
+        assertNotNull(installment);
+        assertEquals(1, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
+        //current debt 1000+(2000-166.67)=2833.33
+        //balance 2000- 166.67=1833.33
+        //remaining amount 2000- 166.67 =1833.33
+        assertEquals(0, creditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2833.33)));
+        assertEquals(0, creditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1833.33)));
+        assertEquals(0, installment.getRemainingAmount().compareTo(BigDecimal.valueOf(1833.33)));
+        assertEquals(1, installment.getPaidPeriods());
+
+        boolean result=transactionController.updateExpense(
+                (Expense) transactionDAO.getByAccountId(creditCardAccount.getId()).getFirst(),
+                testAccount, //new from account
+                electronics,
+                "Updated Laptop Purchase Installment",
+                LocalDate.now(),
+                BigDecimal.valueOf(1000.00),
+                testLedger);
+        assertTrue(result);
+
+        //verify account balance updated
+        BasicAccount updatedFromAccount = (BasicAccount) accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.ZERO)); //1000 - 1000 = 0
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
+
+        CreditAccount updatedCreditCardAccount = (CreditAccount) accountDAO.getAccountById(creditCardAccount.getId());
+        assertEquals(0, updatedCreditCardAccount.getBalance().compareTo(BigDecimal.valueOf(2000.00)));
+        assertEquals(0, updatedCreditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2000.00)));
+        assertEquals(0, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
+        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
+
+        Transaction updatedExpense = transactionDAO.getById(
+                transactionDAO.getByAccountId(testAccount.getId()).getFirst().getId());
+        assertEquals("Updated Laptop Purchase Installment", updatedExpense.getNote());
+        assertEquals(0, updatedExpense.getAmount().compareTo(BigDecimal.valueOf(1000.00)));
+
+        Installment updatedInstallment = installmentDAO.getById(installment.getId());
+        assertEquals(0, updatedInstallment.getRemainingAmount().compareTo(BigDecimal.valueOf(1000.00)));
+        assertEquals(5, updatedInstallment.getPaidPeriods());
+    }
+
+    //new from account is a credit card
+    @Test
+    public void testEdit_ExpenseOfInstallment2(){
+        CreditAccount creditCardAccount = accountController.createCreditAccount("MasterCard Credit Card", null,
+                BigDecimal.valueOf(2000.00),   //balance
+                true, true, testUser,
+                AccountType.CREDIT_CARD,
+                BigDecimal.valueOf(3000.00), //credit limit
+                BigDecimal.valueOf(1000.00), //current debt
+                10, 20);
+
+        LedgerCategory electronics = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Electronics"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(electronics);
+
+        Installment installment = installmentController.createInstallment(creditCardAccount, "Laptop Purchase",
+                BigDecimal.valueOf(2000.00), 12, BigDecimal.ZERO, Installment.Strategy.EVENLY_SPLIT,
+                LocalDate.now(), electronics, true, testLedger);
+        assertNotNull(installment);
+        assertEquals(1, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
+        //current debt 1000+(2000-166.67)=2833.33
+        //balance 2000- 166.67=1833.33
+        //remaining amount 2000- 166.67 =1833.33
+        assertEquals(0, creditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2833.33)));
+        assertEquals(0, creditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1833.33)));
+        assertEquals(0, installment.getRemainingAmount().compareTo(BigDecimal.valueOf(1833.33)));
+        assertEquals(1, installment.getPaidPeriods());
+
+        CreditAccount newFromAccount = accountController.createCreditAccount("New Credit Card", null,
+                BigDecimal.valueOf(4000.00),   //balance
+                true, true, testUser,
+                AccountType.CREDIT_CARD,
+                BigDecimal.valueOf(4000.00), //credit limit
+                BigDecimal.valueOf(500.00), //current debt
+                5, 15);
+
+        boolean result=transactionController.updateExpense(
+                (Expense) transactionDAO.getByAccountId(creditCardAccount.getId()).getFirst(),
+                newFromAccount, //new from account
+                electronics,
+                "Updated Laptop Purchase Installment",
+                LocalDate.now(),
+                BigDecimal.valueOf(1000.00),
+                testLedger);
+        assertTrue(result);
+
+        //verify account balance updated
+        CreditAccount updatedFromAccount = (CreditAccount) accountDAO.getAccountById(newFromAccount.getId());
+        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(3000.00))); //4000 - 1000 = 3000
+        assertEquals(0, updatedFromAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(1500.00))); //500 + 1000 = 1500
+        assertEquals(1, transactionDAO.getByAccountId(newFromAccount.getId()).size());
+
+        CreditAccount updatedCreditCardAccount = (CreditAccount) accountDAO.getAccountById(creditCardAccount.getId());
+        assertEquals(0, updatedCreditCardAccount.getBalance().compareTo(BigDecimal.valueOf(2000.00)));
+        assertEquals(0, updatedCreditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2000.00)));
+        assertEquals(0, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
+        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
+
+        Transaction updatedExpense = transactionDAO.getById(
+                transactionDAO.getByAccountId(newFromAccount.getId()).getFirst().getId());
+        assertEquals("Updated Laptop Purchase Installment", updatedExpense.getNote());
+        assertEquals(0, updatedExpense.getAmount().compareTo(BigDecimal.valueOf(1000.00)));
+
+        Installment updatedInstallment = installmentDAO.getById(installment.getId());
+        assertEquals(0, updatedInstallment.getRemainingAmount().compareTo(BigDecimal.valueOf(1000.00)));
+        assertEquals(5, updatedInstallment.getPaidPeriods());
+    }
+
     //test edit expense of reimbursement
+    @Test
+    public void testEdit_ExpenseOfReimbursement(){
+        LedgerCategory food = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
+
+        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount, testLedger,
+                food);
+        assertNotNull(record);
+
+        reimbursementController.claim(record, BigDecimal.valueOf(200.00), true, testAccount, LocalDate.now());
+        //remaining amount 300
+
+        boolean result=transactionController.updateExpense(
+                (Expense) transactionTxLinkDAO.getTransactionsByReimbursement(record).getFirst(),
+                testAccount,
+                food,
+                "Updated Reimbursement Expense",
+                LocalDate.now(),
+                BigDecimal.valueOf(400.00),
+                testLedger);
+        assertFalse(result); //should fail because new amount exceeds remaining amount
+    }
 
     //test edit transfer of reimbursement
+    @Test
+    public void testEdit_TransferOfReimbursement(){
+        LedgerCategory food = testCategories.stream()
+                .filter(cat -> cat.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
+
+        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount, testLedger,
+                food);
+        assertNotNull(record);
+
+        reimbursementController.claim(record, BigDecimal.valueOf(500.00), true, testAccount, LocalDate.now());
+        //remaining amount 300
+
+        boolean result=transactionController.updateTransfer(
+                (Transfer) transactionTxLinkDAO.getTransactionsByReimbursement(record).getFirst(),
+                null,
+                testAccount,
+                "Updated Reimbursement Transfer",
+                LocalDate.now(),
+                BigDecimal.valueOf(600.00),
+                testLedger);
+        assertFalse(result);
+    }
+
     //test edit transfer of payment of debt
+    @Test
+    public void testEdit_TransferOfDebtPayment(){
+        CreditAccount creditCardAccount = accountController.createCreditAccount("Visa Credit Card", null,
+                BigDecimal.valueOf(1000.00), true, true, testUser,
+                AccountType.CREDIT_CARD,
+                BigDecimal.valueOf(5000.00),
+                BigDecimal.valueOf(500.00),
+                15, 25);
+
+        accountController.repayDebt(creditCardAccount, BigDecimal.valueOf(100.00), testAccount, testLedger);
+        //balance testAccount 1000 - 100 = 900
+        //current debt creditCardAccount 500 - 100 = 400
+
+        BasicAccount newToAccount = accountController.createBasicAccount("New Basic Account",
+                BigDecimal.valueOf(2000.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS, testUser,
+                "New Basic Account Notes", true, true);
+
+        BasicAccount newFromAccount = accountController.createBasicAccount("New Basic Account",
+                BigDecimal.valueOf(1500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS, testUser,
+                "New Basic Account Notes", true, true);
+
+        boolean result=transactionController.updateTransfer(
+                (Transfer) transactionDAO.getByAccountId(testAccount.getId()).getFirst(),
+                newFromAccount,
+                newToAccount,
+                "Updated Debt Payment Transfer",
+                LocalDate.now(),
+                BigDecimal.valueOf(600.00),
+                testLedger);
+        assertFalse(result); //should fail because new amount exceeds current debt
+
+    }
 
     //test delete a payment of installment of a credit card
     @Test
