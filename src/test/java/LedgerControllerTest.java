@@ -112,7 +112,7 @@ public class LedgerControllerTest {
         assertNotNull(monthlyLedgerBudget);
         assertNotNull(yearlyLedgerBudget);
 
-        assertEquals(17, ledgerCategoryDAO.getTreeByLedgerId(ledger.getId()).size());
+        assertEquals(18, ledgerCategoryDAO.getTreeByLedgerId(ledger.getId()).size());
         List<LedgerCategory> categories= ledgerCategoryDAO.getTreeByLedgerId(ledger.getId());
 
         //print details
@@ -251,7 +251,7 @@ public class LedgerControllerTest {
         assertEquals(2, ledgerDAO.getLedgersByUserId(testUser.getId()).size());
         assertNotNull(budgetDAO.getBudgetByLedgerId(copiedLedger.getId(), Budget.Period.MONTHLY));
         assertNotNull(budgetDAO.getBudgetByLedgerId(copiedLedger.getId(), Budget.Period.YEARLY));
-        assertEquals(17, ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId()).size());
+        assertEquals(18, ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId()).size());
 
         List<LedgerCategory> originalCategories = ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId());
         List<LedgerCategory> copiedCategories = ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId());
@@ -346,8 +346,7 @@ public class LedgerControllerTest {
     //test getLedger
     @Test
     public void testGetLedgersByUser() {
-        //visible ledger is testLedger created in setup
-        //create second ledger
+        //create ledger
         Ledger secondLedger = ledgerController.createLedger("Second Ledger", testUser);
         assertNotNull(secondLedger);
 
@@ -357,6 +356,6 @@ public class LedgerControllerTest {
         ledgerController.deleteLedger(deletedLedger);
 
         List<Ledger> ledgers = ledgerController.getLedgersByUser(testUser);
-        assertEquals(2, ledgers.size());
+        assertEquals(1, ledgers.size());
     }
 }

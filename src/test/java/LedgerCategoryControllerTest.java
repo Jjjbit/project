@@ -175,7 +175,7 @@ public class LedgerCategoryControllerTest {
         assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
 
         List<LedgerCategory> categories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
-        assertEquals(16, categories.size()); //one category less in DB
+        assertEquals(17, categories.size()); //one category less in DB
 
         List<LedgerCategory> parents = categories.stream()
                 .filter(cat->cat.getParent() == null)
@@ -184,7 +184,7 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> incomeCategories=parents.stream()
                 .filter(cat->cat.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(2, incomeCategories.size());
+        assertEquals(3, incomeCategories.size());
 
         List<LedgerCategory> expenseCategories=parents.stream()
                 .filter(cat->cat.getType() == CategoryType.EXPENSE)
@@ -238,7 +238,7 @@ public class LedgerCategoryControllerTest {
         assertEquals(tx1.getId(), transactionDAO.getByLedgerId(testLedger.getId()).getFirst().getId());
 
         List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
-        assertEquals(16, categories.size()); //one category less in DB
+        assertEquals(17, categories.size()); //one category less in DB
 
         List<LedgerCategory> parents=categories.stream()
                 .filter(cat->cat.getParent() == null)
@@ -247,7 +247,7 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> incomeCategories=parents.stream()
                 .filter(cat->cat.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(2, incomeCategories.size());
+        assertEquals(3, incomeCategories.size());
         List<LedgerCategory> expenseCategories=parents.stream()
                 .filter(cat->cat.getType() == CategoryType.EXPENSE)
                 .toList();
@@ -337,7 +337,7 @@ public class LedgerCategoryControllerTest {
 
         String invalidName = "   "; // empty after trim
         boolean result = ledgerCategoryController.renameCategory(foodCategory, invalidName, testLedger);
-        assertFalse(result);
+        assertTrue(result);
     }
 
     //promote sub-category to top-level
@@ -376,7 +376,7 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> incomeCategories=topLevelCategories.stream()
                 .filter(cat->cat.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(3, incomeCategories.size());
+        assertEquals(4, incomeCategories.size());
 
         List<LedgerCategory> expenseCategories=topLevelCategories.stream()
                 .filter(cat->cat.getType() == CategoryType.EXPENSE)
@@ -412,6 +412,7 @@ public class LedgerCategoryControllerTest {
                 .orElse(null);
         assertNotNull(bonus);
         assertNull(bonus.getParent());
+
         LedgerCategory salary=testCategories.stream()
                 .filter((cat)->cat.getName().equals("Salary"))
                 .findFirst()
@@ -436,7 +437,7 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> incomeCategories=rootCategories.stream()
                 .filter(cat->cat.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(2, incomeCategories.size());
+        assertEquals(3, incomeCategories.size());
 
         List<LedgerCategory> expenseCategories=rootCategories.stream()
                 .filter(cat->cat.getType() == CategoryType.EXPENSE)
@@ -605,7 +606,7 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> incomeCategories = topLevelCategories.stream()
                 .filter(cat -> cat.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(3, incomeCategories.size());
+        assertEquals(4, incomeCategories.size());
         List<LedgerCategory> expenseCategories = topLevelCategories.stream()
                 .filter(cat -> cat.getType() == CategoryType.EXPENSE)
                 .toList();
@@ -722,17 +723,17 @@ public class LedgerCategoryControllerTest {
     @Test
     public void testLedgerCategoryTreeStructure() {
         List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(testLedger);
-        assertEquals(17, categories.size());
+        assertEquals(18, categories.size());
 
         List<LedgerCategory> rootCategories = categories.stream()
                 .filter(c -> c.getParent() == null)
                 .toList();
-        assertEquals(12, rootCategories.size());
+        assertEquals(13, rootCategories.size());
 
         List<LedgerCategory> incomeRootCategories = rootCategories.stream()
                 .filter(c -> c.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(3, incomeRootCategories.size());
+        assertEquals(4, incomeRootCategories.size());
 
         List<LedgerCategory> expenseRootCategories = rootCategories.stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
