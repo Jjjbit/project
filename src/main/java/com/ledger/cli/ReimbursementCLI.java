@@ -319,11 +319,12 @@ public class ReimbursementCLI {
 
         for(int i=0; i<reimbursements.size(); i++){
             Reimbursement reimb = reimbursements.get(i);
-            System.out.printf("%d. Category: %s, Total Amount: %s, Remaining Amount: %s, is ended: %s%n",
+            System.out.printf("%d. Category: %s, Total Amount: %s, Remaining Amount: %s, Account: %s, is ended: %s%n",
                     (i + 1),
                     reimb.getLedgerCategory().getName(),
                     reimb.getAmount(),
                     reimb.getRemainingAmount(),
+                    reimb.getFromAccount() != null ? reimb.getFromAccount().getName() : "N/A",
                     reimb.isEnded() ? "Yes" : "No"
             );
         }
