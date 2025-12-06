@@ -512,19 +512,25 @@ public class InstallmentUnitTest {
         Installment plan = new Installment(null,
                 BigDecimal.valueOf(1234.56),
                 5,
-                BigDecimal.valueOf(3.00),
+                BigDecimal.valueOf(3.00), // 3%
                 0,
                 Installment.Strategy.FINAL,
                 null,
                 LocalDate.now(),
                 null, true);
+        // total interest = 1234.56 * 0.03 = 37.0368 -> 37.04
+        //total payment = 1234.56 + 37.04 = 1271.60
+        //first payment = 246.91=1234.56 / 5 = 246.912 -> 246.91
+        //second payment = 246.91
+        //third payment = 246.91
+        //fourth payment = 246.91
+        //last payment = 37.04+246.92=283.96
 
         BigDecimal lastPayment = plan.getMonthlyPayment(5);
         BigDecimal priorPayment = plan.getMonthlyPayment(4);
         BigDecimal totalPayment = plan.getTotalPayment();
 
-        // total fee= 1234.56 * 0.03 = 37.0368 -> 37.04
-        assertEquals(0, lastPayment.compareTo(BigDecimal.valueOf(283.95))); // 246.91 + 37.04 = 283.95
+        assertEquals(0, lastPayment.compareTo(BigDecimal.valueOf(283.96))); // 246.91 + 37.04 = 283.95
         assertEquals(0, priorPayment.compareTo(BigDecimal.valueOf(246.91))); // 1234.56 / 5 = 246.912 -> 246.91
         assertEquals(0, totalPayment.compareTo(BigDecimal.valueOf(1271.60))); // 1234.56 + 37.04 = 1271.60
     }
@@ -637,7 +643,7 @@ public class InstallmentUnitTest {
 
         BigDecimal remaining = plan.getRemainingAmountWithRepaidPeriods();
 
-        assertEquals(new BigDecimal("0.00"), remaining);
+        assertEquals(0, remaining.compareTo(BigDecimal.ZERO));
     }
 
     //getRemainingAmountWithRepaidPeriods with UPFRONT - paidPeriods = 0
