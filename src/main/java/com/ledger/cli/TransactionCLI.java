@@ -362,11 +362,9 @@ public class TransactionCLI {
                     System.out.print("Enter the number of the account: ");
                     String input = scanner.nextLine().trim();
                     int choice = Integer.parseInt(input);
-                    if (choice == 0) {
-                        newFromAccount = null;
-                    } else if (choice > 0 && choice <= accounts.size()) {
+                    if (choice > 0 && choice <= accounts.size()) {
                         newFromAccount = accounts.get(choice - 1);
-                    } else {
+                    } else if(choice < 0 || choice > accounts.size()) {
                         System.out.println("Invalid choice: number out of range.");
                         return;
                     }
@@ -387,13 +385,12 @@ public class TransactionCLI {
                     System.out.print("Enter the number of the account: ");
                     String input = scanner.nextLine().trim();
                     int choice = Integer.parseInt(input);
-                    if(choice == 0) {
-                        newToAccount = null;
-                    } else if(choice < 0 || choice > accounts.size()) {
-                        System.out.println("Invalid choice.");
-                        return;
-                    }else{
+
+                    if(choice > 0 && choice <= accounts.size()) {
                         newToAccount = accounts.get(choice - 1);
+                    }else if(choice < 0 || choice > accounts.size()) {
+                        System.out.println("Invalid choice: number out of range.");
+                        return;
                     }
                 }else{
                     newToAccount = selectedTransaction.getToAccount();
