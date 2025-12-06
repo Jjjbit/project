@@ -107,6 +107,10 @@ public class ReimbursementController {
             reimbursementTxLinkDAO.insert(record.getId(), transfer.getId());
 
         } else if(amount.compareTo(record.getRemainingAmount()) < 0) { //partial claim
+            if(isFinalClaim == null) {
+                return false;
+            }
+
             BigDecimal diff = record.getRemainingAmount().subtract(amount);
             if(isFinalClaim) { //it's final claim
                 Expense expense = new Expense(
