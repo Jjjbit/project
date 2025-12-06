@@ -190,27 +190,7 @@ public class TransactionControllerTest {
                 LocalDate.now(),
                 BigDecimal.valueOf(1000.00),
                 testLedger);
-        assertTrue(result);
-
-        //verify account balance updated
-        BasicAccount updatedFromAccount = (BasicAccount) accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.ZERO)); //1000 - 1000 = 0
-        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
-
-        CreditAccount updatedCreditCardAccount = (CreditAccount) accountDAO.getAccountById(creditCardAccount.getId());
-        assertEquals(0, updatedCreditCardAccount.getBalance().compareTo(BigDecimal.valueOf(2000.00)));
-        assertEquals(0, updatedCreditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2000.00)));
-        assertEquals(0, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
-
-        Transaction updatedExpense = transactionDAO.getById(
-                transactionDAO.getByAccountId(testAccount.getId()).getFirst().getId());
-        assertEquals("Updated Laptop Purchase Installment", updatedExpense.getNote());
-        assertEquals(0, updatedExpense.getAmount().compareTo(BigDecimal.valueOf(1000.00)));
-
-        Installment updatedInstallment = installmentDAO.getById(installment.getId());
-        assertEquals(0, updatedInstallment.getRemainingAmount().compareTo(BigDecimal.valueOf(1000.00)));
-        assertEquals(5, updatedInstallment.getPaidPeriods());
+        assertFalse(result);
     }
 
     //new from account is a credit card
@@ -259,28 +239,7 @@ public class TransactionControllerTest {
                 LocalDate.now(),
                 BigDecimal.valueOf(1000.00),
                 testLedger);
-        assertTrue(result);
-
-        //verify account balance updated
-        CreditAccount updatedFromAccount = (CreditAccount) accountDAO.getAccountById(newFromAccount.getId());
-        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(3000.00))); //4000 - 1000 = 3000
-        assertEquals(0, updatedFromAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(1500.00))); //500 + 1000 = 1500
-        assertEquals(1, transactionDAO.getByAccountId(newFromAccount.getId()).size());
-
-        CreditAccount updatedCreditCardAccount = (CreditAccount) accountDAO.getAccountById(creditCardAccount.getId());
-        assertEquals(0, updatedCreditCardAccount.getBalance().compareTo(BigDecimal.valueOf(2000.00)));
-        assertEquals(0, updatedCreditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2000.00)));
-        assertEquals(0, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
-
-        Transaction updatedExpense = transactionDAO.getById(
-                transactionDAO.getByAccountId(newFromAccount.getId()).getFirst().getId());
-        assertEquals("Updated Laptop Purchase Installment", updatedExpense.getNote());
-        assertEquals(0, updatedExpense.getAmount().compareTo(BigDecimal.valueOf(1000.00)));
-
-        Installment updatedInstallment = installmentDAO.getById(installment.getId());
-        assertEquals(0, updatedInstallment.getRemainingAmount().compareTo(BigDecimal.valueOf(1000.00)));
-        assertEquals(5, updatedInstallment.getPaidPeriods());
+        assertFalse(result);
     }
 
     //test edit expense of reimbursement

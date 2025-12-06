@@ -330,6 +330,9 @@ public class TransactionController {
         if(reimbursementTxLinkDAO.isTransactionReimbursed(expense)) {
             return false;
         }
+        if(installmentPaymentDAO.isInstallmentPaymentTransaction(expense)) {
+            return false;
+        }
 
         if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
             return false;
@@ -364,32 +367,6 @@ public class TransactionController {
             //apply new account
             fromAccount.debit(amount != null ? amount : oldAmount);
             expense.setFromAccount(fromAccount);
-
-            if(installmentPaymentDAO.isInstallmentPaymentTransaction(expense)) {
-                Installment installment = installmentPaymentDAO.getInstallmentByTransaction(expense);
-
-                if (installment.isIncludedInCurrentDebts()) {
-                    BigDecimal currentDebtBefore = ((CreditAccount) oldFromAccount).getCurrentDebt().add(oldAmount);
-                    ((CreditAccount) oldFromAccount).setCurrentDebt(
-                            currentDebtBefore.subtract(amount != null ? amount : oldAmount)
-                    );
-                    accountDAO.update(oldFromAccount);
-                }
-
-                //rollback remaining amount
-                BigDecimal remainingBefore = installment.getRemainingAmount().add(oldAmount);
-                //apply new remaining amount
-                installment.setRemainingAmount(remainingBefore.subtract(amount != null ? amount : oldAmount));
-                //recalculate paid periods
-                installment.recalculatePaidPeriods();
-                installmentDAO.update(installment);
-
-                if (installment.isIncludedInCurrentDebts() && fromAccount instanceof CreditAccount) {
-                    ((CreditAccount) fromAccount).setCurrentDebt(
-                            ((CreditAccount) fromAccount).getCurrentDebt().add(installment.getRemainingAmount())
-                    );
-                }
-            }
             accountDAO.update(fromAccount);
         }
 
