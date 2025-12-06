@@ -55,6 +55,9 @@ public class ReimbursementController {
         if(fromAccount == null) {
             return null;
         }
+        if(fromAccount.getBalance().compareTo(amount) < 0) {
+            return null;
+        }
         if(ledger == null) {
             return null;
         }
