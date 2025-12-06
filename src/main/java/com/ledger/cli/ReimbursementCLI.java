@@ -44,11 +44,13 @@ public class ReimbursementCLI {
 
         System.out.println("Select an account for the expense:");
         Account expenseAccount = selectAccount();
+        if(expenseAccount==null){
+            return;
+        }
 
-        System.out.print("Enter a name/description for the reimbursable expense: ");
+        System.out.println("Enter a category for the reimbursable expense: ");
         LedgerCategory category = selectCategory(selectedLedger);
         if(category==null){
-            System.out.println("No category selected. Returning to main menu.");
             return;
         }
 
@@ -58,6 +60,12 @@ public class ReimbursementCLI {
             return;
         }
         System.out.println("Reimbursable expense created successfully");
+        System.out.printf("Category: %s, Total Amount: %s, Remaining Amount: %s, Account: %s%n",
+                record.getLedgerCategory().getName(),
+                record.getAmount(),
+                record.getRemainingAmount(),
+                record.getFromAccount() != null ? record.getFromAccount().getName() : "N/A"
+        );
     }
 
     public void claim(){
@@ -70,7 +78,7 @@ public class ReimbursementCLI {
             return;
         }
 
-        System.out.print("Select a Pending reimbursement: ");
+        System.out.println("Select a Pending reimbursement: ");
         List<Reimbursement> pendingReimbursements = reimbursementController.getReimbursementsByLedger(selectedLedger).stream()
                 .filter(reimbursement -> !reimbursement.isEnded())
                 .toList();
@@ -78,17 +86,18 @@ public class ReimbursementCLI {
             System.out.println("No pending reimbursements found in the selected ledger.");
             return;
         }
+        System.out.println("0. Cancel");
         for(int i=0; i<pendingReimbursements.size(); i++){
-            Reimbursement reimb = pendingReimbursements.get(i);
+            Reimbursement reimbursement = pendingReimbursements.get(i);
             System.out.printf("%d. Category: %s, Total Amount: %s, Remaining Amount: %s, is ended: %s%n",
                     (i + 1),
-                    reimb.getLedgerCategory().getName(),
-                    reimb.getAmount(),
-                    reimb.getRemainingAmount(),
-                    reimb.isEnded() ? "Yes" : "No"
+                    reimbursement.getLedgerCategory().getName(),
+                    reimbursement.getAmount(),
+                    reimbursement.getRemainingAmount(),
+                    reimbursement.isEnded() ? "Yes" : "No"
             );
         }
-        System.out.print("Enter the number of the reimbursement to claim (or 0 to cancel): ");
+        System.out.print("Enter the number of the reimbursement to claim: ");
         String input = scanner.nextLine().trim();
         int choice = Integer.parseInt(input);
         if(choice == 0) {
@@ -102,17 +111,42 @@ public class ReimbursementCLI {
         Reimbursement selectedReimbursement = pendingReimbursements.get(choice - 1);
 
         //select reimbursement account
+        Account reimbursementAccount;
         System.out.println("Select an account for reimbursement:");
-        Account reimbursementAccount = selectAccount();
-        if(reimbursementAccount==null){
+        List<Account> accounts = accountController.getSelectableAccounts(userController.getCurrentUser());
+        if(accounts.isEmpty()){
+            System.out.println("No accounts found for the user.");
+            return;
+        }
+        System.out.println("0. Cancel");
+        for(int i=0; i<accounts.size(); i++){
+            Account account = accounts.get(i);
+            System.out.println((i + 1) + ". " + "Name: " + account.getName() + ", Balance: " + account.getBalance());
+        }
+        System.out.print("Enter the number of the account (or Enter for default): ");
+        input = scanner.nextLine().trim();
+        if(input.isEmpty()){
             reimbursementAccount = selectedReimbursement.getFromAccount();
+        } else {
+            int accChoice = Integer.parseInt(input);
+            if (accChoice == 0) {
+                System.out.println("No account selected. Returning to main menu.");
+                return;
+            }
+            if (accChoice < 1 || accChoice > accounts.size()) {
+                System.out.println("Invalid choice. Returning to main menu.");
+                return;
+            }
+            reimbursementAccount = accounts.get(accChoice - 1);
         }
 
         //input reimbursed amount
         System.out.print("Enter the reimbursed amount: ");
-        BigDecimal reimbursedAmount = scanner.nextBigDecimal();
-        scanner.nextLine(); // consume newline
-        if(reimbursedAmount == null || reimbursedAmount.compareTo(BigDecimal.ZERO) <= 0){
+        String amountInput = scanner.nextLine().trim();
+        BigDecimal reimbursedAmount;
+        if(!amountInput.isEmpty()){
+            reimbursedAmount = new BigDecimal(amountInput);
+        }else{
             reimbursedAmount = selectedReimbursement.getRemainingAmount();
         }
 
@@ -123,7 +157,7 @@ public class ReimbursementCLI {
         boolean moreToReimburse = false;
         if(reimbursedAmount.compareTo(selectedReimbursement.getRemainingAmount()) < 0) {
             //more to reimburse
-            System.out.print("Is there more to reimburse for this expense? (y/n): ");
+            System.out.print("Is the final claim? (y/n): ");
             String moreInput = scanner.nextLine().trim().toLowerCase();
             moreToReimburse = moreInput.equals("y") || moreInput.equals("yes");
         }
@@ -152,17 +186,18 @@ public class ReimbursementCLI {
             return;
         }
 
+        System.out.println("0. Cancel");
         for(int i=0; i<reimbursements.size(); i++){
-            Reimbursement reimb = reimbursements.get(i);
+            Reimbursement reimbursement = reimbursements.get(i);
             System.out.printf("%d. Category: %s, Total Amount: %s, Remaining Amount: %s, is ended: %s%n",
                     (i + 1),
-                    reimb.getLedgerCategory().getName(),
-                    reimb.getAmount(),
-                    reimb.getRemainingAmount(),
-                    reimb.isEnded() ? "Yes" : "No"
+                    reimbursement.getLedgerCategory().getName(),
+                    reimbursement.getAmount(),
+                    reimbursement.getRemainingAmount(),
+                    reimbursement.isEnded() ? "Yes" : "No"
             );
         }
-        System.out.print("Enter the number of the reimbursement to delete (or 0 to cancel): ");
+        System.out.print("Enter the number of the reimbursement to delete: ");
         String input = scanner.nextLine().trim();
         int choice = Integer.parseInt(input);
         if(choice == 0) {
@@ -201,16 +236,17 @@ public class ReimbursementCLI {
             return;
         }
 
+        System.out.println("0. Cancel");
         for(int i=0; i<pendingReimbursements.size(); i++){
-            Reimbursement reimb = pendingReimbursements.get(i);
+            Reimbursement reimbursement = pendingReimbursements.get(i);
             System.out.printf("%d. Category: %s, Total Amount: %s, Remaining Amount: %s%n",
                     (i + 1),
-                    reimb.getLedgerCategory().getName(),
-                    reimb.getAmount(),
-                    reimb.getRemainingAmount()
+                    reimbursement.getLedgerCategory().getName(),
+                    reimbursement.getAmount(),
+                    reimbursement.getRemainingAmount()
             );
         }
-        System.out.print("Enter the number of the reimbursement to edit (or 0 to cancel): ");
+        System.out.print("Enter the number of the reimbursement to edit: ");
         String input = scanner.nextLine().trim();
         int choice = Integer.parseInt(input);
         if(choice == 0) {
@@ -265,11 +301,12 @@ public class ReimbursementCLI {
 
         System.out.println("\nPending Reimbursements:");
         System.out.println("Total Pending: " + reimbursementController.getTotalPending(selectedLedger));
-        for(Reimbursement reimb : pendingReimbursements){
-            System.out.printf("Category: %s, Total Amount: %s, Remaining Amount: %s%n",
-                    reimb.getLedgerCategory().getName(),
-                    reimb.getAmount(),
-                    reimb.getRemainingAmount()
+        for(Reimbursement reimbursement : pendingReimbursements){
+            System.out.printf("Category: %s, Total Amount: %s, Remaining Amount: %s, Account: %s%n",
+                    reimbursement.getLedgerCategory().getName(),
+                    reimbursement.getAmount(),
+                    reimbursement.getRemainingAmount(),
+                    reimbursement.getFromAccount() != null ? reimbursement.getFromAccount().getName() : "N/A"
             );
         }
     }
@@ -293,10 +330,11 @@ public class ReimbursementCLI {
 
         System.out.println("\nClaimed Reimbursements:");
         System.out.println("Total Claimed: " + reimbursementController.getTotalReimbursed(selectedLedger));
-        for(Reimbursement reimb : claimedReimbursements) {
-            System.out.printf("Category: %s, Total Amount: %s%n",
-                    reimb.getLedgerCategory().getName(),
-                    reimb.getAmount()
+        for(Reimbursement reimbursement : claimedReimbursements) {
+            System.out.printf("Category: %s, Total Amount: %s, Account: %s%n",
+                    reimbursement.getLedgerCategory().getName(),
+                    reimbursement.getAmount(),
+                    reimbursement.getFromAccount() != null ? reimbursement.getFromAccount().getName() : "N/A"
             );
         }
     }
@@ -317,19 +355,20 @@ public class ReimbursementCLI {
             return;
         }
 
+        System.out.println("0. Cancel");
         for(int i=0; i<reimbursements.size(); i++){
-            Reimbursement reimb = reimbursements.get(i);
+            Reimbursement reimbursement = reimbursements.get(i);
             System.out.printf("%d. Category: %s, Total Amount: %s, Remaining Amount: %s, Account: %s, is ended: %s%n",
                     (i + 1),
-                    reimb.getLedgerCategory().getName(),
-                    reimb.getAmount(),
-                    reimb.getRemainingAmount(),
-                    reimb.getFromAccount() != null ? reimb.getFromAccount().getName() : "N/A",
-                    reimb.isEnded() ? "Yes" : "No"
+                    reimbursement.getLedgerCategory().getName(),
+                    reimbursement.getAmount(),
+                    reimbursement.getRemainingAmount(),
+                    reimbursement.getFromAccount() != null ? reimbursement.getFromAccount().getName() : "N/A",
+                    reimbursement.isEnded() ? "Yes" : "No"
             );
         }
 
-        System.out.print("Enter the number of the reimbursement to view details (or 0 to cancel): ");
+        System.out.print("Enter the number of the reimbursement to view details: ");
         String input = scanner.nextLine().trim();
         int choice = Integer.parseInt(input);
         if(choice == 0) {
@@ -343,11 +382,11 @@ public class ReimbursementCLI {
 
         List<Transaction> relatedTransactions = transactionController.getTransactionsByReimbursement(selectedReimbursement);
         if(relatedTransactions.isEmpty()){
-            System.out.println("No transactions found for the selected reimbursement.");
+            System.out.println("No claim found for the selected reimbursement.");
             return;
         }
 
-        System.out.println("\nTransactions for the selected reimbursement:");
+        System.out.println("\nClaims for the selected reimbursement:");
         int count = 0;
         for(Transaction tx : relatedTransactions){
             count++;
@@ -402,6 +441,7 @@ public class ReimbursementCLI {
                 .filter(cat -> cat.getParent() == null)
                 .toList();
 
+        System.out.println("0. Cancel");
         for(int i = 0; i < parentCategories.size(); i++) {
             //display parent category
             LedgerCategory parent = parentCategories.get(i);
@@ -422,6 +462,9 @@ public class ReimbursementCLI {
 
         System.out.print("Enter the number of the category: ");
         String input = scanner.nextLine().trim();
+        if(input.equals("0")) {
+            return null;
+        }
         if (input.contains(".")) {
             // select subcategory
             String[] parts = input.split("\\.");
@@ -463,6 +506,7 @@ public class ReimbursementCLI {
             return null;
         }
 
+        System.out.println("0. Cancel");
         for (int i = 0; i < ledgers.size(); i++) {
             Ledger ledger = ledgers.get(i);
             System.out.println((i + 1) + ". "+ "Name: " + ledger.getName());
@@ -470,6 +514,9 @@ public class ReimbursementCLI {
         System.out.print("Enter the number of the ledger: ");
         String input = scanner.nextLine().trim();
         int choice = Integer.parseInt(input);
+        if(choice == 0) {
+            return null;
+        }
         if(choice < 1 || choice > ledgers.size()) {
             System.out.println("Invalid choice.");
             return selectLedger(user);

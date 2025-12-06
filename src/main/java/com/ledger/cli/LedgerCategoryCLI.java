@@ -81,6 +81,9 @@ public class LedgerCategoryCLI {
                 .toList();
         System.out.println("Select a parent category for the new sub-category:");
         LedgerCategory parentCategory = selectCategory(parentCategories);
+        if(parentCategory == null){
+            return;
+        }
 
         //enter sub-category name
         System.out.print("Enter the name of the new sub-category: ");
@@ -113,6 +116,9 @@ public class LedgerCategoryCLI {
         List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
         System.out.println("\nSelect a category to rename:");
         LedgerCategory categoryToRename = selectCategoryWithTree(allCategories);
+        if(categoryToRename == null){
+            return;
+        }
 
         //enter new name
         System.out.print("Enter the new name for the category '" + categoryToRename.getName() + "': ");
@@ -146,6 +152,9 @@ public class LedgerCategoryCLI {
         List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
         System.out.println("Select a category to delete:");
         LedgerCategory categoryToDelete = selectCategoryWithTree(allCategories);
+        if(categoryToDelete == null){
+            return;
+        }
 
         //select if delete transactions
         System.out.print("Are you sure you want to delete this category and all its associated transactions '" + categoryToDelete.getName() + "'? (y/n): ");
@@ -175,13 +184,12 @@ public class LedgerCategoryCLI {
     }
 
     public void promoteSubCategory() {
-        System.out.println("\n === Promoting a sub-category ===");
+        System.out.println("\n === Promoting a subcategory ===");
 
         //select ledger
         System.out.println("\nSelect a ledger:");
         Ledger selectedLedger = selectLedger(userController.getCurrentUser());
         if(selectedLedger == null){
-            System.out.println("No ledger selected.");
             return;
         }
 
@@ -194,10 +202,12 @@ public class LedgerCategoryCLI {
         //select sub-category
         List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
                 .filter(cat -> cat.getType() == categoryType && cat.getParent() != null)
-                .filter(cat -> !cat.getName().equals("Claim Income"))
                 .toList();
         System.out.println("Select a sub-category to promote:");
         LedgerCategory subCategoryToPromote = selectCategory(allCategories);
+        if(subCategoryToPromote == null){
+            return;
+        }
 
         //promote sub-category
         boolean success = ledgerCategoryController.promoteSubCategory(subCategoryToPromote);
@@ -237,6 +247,9 @@ public class LedgerCategoryCLI {
                 .toList();
         System.out.println("Select a first-level category to demote:");
         LedgerCategory categoryToDemote = selectCategory(allCategories);
+        if(categoryToDemote == null){
+            return;
+        }
 
         //select new parent category
         List<LedgerCategory> potentialParents = allCategories.stream()
@@ -244,6 +257,9 @@ public class LedgerCategoryCLI {
                 .toList();
         System.out.println("Select a new parent category for the category to demote:");
         LedgerCategory newParentCategory = selectCategory(potentialParents);
+        if(newParentCategory == null){
+            return;
+        }
 
         //demote category
         boolean success = ledgerCategoryController.demoteCategory(categoryToDemote, newParentCategory);
@@ -274,6 +290,9 @@ public class LedgerCategoryCLI {
                 .filter(cat -> cat.getParent() != null)
                 .toList();
         LedgerCategory subCategoryToChange = selectCategory(subCategories);
+        if(subCategoryToChange == null){
+            return;
+        }
 
         //select new parent category
         List<LedgerCategory> potentialParents = allCategories.stream()
@@ -283,6 +302,9 @@ public class LedgerCategoryCLI {
                 .filter(cat -> !cat.getName().equals("Claim Income"))
                 .toList();
         LedgerCategory newParentCategory = selectCategory(potentialParents);
+        if(newParentCategory == null){
+            return;
+        }
 
         //change parent category
         boolean success = ledgerCategoryController.changeParent(subCategoryToChange, newParentCategory);
@@ -382,6 +404,7 @@ public class LedgerCategoryCLI {
                 .filter(cat -> cat.getParent() == null)
                 .filter(cat -> !cat.getName().equals("Claim Income"))
                 .toList();
+        System.out.println("0. Cancel");
         for (int i = 0; i < rootCategories.size(); i++) {
             //display parent category
             LedgerCategory parent = rootCategories.get(i);
@@ -400,6 +423,10 @@ public class LedgerCategoryCLI {
         }
         System.out.print("Enter choice (e.g. 1 or 1.2): ");
         String input = scanner.nextLine().trim();
+
+        if(input.equals("0")) {
+            return null;
+        }
 
         if(input.contains(".")) {
             //sub-category selected
@@ -433,6 +460,11 @@ public class LedgerCategoryCLI {
     }
 
     private LedgerCategory selectCategory(List<LedgerCategory> categories){
+        if(categories.isEmpty()) {
+            System.out.println("No categories available.");
+            return null;
+        }
+        System.out.println("0. Cancel");
         for (int i = 0; i < categories.size(); i++) {
             LedgerCategory category = categories.get(i);
             System.out.println( (i + 1) + ". "+ "Name: " + category.getName());
@@ -441,6 +473,9 @@ public class LedgerCategoryCLI {
         System.out.print("Enter the number of the category: ");
         String input = scanner.nextLine().trim();
         int choice = Integer.parseInt(input);
+        if(choice == 0) {
+            return null;
+        }
         if(choice < 1 || choice > categories.size()) {
             System.out.println("Invalid choice.");
             return selectCategory(categories);

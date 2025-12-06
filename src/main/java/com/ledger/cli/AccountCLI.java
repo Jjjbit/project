@@ -514,11 +514,29 @@ public class AccountCLI {
         System.out.println("\n=== Account Summary ===");
 
         //select Account
-        Account account = selectAccount();
-        if( account == null) {
-            System.out.println("Account selection cancelled.");
+        List<Account> accounts = accountController.getVisibleAccounts(userController.getCurrentUser());
+        if (accounts.isEmpty()) {
+            System.out.println("No accounts found.");
             return;
         }
+        System.out.println("Select the account to view summary:");
+        System.out.println("0. return");
+        for( int i=0; i< accounts.size(); i++) {
+            Account account = accounts.get(i);
+            System.out.println((i+1) + ". " + account.getName() + " (" + account.getType() +")");
+        }
+        System.out.print("Enter number: ");
+        String inputAccount = scanner.nextLine().trim();
+        int choice = Integer.parseInt(inputAccount);
+        if( choice ==0) {
+            System.out.println("Return to main menu.");
+            return;
+        }
+        if( choice <1 || choice > accounts.size()) {
+            System.out.println("Invalid choice!");
+            return;
+        }
+        Account account = accounts.get(choice -1);
 
         //select date range
         LocalDate startDate;
@@ -534,11 +552,19 @@ public class AccountCLI {
         } else if(summaryType.equals("m") || summaryType.equals("monthly")){
             //select month
             System.out.print("Enter month (1-12) for monthly summary: ");
-            int month= scanner.nextInt();
+            int month;
+            String monthInput = scanner.nextLine().trim();
+            if(!monthInput.isEmpty()){
+
+                month = Integer.parseInt(monthInput);
             if(month<1 || month>12){
                 System.out.println("Invalid month. Please enter a value between 1 and 12.");
                 return;
             }
+            }else{
+                month = LocalDate.now().getMonthValue();
+            }
+
             startDate = LocalDate.of(LocalDate.now().getYear(), month, 1);
             endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
         } else {
@@ -554,7 +580,7 @@ public class AccountCLI {
 
         if(account instanceof BasicAccount || account instanceof CreditAccount){
             BigDecimal totalBalance = account.getBalance();
-            System.out.print("\nCurrent Balance: " + totalBalance);
+            System.out.print(" | Current Balance: " + totalBalance +"\n");
         }
 
         if(account instanceof LoanAccount) {
