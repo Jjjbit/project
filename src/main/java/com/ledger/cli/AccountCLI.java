@@ -826,33 +826,6 @@ public class AccountCLI {
         return userAccounts.get(choice - 1);
     }
 
-    private Account selectAccount() {
-        List<Account> userAccounts = accountController.getVisibleAccounts(userController.getCurrentUser());
-
-        if (userAccounts.isEmpty()) {
-            System.out.println("No accounts found. Please create an account first.");
-            return null;
-        }
-
-        for (int i = 0; i < userAccounts.size(); i++) {
-            Account account = userAccounts.get(i);
-            System.out.println((i + 1) + ". " + account.getName() + " (" + account.getType() + ")");
-        }
-        System.out.println("0. Account is external");
-        System.out.print("Enter choice: ");
-
-        String input = scanner.nextLine().trim();
-        int choice = Integer.parseInt(input);
-
-        if (choice == 0) return null;
-        if (choice < 1 || choice > userAccounts.size()) {
-            System.out.println("Invalid choice!");
-            return selectAccount();
-        }
-
-        return userAccounts.get(choice - 1);
-    }
-
     private LoanAccount.RepaymentType selectRepaymentType() {
         LoanAccount.RepaymentType[] types = LoanAccount.RepaymentType.values();
         for (int i = 0; i < types.length; i++) {
