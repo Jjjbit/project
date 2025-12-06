@@ -13,8 +13,11 @@ import java.util.List;
 public class ReimbursementDAO {
     private final Connection connection;
     private final LedgerCategoryDAO ledgerCategoryDAO;
+    private final AccountDAO accountDAO;
 
-    public ReimbursementDAO(Connection connection, LedgerCategoryDAO ledgerCategoryDAO) {
+    public ReimbursementDAO(Connection connection, LedgerCategoryDAO ledgerCategoryDAO,
+                            AccountDAO accountDAO) {
+        this.accountDAO = accountDAO;
         this.ledgerCategoryDAO = ledgerCategoryDAO;
         this.connection = connection;
     }
@@ -35,6 +38,9 @@ public class ReimbursementDAO {
                     reimbursement.setRemainingAmount(rs.getBigDecimal("remaining_amount"));
                     //set category
                     reimbursement.setLedgerCategory(ledgerCategoryDAO.getById(rs.getLong("ledger_category_id")));
+                    //set from account
+                    reimbursement.setFromAccount(accountDAO.getAccountById(rs.getLong("from_account_id")));
+                    reimbursement.setLedger(ledger);
                     reimbursements.add(reimbursement);
                 }
             }
@@ -58,6 +64,8 @@ public class ReimbursementDAO {
                     reimbursement.setRemainingAmount(rs.getBigDecimal("remaining_amount"));
                     //set category
                     reimbursement.setLedgerCategory(ledgerCategoryDAO.getById(rs.getLong("ledger_category_id")));
+                    //set from account
+                    reimbursement.setFromAccount(accountDAO.getAccountById(rs.getLong("from_account_id")));
                     return reimbursement;
                 }
             }
