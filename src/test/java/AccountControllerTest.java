@@ -47,7 +47,7 @@ public class AccountControllerTest {
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO);
+        ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
         InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
@@ -1251,7 +1251,8 @@ public class AccountControllerTest {
         assertEquals(2, selectableAccounts.size());
     }
 
-    //test getVisibleAccount and getSelectableAccounts
+    //test getVisibleAccount, getSelectableAccounts, getVisibleBorrowingAccounts,
+    // getVisibleLendingAccounts, getCreditCardAccounts, getVisibleLoanAccounts
     @Test
     public void testGetVisibleAccounts() {
         BasicAccount testAccount = accountController.createBasicAccount("Test Account",
@@ -1322,6 +1323,11 @@ public class AccountControllerTest {
 
         List<Account> accountsNotHidden = accountController.getVisibleAccounts(testUser);
         assertEquals(5, accountsNotHidden.size());
+
+        assertEquals(1, accountController.getVisibleBorrowingAccounts(testUser).size());
+        assertEquals(1, accountController.getVisibleLendingAccounts(testUser).size());
+        assertEquals(1, accountController.getCreditCardAccounts(testUser).size());
+        assertEquals(1, accountController.getVisibleLoanAccounts(testUser).size());
 
         for( Account acc : accountsNotHidden) {
             assertFalse(acc.getHidden());
