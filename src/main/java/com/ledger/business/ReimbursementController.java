@@ -28,20 +28,6 @@ public class ReimbursementController {
         return reimbursementDAO.getByLedger(ledger);
     }
 
-    public BigDecimal getTotalPending(Ledger ledger) {
-        return getReimbursementsByLedger(ledger).stream()
-                .filter(r -> !r.isEnded())
-                .map(Reimbursement::getRemainingAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    public BigDecimal getTotalReimbursed(Ledger ledger) {
-        return getReimbursementsByLedger(ledger).stream()
-                .filter(Reimbursement::isEnded)
-                .map(r -> r.getAmount().subtract(r.getRemainingAmount()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
     public Reimbursement create(BigDecimal amount, Account fromAccount, Ledger ledger, LedgerCategory category) {
         if(category == null) {
             return null;
@@ -62,12 +48,22 @@ public class ReimbursementController {
             return null;
         }
 
-        Reimbursement reimbursement = new Reimbursement(amount, false, fromAccount, ledger, category);
+        Transfer transfer = new Transfer(
+                LocalDate.now(),
+                "Reimbursement Funding",
+                fromAccount,
+                null,
+                amount,
+                ledger
+        );
+        transactionDAO.insert(transfer);
+        Reimbursement reimbursement = new Reimbursement(amount, false, fromAccount, ledger, category, transfer);
+        boolean inserted = reimbursementDAO.insert(reimbursement);
 
         fromAccount.debit(amount);
         accountDAO.update(fromAccount);
+        reimbursementTxLinkDAO.insert(reimbursement.getId(), transfer.getId());
 
-        boolean inserted = reimbursementDAO.insert(reimbursement);
         if(!inserted) {
             return null;
         }
@@ -115,32 +111,33 @@ public class ReimbursementController {
             }
 
             BigDecimal diff = record.getRemainingAmount().subtract(amount);
-            if(isFinalClaim) { //it's final claim
-                Expense expense = new Expense(
-                        date,
-                        diff,
-                        "Expense Reimbursement",
-                        record.getFromAccount(),
-                        record.getLedger(),
-                        ledgerCategoryDAO.getByNameAndLedger(record.getLedgerCategory().getName(), record.getLedger()));
-                transactionDAO.insert(expense);
 
+            Transfer transfer = new Transfer(date,
+                    "Reimbursement Claim",
+                    null,
+                    toAccount,
+                    amount,
+                    record.getLedger());
+            transactionDAO.insert(transfer);
+
+            record.setRemainingAmount(diff);
+
+            reimbursementTxLinkDAO.insert(record.getId(), transfer.getId());
+
+            if(isFinalClaim) { //it's final claim
                 record.setRemainingAmount(diff);
                 record.setEnded(true);
 
-                reimbursementTxLinkDAO.insert(record.getId(), expense.getId());
-            } else { //partial
-                Transfer transfer = new Transfer(date,
-                        "Reimbursement Claim",
+                Expense expense = new Expense(
+                        date,
+                        diff,
+                        "Unclaimed Reimbursement Expense",
                         null,
-                        toAccount,
-                        amount,
-                        record.getLedger());
-                transactionDAO.insert(transfer);
+                        record.getLedger(),
+                        record.getLedgerCategory());
+                transactionDAO.insert(expense);
+                reimbursementTxLinkDAO.insert(record.getId(), expense.getId());
 
-                record.setRemainingAmount(diff);
-
-                reimbursementTxLinkDAO.insert(record.getId(), transfer.getId());
             }
         } else { //over claim
             BigDecimal diff = amount.subtract(record.getRemainingAmount());
@@ -174,7 +171,6 @@ public class ReimbursementController {
     }
 
     //edit only pending reimbursement
-    //it can change from account, total reimbursed amount, category
     public boolean editReimbursement(Reimbursement record, BigDecimal newAmount) {
         if(record == null) {
             return false;
@@ -188,6 +184,9 @@ public class ReimbursementController {
         if(newAmount == null){
             newAmount = record.getAmount();
         }
+        Transaction first = reimbursementTxLinkDAO.getTransactionsByReimbursement(record).getFirst();
+        first.setAmount(newAmount);
+        transactionDAO.update(first);
 
         record.getFromAccount().credit(record.getAmount());
         record.getFromAccount().debit(newAmount);
@@ -255,9 +254,17 @@ public class ReimbursementController {
             return false;
         }
 
-        List<Transaction> linkedTxs = reimbursementTxLinkDAO.getTransactionsByReimbursement(record);
+        List<Transaction> linkedTxs = reimbursementTxLinkDAO.getTransactionsByReimbursement(record).stream()
+                .filter(tx -> tx.getId() != record.getOriginalTransaction().getId())
+                .toList();
 
         for(Transaction tx : linkedTxs) {
+//            Account fromAccount = tx.getFromAccount();
+//            if (fromAccount != null) {
+//                Account cached = accountDAO.getAccountById(fromAccount.getId());
+//                cached.credit(tx.getAmount());
+//                accountDAO.update(cached);
+//            }
             Account toAccount = tx.getToAccount();
             if (toAccount != null) {
                 Account cached = accountDAO.getAccountById(toAccount.getId());
@@ -270,8 +277,6 @@ public class ReimbursementController {
         Account fromAccount = record.getFromAccount();
         fromAccount.credit(record.getAmount());
         accountDAO.update(fromAccount);
-        return reimbursementDAO.delete(record);
+        return transactionDAO.delete(record.getOriginalTransaction());
     }
-
-
 }

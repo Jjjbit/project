@@ -10,13 +10,15 @@ public class Reimbursement {
     private Ledger ledger;
     private Account fromAccount;
     private LedgerCategory ledgerCategory;
+    private Transaction originalTransaction;
 
     public Reimbursement(
             BigDecimal amount,
             boolean isEnded,
             Account fromAccount,
-            Ledger ledger, LedgerCategory ledgerCategory
+            Ledger ledger, LedgerCategory ledgerCategory, Transaction originalTransaction
     ) {
+        this.originalTransaction = originalTransaction;
         this.fromAccount = fromAccount;
         this.ledger = ledger;
         this.amount = amount;
@@ -26,6 +28,12 @@ public class Reimbursement {
     }
     public Reimbursement() {}
 
+    public Transaction getOriginalTransaction() {
+        return originalTransaction;
+    }
+    public void setOriginalTransaction(Transaction originalTransaction) {
+        this.originalTransaction = originalTransaction;
+    }
     public LedgerCategory getLedgerCategory() {
         return ledgerCategory;
     }

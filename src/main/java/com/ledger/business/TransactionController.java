@@ -101,8 +101,7 @@ public class TransactionController {
     }
 
     public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String description,
-                                 LocalDate date, BigDecimal amount
-    ) {
+                                 LocalDate date, BigDecimal amount) {
         if (ledger == null) {
             return null;
         }
@@ -212,9 +211,7 @@ public class TransactionController {
                 accountDAO.update(toAccount);
                 break;
             case EXPENSE:
-                if(fromAccount == null) {
-                    return false;
-                }
+
                 if(installmentPaymentDAO.isInstallmentPaymentTransaction(tx)) {
                     Installment installment = installmentPaymentDAO.getInstallmentByTransaction(tx);
                     installment.setPaidPeriods(installment.getPaidPeriods() - 1);
@@ -231,19 +228,36 @@ public class TransactionController {
                 }
                 if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
                     Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
-                    reimbursement.setRemainingAmount(reimbursement.getAmount());
                     reimbursement.setEnded(false);
                     reimbursementDAO.update(reimbursement);
                 }
 
-                fromAccount.credit(tx.getAmount());
-                accountDAO.update(fromAccount);
-                break;
-            case TRANSFER:
-                if (fromAccount != null) {
+                if(fromAccount != null) {
                     fromAccount.credit(tx.getAmount());
                     accountDAO.update(fromAccount);
                 }
+                break;
+            case TRANSFER:
+                if (fromAccount != null) {
+
+                    if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
+                        Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
+
+                        if (tx.getId() == reimbursement.getOriginalTransaction().getId()) { //delete original transaction of reimbursement
+                            List<Transaction> linkedTxs = reimbursementTxLinkDAO.getTransactionsByReimbursement(reimbursement).stream()
+                                    .filter(t -> t.getId() != tx.getId())
+                                    .toList();
+
+                            //delete all linked transactions and reimbursement record
+                            for (Transaction t : linkedTxs) {
+                                deleteTransaction(t);
+                            }
+                        }
+                    }
+                    fromAccount.credit(tx.getAmount());
+                    accountDAO.update(fromAccount);
+                }
+
                 if (toAccount != null) {
                     if(debtPaymentDAO.isDebtPaymentTransaction(tx) && toAccount instanceof CreditAccount) {
                         ((CreditAccount) toAccount).setCurrentDebt(

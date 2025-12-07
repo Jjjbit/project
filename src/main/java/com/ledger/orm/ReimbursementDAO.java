@@ -14,9 +14,11 @@ public class ReimbursementDAO {
     private final Connection connection;
     private final LedgerCategoryDAO ledgerCategoryDAO;
     private final AccountDAO accountDAO;
+    private final TransactionDAO transactionDAO;
 
     public ReimbursementDAO(Connection connection, LedgerCategoryDAO ledgerCategoryDAO,
-                            AccountDAO accountDAO) {
+                            AccountDAO accountDAO, TransactionDAO transactionDAO) {
+        this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
         this.ledgerCategoryDAO = ledgerCategoryDAO;
         this.connection = connection;
@@ -24,7 +26,7 @@ public class ReimbursementDAO {
 
     @SuppressWarnings("SqlResolve")
     public List<Reimbursement> getByLedger(Ledger ledger) {
-        String sql = "SELECT id, amount, is_ended, remaining_amount, from_account_id, ledger_category_id FROM reimbursement_plan "
+        String sql = "SELECT id, amount, is_ended, remaining_amount, from_account_id, ledger_category_id, original_transaction_id FROM reimbursement_plan "
                 + "WHERE ledger_id = ?";
         List<Reimbursement> reimbursements = new ArrayList<>();
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -52,7 +54,7 @@ public class ReimbursementDAO {
 
     @SuppressWarnings("SqlResolve")
     public Reimbursement getById(long id) {
-        String sql = "SELECT id, amount, is_ended, remaining_amount, from_account_id, ledger_category_id FROM reimbursement_plan WHERE id = ?";
+        String sql = "SELECT id, amount, is_ended, remaining_amount, from_account_id, ledger_category_id, original_transaction_id FROM reimbursement_plan WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -66,6 +68,8 @@ public class ReimbursementDAO {
                     reimbursement.setLedgerCategory(ledgerCategoryDAO.getById(rs.getLong("ledger_category_id")));
                     //set from account
                     reimbursement.setFromAccount(accountDAO.getAccountById(rs.getLong("from_account_id")));
+                    //set original transaction
+                    reimbursement.setOriginalTransaction(transactionDAO.getById(rs.getLong("original_transaction_id")));
                     return reimbursement;
                 }
             }
@@ -77,7 +81,7 @@ public class ReimbursementDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean insert(Reimbursement claim) {
-        String sql = "INSERT INTO reimbursement_plan (amount, is_ended, ledger_id, remaining_amount, from_account_id, ledger_category_id) VALUES ( ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO reimbursement_plan (amount, is_ended, ledger_id, remaining_amount, from_account_id, ledger_category_id, original_transaction_id) VALUES ( ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
             stmt.setBigDecimal(1, claim.getAmount());
             stmt.setBoolean(2, claim.isEnded());
@@ -85,6 +89,7 @@ public class ReimbursementDAO {
             stmt.setBigDecimal(4, claim.getRemainingAmount());
             stmt.setLong(5, claim.getFromAccount().getId());
             stmt.setLong(6, claim.getLedgerCategory().getId());
+            stmt.setLong(7, claim.getOriginalTransaction().getId());
 
             int affected = stmt.executeUpdate();
             if (affected > 0) {

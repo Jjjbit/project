@@ -48,7 +48,7 @@ public class ReimbursementControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO);
+        reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
 
@@ -108,7 +108,6 @@ public class ReimbursementControllerTest {
 
     @Test
     public void testCreateReimbursement(){
-
         Reimbursement record = reimbursementController.create(BigDecimal.valueOf(300.00), testAccount, testLedger,
                 food);
         assertNotNull(record);
@@ -119,12 +118,15 @@ public class ReimbursementControllerTest {
         assertEquals(food.getId(), record.getLedgerCategory().getId());
         assertEquals(testAccount.getId(), record.getFromAccount().getId());
         assertEquals(testLedger.getId(), record.getLedger().getId());
+        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(1, reimbursementTxLinkDAO.getTransactionsByReimbursement(record).size());
 
         Account fromAccount = accountDAO.getAccountById(testAccount.getId());
         assertEquals(0, fromAccount.getBalance().compareTo(BigDecimal.valueOf(700.00))); //1000-300=700
     }
 
-    //test claim: record a full reimbursement claim for an expense transaction
+    //test claim: record a full reimbursement claim
     @Test
     public void testFullReimbursementClaim() {
         BasicAccount testAccount1 = accountController.createBasicAccount("Reimbursement Account",
@@ -146,11 +148,13 @@ public class ReimbursementControllerTest {
 
         // Verify that a reimbursement transaction was created
         List<Transaction> txLinks = reimbursementTxLinkDAO.getTransactionsByReimbursement(updatedReimbursement);
-        assertEquals(1, txLinks.size());
+        assertEquals(2, txLinks.size());
         assertEquals(TransactionType.TRANSFER, txLinks.getFirst().getType());
+        assertEquals(TransactionType.TRANSFER, txLinks.getLast().getType());
 
-        assertEquals(1,  transactionDAO.getByLedgerId(testLedger.getId()).size()); //reimbursement transaction
+        assertEquals(2,  transactionDAO.getByLedgerId(testLedger.getId()).size()); //reimbursement transaction
         assertEquals(1, transactionDAO.getByAccountId(testAccount1.getId()).size()); //reimbursement transaction
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size()); //original reimbursement funding transaction
 
         Account updatedAccount = accountDAO.getAccountById(testAccount1.getId());
         assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(700.00)));
@@ -177,11 +181,13 @@ public class ReimbursementControllerTest {
 
         // Verify that a reimbursement transaction was created
         List<Transaction> txLinks = reimbursementTxLinkDAO.getTransactionsByReimbursement(updatedReimbursement);
-        assertEquals(1, txLinks.size());
+        assertEquals(2, txLinks.size());
         assertEquals(TransactionType.TRANSFER, txLinks.getFirst().getType());
+        assertEquals(TransactionType.TRANSFER, txLinks.getLast().getType());
 
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size()); // reimbursement transaction
+        assertEquals(2, transactionDAO.getByLedgerId(testLedger.getId()).size()); // reimbursement transaction
         assertEquals(1, transactionDAO.getByAccountId(testAccount1.getId()).size()); // reimbursement transaction
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size()); // original reimbursement funding transaction
 
         Account updatedAccount = accountDAO.getAccountById(testAccount1.getId());
         assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(700.00))); //500+200
@@ -209,14 +215,12 @@ public class ReimbursementControllerTest {
 
         // Verify that a reimbursement transaction was created
         List<Transaction> txLinks = reimbursementTxLinkDAO.getTransactionsByReimbursement(updatedReimbursement);
-        assertEquals(1, txLinks.size());
-        Transaction firstTx = txLinks.getFirst();
-        assertEquals(TransactionType.EXPENSE, firstTx.getType());
-        assertEquals(0, firstTx.getAmount().compareTo(BigDecimal.valueOf(300.00)));
+        assertEquals(3, txLinks.size());
 
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size()); // reimbursement transaction
+        assertEquals(3, transactionDAO.getByLedgerId(testLedger.getId()).size()); // reimbursement transaction
         assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size()); // reimbursement transaction
-        assertEquals(1, transactionDAO.getByCategoryId(food.getId()).size()); //
+        assertEquals(1, transactionDAO.getByAccountId(testAccount1.getId()).size()); // reimbursement transaction
+        assertEquals(1, transactionDAO.getByCategoryId(food.getId()).size());
 
         Account updatedAccount = accountDAO.getAccountById(testAccount1.getId());
         assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(700.00))); //500+200
@@ -244,10 +248,11 @@ public class ReimbursementControllerTest {
 
 
         List<Transaction> txLinks = reimbursementTxLinkDAO.getTransactionsByReimbursement(updatedReimbursement);
-        assertEquals(2, txLinks.size());
+        assertEquals(3, txLinks.size());
 
-        assertEquals(2,  transactionDAO.getByLedgerId(testLedger.getId()).size());
+        assertEquals(3,  transactionDAO.getByLedgerId(testLedger.getId()).size());
         assertEquals(2, transactionDAO.getByAccountId(testAccount1.getId()).size());
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
 
         Account updatedAccount = accountDAO.getAccountById(testAccount1.getId());
         assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //500+300
@@ -256,7 +261,7 @@ public class ReimbursementControllerTest {
     //over claim with final claim
     //test delete: delete reimbursement record, original transaction and all linked reimbursement transactions are also deleted
     @Test
-    public void testDeleteReimbursement() {
+    public void testDeleteReimbursement1() {
         BasicAccount testAccount1 = accountController.createBasicAccount("Reimbursement Account",
                 BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS,
                 testUser, null, true, true);
@@ -267,16 +272,15 @@ public class ReimbursementControllerTest {
         reimbursementController.claim(reimbursement, BigDecimal.valueOf(300.00),
                 null, testAccount1, LocalDate.now());
         //balance of testAccount1: 800.00=500+300
-        assertEquals(2, transactionDAO.getByLedgerId(testLedger.getId()).size()); //transfer+income
-        assertEquals(2, reimbursementTxLinkDAO.getTransactionsByReimbursement(reimbursement).size());
+        assertEquals(3, transactionDAO.getByLedgerId(testLedger.getId()).size()); //transfer+income
+        assertEquals(3, reimbursementTxLinkDAO.getTransactionsByReimbursement(reimbursement).size());
 
         // Delete the reimbursement
         boolean deleteResult = reimbursementController.delete(reimbursement);
         assertTrue(deleteResult);
 
         // Verify that the reimbursement is deleted
-        Reimbursement deletedReimbursement = reimbursementDAO.getById(reimbursement.getId());
-        assertNull(deletedReimbursement);
+        assertNull(reimbursementDAO.getById(reimbursement.getId()));
 
         // Verify that all linked reimbursement transactions are deleted
         assertEquals(0,  transactionDAO.getByLedgerId(testLedger.getId()).size());
@@ -290,6 +294,41 @@ public class ReimbursementControllerTest {
 
         Account originalAccount = accountDAO.getAccountById(testAccount.getId());
         assertEquals(0, originalAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //no change
+    }
+
+    //final partial claim
+    @Test
+    public void testDeleteReimbursement2() {
+        BasicAccount testAccount1 = accountController.createBasicAccount("Reimbursement Account",
+                BigDecimal.valueOf(500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS,
+                testUser, null, true, true);
+
+        Reimbursement reimbursement = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount,
+                testLedger, food);
+
+        // Claim partial reimbursement
+        boolean claimResult = reimbursementController.claim(reimbursement, BigDecimal.valueOf(200.00),
+                true, testAccount1, LocalDate.now());
+        assertTrue(claimResult);
+
+        // Delete the reimbursement
+        boolean deleteResult = reimbursementController.delete(reimbursement);
+        assertTrue(deleteResult);
+
+        // Verify that the reimbursement is deleted
+        assertNull(reimbursementDAO.getById(reimbursement.getId()));
+
+        assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
+        assertEquals(0, reimbursementTxLinkDAO.getTransactionsByReimbursement(reimbursement).size());
+        assertEquals(0, transactionDAO.getByCategoryId(food.getId()).size());
+
+        Account updatedAccount = accountDAO.getAccountById(testAccount1.getId());
+        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(500.00))); //500+200-200
+        assertEquals(0, transactionDAO.getByAccountId(testAccount.getId()).size());
+
+        Account originalAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, originalAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //no change
+        assertEquals(0, transactionDAO.getByAccountId(testAccount1.getId()).size());
     }
 
     //test edit reimbursement details
@@ -315,9 +354,7 @@ public class ReimbursementControllerTest {
         assertEquals(0, updatedReimbursement.getAmount().compareTo(BigDecimal.valueOf(300.00)));
         assertEquals(0, updatedReimbursement.getRemainingAmount().compareTo(BigDecimal.valueOf(-20.00)));
         assertTrue(updatedReimbursement.isEnded());
-
-        assertEquals(2, transactionDAO.getByLedgerId(testLedger.getId()).size());
-        assertEquals(2, reimbursementTxLinkDAO.getTransactionsByReimbursement(updatedReimbursement).size());
+        assertEquals(0, updatedReimbursement.getOriginalTransaction().getAmount().compareTo(BigDecimal.valueOf(300.00)));
     }
 
     //reimbursed amount is zero
@@ -339,6 +376,7 @@ public class ReimbursementControllerTest {
         assertEquals(0, updatedReimbursement.getAmount().compareTo(BigDecimal.valueOf(300.00)));
         assertEquals(0, updatedReimbursement.getRemainingAmount().compareTo(BigDecimal.valueOf(300.00)));
         assertFalse(updatedReimbursement.isEnded());
+        assertEquals(0, updatedReimbursement.getOriginalTransaction().getAmount().compareTo(BigDecimal.valueOf(300.00)));
     }
 
     //reimbursed amount is 100
@@ -362,6 +400,7 @@ public class ReimbursementControllerTest {
         assertEquals(0, updatedReimbursement.getAmount().compareTo(BigDecimal.valueOf(300.00)));
         assertEquals(0, updatedReimbursement.getRemainingAmount().compareTo(BigDecimal.valueOf(200.00)));
         assertFalse(updatedReimbursement.isEnded());
+        assertEquals(0, updatedReimbursement.getOriginalTransaction().getAmount().compareTo(BigDecimal.valueOf(300.00)));
     }
 
 }
