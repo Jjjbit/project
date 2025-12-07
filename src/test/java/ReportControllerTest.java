@@ -108,11 +108,59 @@ public class ReportControllerTest {
         }
     }
 
-    //test getTotalPendingAmount
+    //test getTotalPendingAmount, test getTotalReimbursedAmount, test getTotalIncome, getTotalExpense by account and by ledger when there are reimbursement's transactions
+    @Test
+    public void testReimbursements(){
+        LedgerCategory food = testCategories.stream()
+                .filter(c -> c.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(food);
 
-    //test getTotalReimbursedAmount
+        //full reimbursement claimed
+        Reimbursement reimbursement1 = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount,
+                testLedger, food);
+        assertNotNull(reimbursement1);
+        reimbursementController.claim(reimbursement1, BigDecimal.valueOf(500.00), true, testAccount, null);
 
-    //test getTotalIncome and getTotalExpense by account when there are reimbursement transactions
+        //partial reimbursement claimed
+        Reimbursement reimbursement2 = reimbursementController.create(BigDecimal.valueOf(300.00), testAccount,
+                testLedger, food);
+        assertNotNull(reimbursement2);
+        reimbursementController.claim(reimbursement2, BigDecimal.valueOf(200.00), false, testAccount, LocalDate.now());
+
+        //final partial reimbursement claimed
+        Reimbursement reimbursement3 = reimbursementController.create(BigDecimal.valueOf(300.00), testAccount, testLedger, food);
+        assertNotNull(reimbursement3);
+        reimbursementController.claim(reimbursement3, BigDecimal.valueOf(200.00), true, testAccount, LocalDate.now());
+
+        //over-claim reimbursement
+        Reimbursement reimbursement4 = reimbursementController.create(BigDecimal.valueOf(200.00), testAccount, testLedger, food);
+        assertNotNull(reimbursement4);
+        reimbursementController.claim(reimbursement4, BigDecimal.valueOf(400.00), true, testAccount, null);
+
+        BigDecimal totalPending = reportController.getTotalPendingAmount(testLedger);
+        assertEquals(0, totalPending.compareTo(BigDecimal.valueOf(100.00))); //300-200=100 pending
+
+        BigDecimal totalReimbursed = reportController.getTotalReimbursedAmount(testLedger);
+        assertEquals(0, totalReimbursed.compareTo(BigDecimal.valueOf(1100.00)));
+
+        BigDecimal totalExpenseOfLedger = reportController.getTotalExpenseByLedger(testLedger,
+                LocalDate.now().withDayOfMonth(1), LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()));
+        assertEquals(0, totalExpenseOfLedger.compareTo(BigDecimal.valueOf(100.00)));
+
+        BigDecimal totalIncomeOfLedger = reportController.getTotalIncomeByLedger(testLedger,
+                LocalDate.now().withDayOfMonth(1), LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()));
+        assertEquals(0, totalIncomeOfLedger.compareTo(BigDecimal.valueOf(200.00)));
+
+        BigDecimal totalExpenseOfAccount = reportController.getTotalExpenseByAccount(testAccount,
+                LocalDate.now().withDayOfMonth(1), LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()));
+        assertEquals(0, totalExpenseOfAccount.compareTo(BigDecimal.valueOf(1300.00)));
+
+        BigDecimal totalIncomeOfAccount = reportController.getTotalIncomeByAccount(testAccount,
+                LocalDate.now().withDayOfMonth(1), LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()));
+        assertEquals(0, totalIncomeOfAccount.compareTo(BigDecimal.valueOf(1300.00)));
+    }
 
     //test getIncomeByAccount and getExpenseByAccount
     @Test
