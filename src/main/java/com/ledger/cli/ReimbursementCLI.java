@@ -15,12 +15,15 @@ public class ReimbursementCLI {
     private final LedgerController ledgerController;
     private final AccountController accountController;
     private final LedgerCategoryController ledgerCategoryController;
+    private final ReportController reportController;
     private final Scanner scanner = new Scanner(System.in);
 
     public ReimbursementCLI(UserController userController,
                             ReimbursementController reimbursementController,
                             TransactionController transactionController, LedgerController ledgerController,
-                            AccountController accountController, LedgerCategoryController ledgerCategoryController) {
+                            AccountController accountController, LedgerCategoryController ledgerCategoryController,
+                            ReportController reportController) {
+        this.reportController = reportController;
         this.ledgerCategoryController = ledgerCategoryController;
         this.accountController = accountController;
         this.ledgerController = ledgerController;
@@ -300,7 +303,7 @@ public class ReimbursementCLI {
         }
 
         System.out.println("\nPending Reimbursements:");
-        System.out.println("Total Pending: " + reimbursementController.getTotalPending(selectedLedger));
+        System.out.println("Total Pending: " + reportController.getTotalPendingAmount(selectedLedger));
         for(Reimbursement reimbursement : pendingReimbursements){
             System.out.printf("Category: %s, Total Amount: %s, Remaining Amount: %s, Account: %s%n",
                     reimbursement.getLedgerCategory().getName(),
@@ -329,7 +332,7 @@ public class ReimbursementCLI {
         }
 
         System.out.println("\nClaimed Reimbursements:");
-        System.out.println("Total Claimed: " + reimbursementController.getTotalReimbursed(selectedLedger));
+        System.out.println("Total Claimed: " + reportController.getTotalReimbursedAmount(selectedLedger));
         for(Reimbursement reimbursement : claimedReimbursements) {
             System.out.printf("Category: %s, Total Amount: %s, Account: %s%n",
                     reimbursement.getLedgerCategory().getName(),
