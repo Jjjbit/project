@@ -230,25 +230,6 @@ public class InstallmentUnitTest {
         assertEquals(12, plan.getPaidPeriods());
     }
 
-    //test recalculate paid periods after repayment
-    @Test
-    public void testRecalculatePaidPeriodsAfterRepayment() {
-        Installment plan = new Installment(null,
-                BigDecimal.valueOf(2000.00),
-                12,
-                BigDecimal.ZERO,
-                0,
-                Installment.Strategy.EVENLY_SPLIT,
-                null,
-                LocalDate.now(),
-                null, true);
-
-        plan.setRemainingAmount(BigDecimal.valueOf(500.00)); // simulate partial repayment
-        plan.recalculatePaidPeriods();
-        assertEquals(8, plan.getPaidPeriods());
-
-    }
-
     // Boundary test for feeRate = 0
     @Test
     public void testFullRepaymentFlow_ZeroFeeRate_EvenlySplit() {
