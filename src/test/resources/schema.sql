@@ -192,5 +192,35 @@ CREATE TABLE IF NOT EXISTS debt_payments (
     FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS loan_tx_link (
+    account_id BIGINT NOT NULL,
+    transaction_id BIGINT NOT NULL UNIQUE,
+
+    PRIMARY KEY (account_id, transaction_id),
+
+    FOREIGN KEY (account_id) REFERENCES loan_account(id) ON DELETE CASCADE,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS borrowing_tx_link (
+    account_id BIGINT NOT NULL,
+    transaction_id BIGINT NOT NULL UNIQUE,
+
+    PRIMARY KEY (account_id, transaction_id),
+
+    FOREIGN KEY (account_id) REFERENCES borrowing_account(id) ON DELETE CASCADE,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS lending_tx_link(
+    account_id BIGINT NOT NULL,
+    transaction_id BIGINT NOT NULL UNIQUE,
+
+    PRIMARY KEY (account_id, transaction_id),
+
+    FOREIGN KEY (account_id) REFERENCES lending_account(id) ON DELETE CASCADE,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+);
+
 
 
