@@ -10,7 +10,6 @@ public class BorrowingAccount extends Account{
     private BigDecimal borrowingAmount;
     private BigDecimal remainingAmount;
 
-
     public BorrowingAccount() {}
     public BorrowingAccount(String name,  //person or entity from whom the money is borrowed
                             BigDecimal borrowingAmount, //bilancio da pagare da utente
@@ -23,6 +22,7 @@ public class BorrowingAccount extends Account{
         this.date=date;
         this.borrowingAmount=borrowingAmount;
         this.remainingAmount=borrowingAmount;
+        this.isEnded = false;
     }
 
     public void setBorrowingDate(LocalDate date){this.date=date;}
