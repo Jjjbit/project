@@ -20,7 +20,7 @@ public class LoanAccount extends Account {
     private LocalDate repaymentDay;
     private RepaymentType repaymentType;
     private BigDecimal remainingAmount;
-    protected boolean isEnded;
+    private boolean isEnded;
 
     public LoanAccount() {}
     public LoanAccount(
@@ -42,12 +42,12 @@ public class LoanAccount extends Account {
         this.repaymentDay = repaymentDate;
         this.repaymentType = repaymentType;
         this.remainingAmount= calculateRemainingAmount();
+        this.isEnded = false;
     }
 
     public void setTotalPeriods(int totalPeriods) {
         this.totalPeriods = totalPeriods;
     }
-
     public void setRepaidPeriods(int repaidPeriods) {
         this.repaidPeriods = repaidPeriods;
     }
@@ -91,12 +91,12 @@ public class LoanAccount extends Account {
 
     @Override
     public void debit(BigDecimal amount) {
-        throw new UnsupportedOperationException("Debit operation is not supported for LoanAccount");
+        this.remainingAmount = this.remainingAmount.add(amount).setScale(2, RoundingMode.HALF_UP);
     }
 
     @Override
     public void credit(BigDecimal amount) {
-        throw new UnsupportedOperationException("Credit operation is not supported for LoanAccount");
+        this.remainingAmount = this.remainingAmount.subtract(amount).setScale(2, RoundingMode.HALF_UP);
     }
 
     public int getTotalPeriods(){return this.totalPeriods;}
