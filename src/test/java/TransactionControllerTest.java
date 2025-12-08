@@ -32,6 +32,9 @@ public class TransactionControllerTest {
     private InstallmentDAO installmentDAO;
     private ReimbursementTxLinkDAO transactionTxLinkDAO;
     private ReimbursementDAO reimbursementDAO;
+    private LoanTxLinkDAO loanTxLinkDAO;
+    private BorrowingTxLinkDAO borrowingTxLinkDAO;
+    private LendingTxLinkDAO lendingTxLinkDAO;
 
     private TransactionController transactionController;
     private LedgerController ledgerController;
@@ -58,12 +61,15 @@ public class TransactionControllerTest {
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
         installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
+        loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
+        borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
+        lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO,
-                transactionTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO);
+                transactionTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, borrowingTxLinkDAO, loanTxLinkDAO, lendingTxLinkDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO, loanTxLinkDAO, borrowingTxLinkDAO, lendingTxLinkDAO);
         reimbursementController = new ReimbursementController(transactionDAO,
                 reimbursementDAO, transactionTxLinkDAO, ledgerCategoryDAO, accountDAO);
         installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO, installmentPaymentDAO);
@@ -301,6 +307,313 @@ public class TransactionControllerTest {
                 testLedger);
         assertFalse(result); //should fail because new amount exceeds current debt
 
+    }
+
+    //test delete transactions relative to loan
+    @Test
+    public void testDelete_TransactionsOfLoanPayment1(){
+        LoanAccount account = accountController.createLoanAccount("Personal Loan", null, true,
+                testUser, 36, 0,
+                BigDecimal.valueOf(1.00), //initial interest rate
+                BigDecimal.valueOf(5000.00), //loan amount
+                testAccount, //receive to testAccount. balance 1000 + 10000 = 11000
+                LocalDate.now(),
+                LoanAccount.RepaymentType.EQUAL_INTEREST,
+                testLedger);
+        assertNotNull(account);
+        //total amount to repay  141.04*36=5077.44
+        //monthly repayment 141.04
+
+        Transaction inizialLoanTransaction = transactionDAO.getByAccountId(account.getId()).stream()
+                .findFirst()
+                .orElse(null);
+        assertNotNull(inizialLoanTransaction);
+
+        accountController.repayLoan(account, testAccount, testLedger); //balance testAccount 5858.96. remaining loan 5077.44-141.04=4936.40
+        accountController.repayLoan(account, null, testLedger); //balance testAccount 5858.96. remaining loan 4936.40-141.04=4795.36
+
+        List<Transaction> loanPayments = loanTxLinkDAO.getTransactionByLoan(account);
+        assertEquals(3, loanPayments.size());
+
+        boolean deleted1 = transactionController.deleteTransaction(loanPayments.get(1)); //delete first loan payment
+        assertTrue(deleted1);
+        assertEquals(2, loanTxLinkDAO.getTransactionByLoan(account).size());
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size()); //initial loan + remaining loan payment
+        assertEquals(2, transactionDAO.getByAccountId(account.getId()).size());
+
+        Account updatedAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(6000.00)));
+
+        Account updatedLoanAccount = accountDAO.getAccountById(account.getId());
+        assertEquals(0, ((LoanAccount) updatedLoanAccount).getRemainingAmount().compareTo(BigDecimal.valueOf(4936.40)));
+        assertEquals(1, ((LoanAccount)updatedLoanAccount).getRepaidPeriods());
+        assertFalse(((LoanAccount)updatedLoanAccount).getIsEnded());
+
+        boolean deleted2 = transactionController.deleteTransaction(loanPayments.get(2)); //delete second loan payment
+        assertTrue(deleted2);
+        assertEquals(1, loanTxLinkDAO.getTransactionByLoan(account).size());
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size()); //only initial loan transaction left
+        assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
+
+        Account finalAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, finalAccount.getBalance().compareTo(BigDecimal.valueOf(6000.00)));
+
+        Account finalLoanAccount = accountDAO.getAccountById(account.getId());
+        assertEquals(0, ((LoanAccount) finalLoanAccount).getRemainingAmount().compareTo(BigDecimal.valueOf(5077.44)));
+        assertEquals(0, ((LoanAccount)finalLoanAccount).getRepaidPeriods());
+        assertFalse(((LoanAccount)finalLoanAccount).getIsEnded());
+
+        boolean deleted3 = transactionController.deleteTransaction(inizialLoanTransaction); //delete initial loan transaction
+        assertTrue(deleted3);
+        assertEquals(0, loanTxLinkDAO.getTransactionByLoan(account).size());
+        assertEquals(0, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
+
+        LoanAccount LoanAccount = (LoanAccount) accountDAO.getAccountById(account.getId());
+        assertEquals(0, LoanAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(36, LoanAccount.getRepaidPeriods());
+        assertTrue(LoanAccount.getIsEnded());
+
+        Account finalAccount2 = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, finalAccount2.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
+    }
+
+    //test delete transactions relative to loan - delete in reverse order
+    @Test
+    public void testDelete_TransactionsOfLoanPayment2(){
+        LoanAccount account = accountController.createLoanAccount("Personal Loan", null, true,
+                testUser, 36, 0,
+                BigDecimal.valueOf(1.00), //initial interest rate
+                BigDecimal.valueOf(5000.00), //loan amount
+                testAccount, //receive to testAccount. balance 1000 + 10000 = 11000
+                LocalDate.now(),
+                LoanAccount.RepaymentType.EQUAL_INTEREST,
+                testLedger);
+        assertNotNull(account);
+        //total amount to repay  141.04*36=5077.44
+        //monthly repayment 141.04
+
+        Transaction inizialLoanTransaction = transactionDAO.getByAccountId(account.getId()).stream()
+                .findFirst()
+                .orElse(null);
+        assertNotNull(inizialLoanTransaction);
+
+        accountController.repayLoan(account, testAccount, testLedger); //balance testAccount 5858.96. remaining loan 5077.44-141.04=4936.40
+        accountController.repayLoan(account, null, testLedger); //balance testAccount 5858.96. remaining loan 4936.40-141.04=4795.36
+
+        List<Transaction> loanPayments = loanTxLinkDAO.getTransactionByLoan(account);
+        assertEquals(3, loanPayments.size());
+
+        boolean deleted1 = transactionController.deleteTransaction(inizialLoanTransaction);
+        assertTrue(deleted1);
+        assertEquals(0, loanTxLinkDAO.getTransactionByLoan(account).size());
+        assertEquals(0, transactionDAO.getByAccountId(testAccount.getId()).size()); //both loan payments still there
+        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
+
+        LoanAccount LoanAccount = (LoanAccount) accountDAO.getAccountById(account.getId());
+        assertEquals(0, LoanAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(36, LoanAccount.getRepaidPeriods());
+        assertTrue(LoanAccount.getIsEnded());
+
+        Account updatedTestAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, updatedTestAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
+    }
+
+    //test delete transactions relative to borrowing
+    @Test
+    public void testDelete_TransactionsOfBorrowingPayment1() {
+        BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Alice",
+                BigDecimal.valueOf(300.00), //borrowed amount
+                null, true, true,
+                testAccount, //toAccount
+                LocalDate.now(), testLedger);
+        assertNotNull(account);
+        //balance testAccount 1000 + 300 = 1300, remaining borrowing 300
+
+        Transaction inizialBorrowingTransaction = transactionDAO.getByAccountId(account.getId()).stream()
+                .findFirst()
+                .orElse(null);
+        assertNotNull(inizialBorrowingTransaction);
+
+        accountController.payBorrowing(account, BigDecimal.valueOf(100.00), testAccount, testLedger); //balance testAccount 1200, remaining borrowing 200
+        accountController.payBorrowing(account, BigDecimal.valueOf(100.00), null, testLedger); //balance testAccount 1200, remaining borrowing 100
+
+        List<Transaction> borrowingPayments = borrowingTxLinkDAO.getTransactionByBorrowing(account);
+        assertEquals(3, borrowingPayments.size());
+
+        boolean deleted1 = transactionController.deleteTransaction(borrowingPayments.get(1)); //delete first borrowing payment
+        assertTrue(deleted1);
+        assertEquals(2, borrowingTxLinkDAO.getTransactionByBorrowing(account).size());
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(2, transactionDAO.getByAccountId(account.getId()).size());
+
+        Account updatedAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(1300.00)));
+
+        Account updatedBorrowingAccount = accountDAO.getAccountById(account.getId());
+        assertEquals(0, ((BorrowingAccount) updatedBorrowingAccount).getRemainingAmount().compareTo(BigDecimal.valueOf(200.00)));
+        assertFalse(((BorrowingAccount)updatedBorrowingAccount).getIsEnded());
+
+        boolean deleted2 = transactionController.deleteTransaction(borrowingPayments.get(2)); //delete second borrowing payment
+        assertTrue(deleted2);
+        assertEquals(1, borrowingTxLinkDAO.getTransactionByBorrowing(account).size());
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
+
+        Account finalAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, finalAccount.getBalance().compareTo(BigDecimal.valueOf(1300.00)));
+
+        Account finalBorrowingAccount = accountDAO.getAccountById(account.getId());
+        assertEquals(0, ((BorrowingAccount) finalBorrowingAccount).getRemainingAmount().compareTo(BigDecimal.valueOf(300.00)));
+        assertFalse(((BorrowingAccount)finalBorrowingAccount).getIsEnded());
+
+        boolean deleted3 = transactionController.deleteTransaction(inizialBorrowingTransaction); //delete initial borrowing transaction
+        assertTrue(deleted3);
+        assertEquals(0, borrowingTxLinkDAO.getTransactionByBorrowing(account).size());
+        assertEquals(0, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
+
+        BorrowingAccount finalBorrowingAccount2 = (BorrowingAccount) accountDAO.getAccountById(account.getId());
+        assertEquals(0, finalBorrowingAccount2.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertTrue(finalBorrowingAccount2.getIsEnded());
+
+        Account finalAccount2 = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, finalAccount2.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
+    }
+
+    //test delete transactions relative to borrowing - delete in reverse order
+    @Test
+    public void testDelete_TransactionsOfBorrowingPayment2() {
+        BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Alice",
+                BigDecimal.valueOf(300.00), //borrowed amount
+                null, true, true,
+                testAccount, //toAccount
+                LocalDate.now(), testLedger);
+        assertNotNull(account);
+        //balance testAccount 1000 + 300 = 1300, remaining borrowing 300
+
+        Transaction inizialBorrowingTransaction = transactionDAO.getByAccountId(account.getId()).stream()
+                .findFirst()
+                .orElse(null);
+        assertNotNull(inizialBorrowingTransaction);
+
+        accountController.payBorrowing(account, BigDecimal.valueOf(100.00), testAccount, testLedger); //balance testAccount 1200, remaining borrowing 200
+        accountController.payBorrowing(account, BigDecimal.valueOf(100.00), null, testLedger); //balance testAccount 1200, remaining borrowing 100
+
+        List<Transaction> borrowingPayments = borrowingTxLinkDAO.getTransactionByBorrowing(account);
+        assertEquals(3, borrowingPayments.size());
+
+        boolean deleted1 = transactionController.deleteTransaction(inizialBorrowingTransaction); //delete first borrowing payment
+        assertTrue(deleted1);
+        assertEquals(0, borrowingTxLinkDAO.getTransactionByBorrowing(account).size());
+        assertEquals(0, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
+
+        BorrowingAccount finalBorrowingAccount = (BorrowingAccount) accountDAO.getAccountById(account.getId());
+        assertEquals(0, finalBorrowingAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertTrue(finalBorrowingAccount.getIsEnded());
+
+        Account finalAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, finalAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
+
+    }
+
+    //test delete transactions relative to lending
+    @Test
+    public void testDelete_TransactionsOfLendingReceivingPayment1() {
+        LendingAccount account = accountController.createLendingAccount(testUser, "Bob",
+                BigDecimal.valueOf(400.00), //lent amount
+                null, true, true,
+                testAccount, //fromAccount
+                LocalDate.now(), testLedger);
+        assertNotNull(account);
+        //balance testAccount 1000 - 400 = 600, remaining lending 400
+
+        Transaction inizialLendingTransaction = transactionDAO.getByAccountId(account.getId()).stream()
+                .findFirst()
+                .orElse(null);
+        assertNotNull(inizialLendingTransaction);
+
+        accountController.receiveLending(account, BigDecimal.valueOf(150.00), testAccount, testLedger); //balance testAccount 750, remaining lending 250
+        accountController.receiveLending(account, BigDecimal.valueOf(150.00), null, testLedger); //balance testAccount 750, remaining lending 100
+
+        List<Transaction> lendingPayments = lendingTxLinkDAO.getTransactionByLending(account);
+        assertEquals(3, lendingPayments.size());
+
+        boolean deleted1 = transactionController.deleteTransaction(lendingPayments.get(1)); //delete first lending payment
+        assertTrue(deleted1);
+        assertEquals(2, lendingTxLinkDAO.getTransactionByLending(account).size());
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(2, transactionDAO.getByAccountId(account.getId()).size());
+
+        Account updatedAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(600))); //750-150=600
+
+        Account updatedLendingAccount = accountDAO.getAccountById(account.getId());
+        assertFalse(((LendingAccount)updatedLendingAccount).getIsEnded());
+        assertEquals(0, updatedLendingAccount.getBalance().compareTo(BigDecimal.valueOf(250.00))); //100+150=250
+
+        boolean deleted2 = transactionController.deleteTransaction(lendingPayments.get(2)); //delete second lending payment
+        assertTrue(deleted2);
+        assertEquals(1, lendingTxLinkDAO.getTransactionByLending(account).size());
+        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
+
+        Account finalAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, finalAccount.getBalance().compareTo(BigDecimal.valueOf(600.00)));
+
+        Account finalLendingAccount = accountDAO.getAccountById(account.getId());
+        assertFalse(((LendingAccount)finalLendingAccount).getIsEnded());
+        assertEquals(0, finalLendingAccount.getBalance().compareTo(BigDecimal.valueOf(400.00))); //250+150=400
+
+        boolean deleted3 = transactionController.deleteTransaction(inizialLendingTransaction); //delete initial lending transaction
+        assertTrue(deleted3);
+        assertEquals(0, lendingTxLinkDAO.getTransactionByLending(account).size());
+        assertEquals(0, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
+
+        LendingAccount finalLendingAccount2 = (LendingAccount) accountDAO.getAccountById(account.getId());
+        assertEquals(0, finalLendingAccount2.getBalance().compareTo(BigDecimal.ZERO));
+        assertTrue(finalLendingAccount2.getIsEnded());
+
+        Account finalAccount2 = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, finalAccount2.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
+    }
+
+    //test delete transactions relative to lending - delete in reverse order
+    @Test
+    public void testDelete_TransactionsOfLendingReceivingPayment2() {
+        LendingAccount account = accountController.createLendingAccount(testUser, "Bob",
+                BigDecimal.valueOf(400.00), //lent amount
+                null, true, true,
+                testAccount, //fromAccount
+                LocalDate.now(), testLedger);
+        assertNotNull(account);
+        //balance testAccount 1000 - 400 = 600, remaining lending 400
+
+        Transaction inizialLendingTransaction = transactionDAO.getByAccountId(account.getId()).stream()
+                .findFirst()
+                .orElse(null);
+        assertNotNull(inizialLendingTransaction);
+
+        accountController.receiveLending(account, BigDecimal.valueOf(150.00), testAccount, testLedger); //balance testAccount 750, remaining lending 250
+        accountController.receiveLending(account, BigDecimal.valueOf(150.00), null, testLedger); //balance testAccount 750, remaining lending 100
+
+        List<Transaction> lendingPayments = lendingTxLinkDAO.getTransactionByLending(account);
+        assertEquals(3, lendingPayments.size());
+
+        boolean deleted1 = transactionController.deleteTransaction(inizialLendingTransaction); //delete initial lending transaction
+        assertTrue(deleted1);
+        assertEquals(0, lendingTxLinkDAO.getTransactionByLending(account).size());
+        assertEquals(0, transactionDAO.getByAccountId(testAccount.getId()).size());
+        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
+
+        LendingAccount finalLendingAccount = (LendingAccount) accountDAO.getAccountById(account.getId());
+        assertEquals(0, finalLendingAccount.getBalance().compareTo(BigDecimal.ZERO));
+        assertTrue(finalLendingAccount.getIsEnded());
+
+        Account finalAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, finalAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
     }
 
     //test delete a payment of installment of a credit card

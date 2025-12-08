@@ -17,11 +17,19 @@ public class TransactionController {
     private final DebtPaymentDAO debtPaymentDAO;
     private final InstallmentPaymentDAO installmentPaymentDAO;
     private final InstallmentDAO installmentDAO;
+    private final BorrowingTxLinkDAO borrowingTxLinkDAO;
+    private final LoanTxLinkDAO loanTxLinkDAO;
+    private final LendingTxLinkDAO lendingTxLinkDAO;
 
     public TransactionController(TransactionDAO transactionDAO, AccountDAO accountDAO,
                                  ReimbursementDAO reimbursementDAO,
                                  ReimbursementTxLinkDAO reimbursementTxLinkDAO, DebtPaymentDAO debtPaymentDAO,
-                                 InstallmentPaymentDAO installmentPaymentDAO, InstallmentDAO installmentDAO) {
+                                 InstallmentPaymentDAO installmentPaymentDAO, InstallmentDAO installmentDAO,
+                                 BorrowingTxLinkDAO borrowingTxLinkDAO, LoanTxLinkDAO loanTxLinkDAO,
+                                 LendingTxLinkDAO lendingTxLinkDAO) {
+        this.lendingTxLinkDAO = lendingTxLinkDAO;
+        this.loanTxLinkDAO = loanTxLinkDAO;
+        this.borrowingTxLinkDAO = borrowingTxLinkDAO;
         this.installmentDAO = installmentDAO;
         this.installmentPaymentDAO = installmentPaymentDAO;
         this.debtPaymentDAO = debtPaymentDAO;
@@ -185,21 +193,16 @@ public class TransactionController {
         if (tx == null) {
             return false;
         }
-
-        Account toAccount = null;
-        if (tx.getToAccount() != null) {
-            toAccount = accountDAO.getAccountById(tx.getToAccount().getId());
-        }
+        Account toAccount;
         Account fromAccount = null;
-        if (tx.getFromAccount() != null) {
-            fromAccount = accountDAO.getAccountById(tx.getFromAccount().getId());
-        }
 
         switch (tx.getType()) {
             case INCOME:
-                if(toAccount == null) {
+                if(tx.getToAccount() == null) {
                     return false;
                 }
+                toAccount = accountDAO.getAccountById(tx.getToAccount().getId());
+
                 if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
                     Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
                     reimbursement.setRemainingAmount(
@@ -211,6 +214,9 @@ public class TransactionController {
                 accountDAO.update(toAccount);
                 break;
             case EXPENSE:
+                if(tx.getFromAccount() != null) {
+                    fromAccount = accountDAO.getAccountById(tx.getFromAccount().getId());
+                }
 
                 if(installmentPaymentDAO.isInstallmentPaymentTransaction(tx)) {
                     Installment installment = installmentPaymentDAO.getInstallmentByTransaction(tx);
@@ -238,7 +244,9 @@ public class TransactionController {
                 }
                 break;
             case TRANSFER:
-                if (fromAccount != null) {
+                //rollback fromAccount
+                if (tx.getFromAccount() != null) {
+                    fromAccount= accountDAO.getAccountById(tx.getFromAccount().getId());
 
                     if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
                         Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
@@ -254,16 +262,51 @@ public class TransactionController {
                             }
                         }
                     }
+
                     fromAccount.credit(tx.getAmount());
+
+                    if (fromAccount instanceof LoanAccount && loanTxLinkDAO.isLoanPaymentTransaction(tx)) { //tx is creation of LoanAccount
+                        ((LoanAccount) fromAccount).setRemainingAmount(BigDecimal.ZERO);
+                        ((LoanAccount) fromAccount).setRepaidPeriods(
+                                ((LoanAccount) fromAccount).getTotalPeriods()
+                        );
+                        ((LoanAccount) fromAccount).checkAndUpdateStatus();
+                        //delete all loan payment transactions
+                        List<Transaction> loanPaymentTxs = loanTxLinkDAO.getTransactionByLoan(fromAccount).stream()
+                                .filter(t -> t.getId() != tx.getId())
+                                .toList();
+                        for(Transaction loanPaymentTx : loanPaymentTxs) {
+                            deleteTransaction(loanPaymentTx);
+                        }
+                    }
+
+                    if(fromAccount instanceof BorrowingAccount && borrowingTxLinkDAO.isBorrowingPaymentTransaction(tx)) { //tx is creation of BorrowingAccount
+                        ((BorrowingAccount) fromAccount).checkAndUpdateStatus();
+                        //delete all borrowing payment transactions
+                        List<Transaction> borrowingPaymentTxs = borrowingTxLinkDAO.getTransactionByBorrowing(fromAccount).stream()
+                                .filter(t -> t.getId() != tx.getId())
+                                .toList();
+                        for(Transaction borrowingPaymentTx : borrowingPaymentTxs) {
+                            deleteTransaction(borrowingPaymentTx);
+                        }
+                    }
+
+                    if(lendingTxLinkDAO.isLendingReceivingTransaction(tx) && fromAccount instanceof LendingAccount) { //tx is receiving of lending
+                        ((LendingAccount) fromAccount).checkAndUpdateStatus();
+                    }
                     accountDAO.update(fromAccount);
                 }
 
-                if (toAccount != null) {
+                //rollback toAccount
+                if (tx.getToAccount() != null) {
+                    toAccount= accountDAO.getAccountById(tx.getToAccount().getId());
+
                     if(debtPaymentDAO.isDebtPaymentTransaction(tx) && toAccount instanceof CreditAccount) {
                         ((CreditAccount) toAccount).setCurrentDebt(
                                 ((CreditAccount) toAccount).getCurrentDebt().add(tx.getAmount())
                         );
-                    }else if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
+                    }
+                    if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
                         Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
                         reimbursement.setRemainingAmount(
                                 reimbursement.getRemainingAmount().add(tx.getAmount())
@@ -271,7 +314,26 @@ public class TransactionController {
                         reimbursement.setEnded(false);
                         reimbursementDAO.update(reimbursement);
                     }
+
                     toAccount.debit(tx.getAmount());
+                    if(loanTxLinkDAO.isLoanPaymentTransaction(tx) && toAccount instanceof LoanAccount) { //tx is payment of laon
+                        ((LoanAccount) toAccount).setRepaidPeriods(((LoanAccount) toAccount).getRepaidPeriods() - 1);
+                        ((LoanAccount) toAccount).checkAndUpdateStatus();
+
+                    }
+                    if(borrowingTxLinkDAO.isBorrowingPaymentTransaction(tx) && toAccount instanceof BorrowingAccount) { //tx is payment of borrowing
+                        ((BorrowingAccount) toAccount).checkAndUpdateStatus();
+                    }
+                    if(toAccount instanceof LendingAccount && lendingTxLinkDAO.isLendingReceivingTransaction(tx)) { //tx is creation of LendingAccount
+                        ((LendingAccount) toAccount).checkAndUpdateStatus();
+                        //delete all lending receiving transactions
+                        List<Transaction> lendingReceivingTxs = lendingTxLinkDAO.getTransactionByLending(toAccount).stream()
+                                .filter(t -> t.getId() != tx.getId())
+                                .toList();
+                        for(Transaction lendingReceivingTx : lendingReceivingTxs) {
+                            deleteTransaction(lendingReceivingTx);
+                        }
+                    }
                     accountDAO.update(toAccount);
                 }
                 break;
@@ -402,6 +464,15 @@ public class TransactionController {
         if(debtPaymentDAO.isDebtPaymentTransaction(transfer)) {
             return false;
         }
+        if(loanTxLinkDAO.isLoanPaymentTransaction(transfer)) {
+            return false;
+        }
+        if(borrowingTxLinkDAO.isBorrowingPaymentTransaction(transfer)) {
+            return false;
+        }
+        if(lendingTxLinkDAO.isLendingReceivingTransaction(transfer)) {
+            return false;
+        }
 
         if( newFromAccount == null && newToAccount == null) {
             return false;
@@ -453,6 +524,7 @@ public class TransactionController {
         //toAccount change
         if (newToAccount != null && (oldToAccount == null || newToAccount.getId()!= oldToAccount.getId())
                 || (newToAccount == null && oldToAccount != null)) {
+
             //rollback old toAccount
             if (oldToAccount != null) {
                 oldToAccount.debit(oldAmount);
