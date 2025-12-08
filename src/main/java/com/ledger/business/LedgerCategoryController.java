@@ -21,7 +21,9 @@ public class LedgerCategoryController {
     }
 
     public List<LedgerCategory> getLedgerCategoryTreeByLedger(Ledger ledger) {
-        return ledgerCategoryDAO.getTreeByLedgerId(ledger.getId());
+        return ledgerCategoryDAO.getTreeByLedgerId(ledger.getId()).stream()
+                .filter(category -> !category.getName().equals("Claim Income"))
+                .toList();
     }
 
     public LedgerCategory createCategory(String name, Ledger ledger, CategoryType type) {

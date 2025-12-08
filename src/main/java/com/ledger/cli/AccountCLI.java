@@ -95,16 +95,27 @@ public class AccountCLI {
         for (Account account : accounts) {
             System.out.print("- " + account.getName() + " | ");
             System.out.print("Category: "+ account.getCategory() + " | Type: " + account.getType() + " | Included in Net Worth: " + (account.getIncludedInNetAsset() ? "Yes" : "No") + " | Selectable: " + (account.getSelectable() ? "Yes" : "No"));
+            if(account instanceof BasicAccount){
+                System.out.print(" | Balance: " + account.getBalance());
+            }
             if(account instanceof LoanAccount){
                 System.out.print(" | Remaining Loan Amount: " + ((LoanAccount) account).getRemainingAmount());
                 System.out.print(" | Loan Amount: " + ((LoanAccount) account).getLoanAmount());
                 System.out.print(" | Repaid Periods: " + ((LoanAccount) account).getRepaidPeriods() + "/" + ((LoanAccount) account).getTotalPeriods());
-            }else if(account instanceof CreditAccount){
+            }
+            if(account instanceof CreditAccount){
                 System.out.print(" | Balance: " + account.getBalance());
                 System.out.print(" | Current Debt: " + ((CreditAccount) account).getCurrentDebt());
                 System.out.print(" | Credit Limit: " + ((CreditAccount) account).getCreditLimit());
-            }else{
+            }
+            if(account instanceof BorrowingAccount){
+                System.out.print(" | Remaining Amount: " + ((BorrowingAccount) account).getRemainingAmount());
+                System.out.print(" | Borrowing Amount: " + ((BorrowingAccount) account).getBorrowingAmount());
+                System.out.print(" | is Ended: " + (((BorrowingAccount) account).getIsEnded() ? "Yes" : "No"));
+            }
+            if(account instanceof LendingAccount){
                 System.out.print(" | Balance: " + account.getBalance());
+                System.out.print(" | is Ended: " + (((LendingAccount) account).getIsEnded() ? "Yes" : "No"));
             }
             System.out.println();
         }
@@ -578,7 +589,7 @@ public class AccountCLI {
         System.out.println("\nfrom " + startDate + " to " + endDate);
         System.out.print("Account: " + account.getName() + " | Total Income: " + totalIncome + " | Total Expense: " + totalExpense);
 
-        if(account instanceof BasicAccount || account instanceof CreditAccount){
+        if(account instanceof BasicAccount || account instanceof CreditAccount || account instanceof LendingAccount) {
             BigDecimal totalBalance = account.getBalance();
             System.out.print(" | Current Balance: " + totalBalance +"\n");
         }
@@ -598,16 +609,27 @@ public class AccountCLI {
             BigDecimal creditLimit = ((CreditAccount) account).getCreditLimit();
             BigDecimal currentDebt = ((CreditAccount) account).getCurrentDebt();
             System.out.print(" | Credit Limit: " + creditLimit + " | Current Debt: " + currentDebt+"\n");
+        }
 
+        if(account instanceof BorrowingAccount) {
+            BigDecimal borrowingAmount = ((BorrowingAccount) account).getBorrowingAmount();
+            BigDecimal remainingAmount = ((BorrowingAccount) account).getRemainingAmount();
+            boolean isEnded = ((BorrowingAccount) account).getIsEnded();
+            System.out.print(" | Borrowing Amount: " + borrowingAmount + " | Remaining Amount: " + remainingAmount +
+                    " | Borrowing Status: " + (isEnded ? "Ended" : "Active") +"\n");
+        }
+        if(account instanceof LendingAccount) {
+            System.out.print(" | Lending Status: " + ( ((LendingAccount) account).getIsEnded() ? "Ended" : "Active") +"\n");
         }
 
         int i = 0;
         System.out.println("Transactions for Account " + account.getName() + ":");
         for (Transaction tx : transactions) {
+            i++;
             StringBuilder info = new StringBuilder();
 
             info.append(String.format("%d. Amount: %s, Date: %s",
-                    (i + 1),
+                    i,
                     tx.getType() == TransactionType.EXPENSE
                             ? tx.getAmount().negate()
                             : tx.getAmount(),

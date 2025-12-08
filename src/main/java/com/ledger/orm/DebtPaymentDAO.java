@@ -31,7 +31,7 @@ public class DebtPaymentDAO {
             int affected = stmt.executeUpdate();
             return affected > 0;
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
             System.err.println("SQL Exception during debt payment insert: " + e.getMessage());
         }
         return false;
