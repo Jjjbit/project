@@ -1,9 +1,7 @@
 package com.ledger.business;
 
 import com.ledger.domain.*;
-import com.ledger.orm.AccountDAO;
-import com.ledger.orm.DebtPaymentDAO;
-import com.ledger.orm.TransactionDAO;
+import com.ledger.orm.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,8 +11,16 @@ public class AccountController {
     private final AccountDAO accountDAO;
     private final TransactionDAO transactionDAO;
     private final DebtPaymentDAO  debtPaymentDAO;
+    private final LoanTxLinkDAO loanTxLinkDAO;
+    private final BorrowingTxLinkDAO borrowingTxLinkDAO;
+    private final LendingTxLinkDAO lendingTxLinkDAO;
 
-    public AccountController(AccountDAO accountDAO, TransactionDAO transactionDAO, DebtPaymentDAO debtPaymentDAO) {
+    public AccountController(AccountDAO accountDAO, TransactionDAO transactionDAO, DebtPaymentDAO debtPaymentDAO,
+                             LoanTxLinkDAO loanTxLinkDAO, BorrowingTxLinkDAO borrowingTxLinkDAO,
+                             LendingTxLinkDAO lendingTxLinkDAO) {
+        this.lendingTxLinkDAO = lendingTxLinkDAO;
+        this.borrowingTxLinkDAO = borrowingTxLinkDAO;
+        this.loanTxLinkDAO = loanTxLinkDAO;
         this.debtPaymentDAO = debtPaymentDAO;
         this.transactionDAO = transactionDAO;
         this.accountDAO = accountDAO;
@@ -175,6 +181,7 @@ public class AccountController {
                 loanAmount,
                 ledger);
         transactionDAO.insert(tx); //insert transaction to db
+        loanTxLinkDAO.insert(account, tx); //insert loan payment record to db
 
         if (receivingAccount != null) {
             receivingAccount.credit(loanAmount);
@@ -214,6 +221,7 @@ public class AccountController {
                 amount,
                 ledger);
         transactionDAO.insert(tx); //insert transaction to db
+        borrowingTxLinkDAO.insert(borrowingAccount, tx); //insert borrowing payment record to db
 
         if (toAccount != null) {
             toAccount.credit(amount);
@@ -252,6 +260,7 @@ public class AccountController {
                 amount,
                 ledger);
         transactionDAO.insert(tx); //insert transaction to db
+        lendingTxLinkDAO.insert(lendingAccount, tx); //insert lending receiving record to db
 
         if (fromAccount != null) {
             fromAccount.debit(amount);
@@ -332,6 +341,7 @@ public class AccountController {
         if (repaymentType != null) account.setRepaymentType(repaymentType);
 
         account.setRemainingAmount(account.calculateRemainingAmount());
+
         account.checkAndUpdateStatus();
         return accountDAO.update(account);
     }
@@ -341,8 +351,11 @@ public class AccountController {
 
         if (name != null) account.setName(name);
         if (amount != null) {
+            BigDecimal oldAmount = account.getBorrowingAmount();
             account.setBorrowingAmount(amount);
-            account.setRemainingAmount(amount);
+            BigDecimal paidAmount = oldAmount.subtract(account.getRemainingAmount());
+            account.setRemainingAmount(amount.subtract(paidAmount));
+            account.checkAndUpdateStatus();
         }
         account.setNotes(notes);
         if (includedInNetAsset != null) account.setIncludedInNetAsset(includedInNetAsset);
@@ -417,6 +430,7 @@ public class AccountController {
                 repayAmount,
                 ledger);
         transactionDAO.insert(tx); //insert transaction to db
+        loanTxLinkDAO.insert(loanAccount, tx); //insert loan payment record to db
 
         loanAccount.repayLoan(); //reduce remaining amount and increase repaid period
 
@@ -441,12 +455,13 @@ public class AccountController {
 
         Transaction tx = new Transfer(LocalDate.now(),
                 "Repay Borrowing",
-                borrowingAccount,
                 fromAccount,
+                borrowingAccount,
                 amount,
                 ledger);
         transactionDAO.insert(tx); //insert transaction to db
         borrowingAccount.repay(amount); //reduce remaining amount, update status and add incoming transaction
+        borrowingTxLinkDAO.insert(borrowingAccount, tx); //insert borrowing payment record to db
 
         if (fromAccount != null) {
             fromAccount.debit(amount);
@@ -464,12 +479,13 @@ public class AccountController {
 
         Transaction tx = new Transfer(LocalDate.now(),
                 "Receive Lending",
-                toAccount,
                 lendingAccount,
+                toAccount,
                 amount,
                 ledger);
         transactionDAO.insert(tx); //insert transaction to db
         lendingAccount.receiveRepayment(amount); //increase lending amount, update status and add outgoing transaction
+        lendingTxLinkDAO.insert(lendingAccount, tx); //insert lending receiving record to db
 
         if (toAccount != null) {
             toAccount.credit(amount);

@@ -50,11 +50,15 @@ public class AccountControllerTest {
         ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
-        InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
+        InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO,
+                installmentDAO);
+        LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
+        BorrowingTxLinkDAO borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
+        LendingTxLinkDAO lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
-        accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO);
+        accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO, loanTxLinkDAO, borrowingTxLinkDAO, lendingTxLinkDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, borrowingTxLinkDAO, loanTxLinkDAO, lendingTxLinkDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO, installmentPaymentDAO);
 
@@ -1107,16 +1111,17 @@ public class AccountControllerTest {
                 "Initial Notes", true, true, null, LocalDate.now(), testLedger
         );
 
+        account.setRemainingAmount(BigDecimal.valueOf(500.00));
+
         boolean result = accountController.editBorrowingAccount(account, "Updated Bob",
                 BigDecimal.valueOf(2500.00), //new amount borrowed
                 "Updated Notes", false, false, true);
         assertTrue(result);
-        assertEquals(0, account.getRemainingAmount().compareTo(BigDecimal.valueOf(2500.00)));
 
         BorrowingAccount editedAccount = (BorrowingAccount) accountDAO.getAccountById(account.getId());
         assertNotNull(editedAccount);
         assertEquals("Updated Bob", editedAccount.getName());
-        assertEquals(0, editedAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(2500.00)));
+        assertEquals(0, editedAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
         assertEquals(0, editedAccount.getBorrowingAmount().compareTo(BigDecimal.valueOf(2500.00)));
         assertEquals("Updated Notes", editedAccount.getNotes());
         assertFalse(editedAccount.getIncludedInNetAsset());
