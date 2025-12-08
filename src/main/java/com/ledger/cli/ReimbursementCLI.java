@@ -157,15 +157,15 @@ public class ReimbursementCLI {
         System.out.print("Enter the date for the reimbursement (YYYY-MM-DD): ");
         LocalDate date = inputDate();
 
-        boolean moreToReimburse = false;
+        boolean isFinalClaim = true;
         if(reimbursedAmount.compareTo(selectedReimbursement.getRemainingAmount()) < 0) {
             //more to reimburse
             System.out.print("Is the final claim? (y/n): ");
             String moreInput = scanner.nextLine().trim().toLowerCase();
-            moreToReimburse = moreInput.equals("y") || moreInput.equals("yes");
+            isFinalClaim = moreInput.equals("y") || moreInput.equals("yes");
         }
 
-        boolean claimed = reimbursementController.claim(selectedReimbursement, reimbursedAmount, moreToReimburse, reimbursementAccount, date);
+        boolean claimed = reimbursementController.claim(selectedReimbursement, reimbursedAmount, isFinalClaim, reimbursementAccount, date);
         if(!claimed){
             System.out.println("Failed to claim reimbursement.");
             return;

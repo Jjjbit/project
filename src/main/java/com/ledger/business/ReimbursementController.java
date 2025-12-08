@@ -259,12 +259,6 @@ public class ReimbursementController {
                 .toList();
 
         for(Transaction tx : linkedTxs) {
-//            Account fromAccount = tx.getFromAccount();
-//            if (fromAccount != null) {
-//                Account cached = accountDAO.getAccountById(fromAccount.getId());
-//                cached.credit(tx.getAmount());
-//                accountDAO.update(cached);
-//            }
             Account toAccount = tx.getToAccount();
             if (toAccount != null) {
                 Account cached = accountDAO.getAccountById(toAccount.getId());
