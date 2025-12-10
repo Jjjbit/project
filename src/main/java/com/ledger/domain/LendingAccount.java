@@ -33,11 +33,6 @@ public class LendingAccount extends Account {
         return date;
     }
 
-    public void receiveRepayment(BigDecimal amount){
-        balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-        checkAndUpdateStatus();
-    }
-
     public void checkAndUpdateStatus() {
         if(balance.compareTo(BigDecimal.ZERO) <= 0) {
             balance=BigDecimal.ZERO;
@@ -45,5 +40,10 @@ public class LendingAccount extends Account {
         } else {
             this.isEnded = false;
         }
+    }
+    @Override
+    public void debit(BigDecimal amount){
+        balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
+        checkAndUpdateStatus();
     }
 }
