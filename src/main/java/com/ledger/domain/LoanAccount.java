@@ -41,7 +41,11 @@ public class LoanAccount extends Account {
         this.loanAmount = loanAmount;
         this.repaymentDay = repaymentDate;
         this.repaymentType = repaymentType;
-        this.remainingAmount= calculateRemainingAmount();
+        if(annualInterestRate.compareTo(BigDecimal.ZERO) == 0){
+            this.remainingAmount = loanAmount;
+        }else {
+            this.remainingAmount = calculateRemainingAmount();
+        }
         this.isEnded = false;
     }
 
@@ -115,11 +119,10 @@ public class LoanAccount extends Account {
         checkAndUpdateStatus();
     }
 
-    public BigDecimal calculateRemainingAmount() { //dipende da repaidPeriods
+    public BigDecimal calculateRemainingAmount() {
         if (loanAmount == null || totalPeriods == 0) {
             return BigDecimal.ZERO;
         }
-
         BigDecimal total = BigDecimal.ZERO;
         for (int i = repaidPeriods + 1; i <= totalPeriods; i++) {
             total = total.add(getMonthlyRepayment(i));
@@ -132,15 +135,19 @@ public class LoanAccount extends Account {
     // loan amount P: loanAmount
     public BigDecimal getMonthlyRepayment(int period){
         BigDecimal monthlyRate = getMonthlyRate();
-        if (monthlyRate.compareTo(BigDecimal.ZERO) == 0) {
-            return loanAmount.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP);
-        }
 
         switch(this.repaymentType) {
             case EQUAL_INTEREST:
                 // For EQUAL_INTEREST, the monthly repayment is calculated as follows:
                 // M = (P * r * (1 + r)^n) / ((1 + r)^n - 1) = monthly payment is constant
                 // where: M = monthly payment, P = loan amount, r = monthly rate, n = total periods
+                if (monthlyRate.compareTo(BigDecimal.ZERO) == 0) {
+                    if(period < totalPeriods) {
+                        return loanAmount.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP);
+                    }else{
+                        return remainingAmount;
+                    }
+                }
                 BigDecimal numerator = loanAmount.multiply(monthlyRate).multiply(
                         (BigDecimal.ONE.add(monthlyRate)).pow(totalPeriods)
                 );
@@ -153,6 +160,13 @@ public class LoanAccount extends Account {
                 // Remaining Principal = loanAmount - (Monthly Principal * repaidPeriods)
                 // Monthly Interest = Remaining Principal * r = remainingPrincipal * monthlyRate
                 // Monthly Payment = Monthly Principal + Monthly Interest
+                if (monthlyRate.compareTo(BigDecimal.ZERO) == 0) {
+                    if(period < totalPeriods) {
+                        return loanAmount.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP);
+                    }else{
+                        return remainingAmount;
+                    }
+                }
                 BigDecimal monthlyPrincipal = loanAmount.divide(BigDecimal.valueOf(totalPeriods),20, RoundingMode.HALF_UP);
                 BigDecimal remainingPrincipal = loanAmount.subtract(monthlyPrincipal.multiply(BigDecimal.valueOf(period-1))); //remainingPrincipal=loanAmount-(monthlyPrincipal*(period-1))
                 BigDecimal interest = remainingPrincipal.multiply(monthlyRate); //interest=remainingPrincipal*monthlyRate
@@ -161,6 +175,13 @@ public class LoanAccount extends Account {
             case EQUAL_PRINCIPAL_AND_INTEREST:
                 //monthly payment= (loanAmount + totalInterest) / totalPeriods
                 //monthly payment is fixed
+                if (monthlyRate.compareTo(BigDecimal.ZERO) == 0) {
+                    if(period < totalPeriods) {
+                        return loanAmount.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP);
+                    }else{
+                        return remainingAmount;
+                    }
+                }
                 BigDecimal totalInterest = loanAmount.multiply(monthlyRate).multiply(BigDecimal.valueOf(totalPeriods));
                 BigDecimal totalrepayment = loanAmount.add(totalInterest);
                 return totalrepayment.divide(BigDecimal.valueOf(totalPeriods), 2, RoundingMode.HALF_UP); // For EQUAL_PRINCIPAL_AND_INTEREST, the monthly payment is fixed
@@ -180,11 +201,15 @@ public class LoanAccount extends Account {
     }
 
     public BigDecimal calculateTotalRepayment() {
-        BigDecimal total = BigDecimal.ZERO;
-        for (int i = 1; i <= totalPeriods; i++) {
-            total = total.add(getMonthlyRepayment(i));
+        if(annualInterestRate.compareTo(BigDecimal.ZERO) == 0){
+            return loanAmount;
+        }else {
+            BigDecimal total = BigDecimal.ZERO;
+            for (int i = 1; i <= totalPeriods; i++) {
+                total = total.add(getMonthlyRepayment(i));
+            }
+            return total.setScale(2, RoundingMode.HALF_UP);
         }
-        return total.setScale(2, RoundingMode.HALF_UP);
     }
 
     public void checkAndUpdateStatus() {

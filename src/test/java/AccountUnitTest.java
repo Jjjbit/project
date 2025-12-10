@@ -178,28 +178,6 @@ public class AccountUnitTest {
 
     //test repayLoan
     @Test
-    public void testRepayLoan_EQUAL_INTEREST() {
-        LoanAccount loanAccount= new LoanAccount("Test Loan", testUser, "Test Note", true,
-                36, 0,
-                BigDecimal.valueOf(1.00), // 1% interest rate
-                BigDecimal.valueOf(5000.00), // Loan amount
-                LocalDate.now(), LoanAccount.RepaymentType.EQUAL_INTEREST);
-        //total repayment should be 5077.44
-
-        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5077.44)));
-        assertEquals(0, loanAccount.calculateRemainingAmount().compareTo(BigDecimal.valueOf(5077.44)));
-
-        BigDecimal repayAmount = loanAccount.getMonthlyRepayment(loanAccount.getRepaidPeriods()+1);
-        assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(141.04))); //first month repayment
-
-        loanAccount.repayLoan();
-
-        assertEquals(1, loanAccount.getRepaidPeriods());
-        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(4936.40)));
-        assertFalse(loanAccount.getIsEnded());
-    }
-
-    @Test
     public void testFullFlow_EQUAL_INTEREST() {
         LoanAccount loanAccount= new LoanAccount("Test Loan", testUser, "Test Note", true,
                 36, 0,
@@ -221,29 +199,6 @@ public class AccountUnitTest {
     }
 
     @Test
-    public void testRepayLoan_EQUAL_PRINCIPAL() {
-        LoanAccount loanAccount= new LoanAccount("Test Loan", testUser, "Test Note",
-                true, 36, 0,
-                BigDecimal.valueOf(1.00), // 1% interest rate
-                BigDecimal.valueOf(5000.00), // Loan amount
-                LocalDate.now(),
-                LoanAccount.RepaymentType.EQUAL_PRINCIPAL);
-
-        //total repayment should be 5077.08
-        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5077.08)));
-        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5077.08)));
-
-        BigDecimal repayAmount = loanAccount.getMonthlyRepayment(loanAccount.getRepaidPeriods()+1);
-        assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(143.06))); //first month repayment
-
-        loanAccount.repayLoan();
-
-        assertEquals(1, loanAccount.getRepaidPeriods());
-        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(4934.02)));
-        assertFalse(loanAccount.getIsEnded());
-    }
-
-    @Test
     public void testFullFlow_EQUAL_PRINCIPAL() {
         LoanAccount loanAccount= new LoanAccount("Test Loan", testUser, "Test Note", true,
                 36, 0,
@@ -251,42 +206,26 @@ public class AccountUnitTest {
                 BigDecimal.valueOf(5000.00), // Loan amount
                 LocalDate.now(),
                 LoanAccount.RepaymentType.EQUAL_PRINCIPAL);
+        assertEquals(0, loanAccount.getLoanAmount().compareTo(BigDecimal.valueOf(5000.00)));
+        System.out.println("Loan Amount: " + loanAccount.getLoanAmount());
+        System.out.println("Total Repayment: " + loanAccount.calculateTotalRepayment());
+        System.out.println("Remaining Amount at start: " + loanAccount.getRemainingAmount());
+        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5077.08)));
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5077.08)));
 
+        BigDecimal paidAmount = BigDecimal.ZERO;
         for (int i = 1; i <= loanAccount.getTotalPeriods(); i++) {
 
             System.out.println("Month " + i + " repayment: " + loanAccount.getMonthlyRepayment(i));
             loanAccount.repayLoan();
+            paidAmount = paidAmount.add(loanAccount.getMonthlyRepayment(i));
 
             assertEquals(i, loanAccount.getRepaidPeriods());
             System.out.println("Remaining Amount after month " + i + ": " + loanAccount.getRemainingAmount());
         }
-
+        assertEquals(0, paidAmount.compareTo(loanAccount.calculateTotalRepayment()));
         assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
         assertTrue(loanAccount.getIsEnded());
-    }
-
-   @Test
-    public void testRepayLoan_EQUAL_PRINCIPAL_AND_INTEREST() {
-       LoanAccount loanAccount= new LoanAccount("Test Loan", testUser, "Test Note",
-               true, 36, 0,
-               BigDecimal.valueOf(1.00), // 1% interest rate
-               BigDecimal.valueOf(5000.00), // Loan amount
-               LocalDate.now(),
-               LoanAccount.RepaymentType.EQUAL_PRINCIPAL_AND_INTEREST);
-
-        //total repayment should be 5150.16
-        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5150.16)));
-        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5150.16)));
-
-        BigDecimal repayAmount = loanAccount.getMonthlyRepayment(loanAccount.getRepaidPeriods()+1);
-        assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(143.06))); //first month repayment
-
-        loanAccount.repayLoan();
-
-        assertEquals(1, loanAccount.getRepaidPeriods());
-        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5007.10)));
-        assertFalse(loanAccount.getIsEnded());
-
     }
 
     @Test
@@ -297,41 +236,24 @@ public class AccountUnitTest {
                 BigDecimal.valueOf(5000.00), // Loan amount
                 LocalDate.now(),
                 LoanAccount.RepaymentType.EQUAL_PRINCIPAL_AND_INTEREST);
+        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5150.16)));
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5150.16)));
 
+        BigDecimal paidAmount = BigDecimal.ZERO;
         for (int i = 1; i <= loanAccount.getTotalPeriods(); i++) {
             BigDecimal repayAmount = loanAccount.getMonthlyRepayment(i);
 
             assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(143.06))); //monthly repayment should be constant
             System.out.println("Month " + i + " repayment: " + loanAccount.getMonthlyRepayment(i));
             loanAccount.repayLoan();
+            paidAmount = paidAmount.add(repayAmount);
 
             assertEquals(i, loanAccount.getRepaidPeriods());
             System.out.println("Remaining Amount after month " + i + ": " + loanAccount.getRemainingAmount());
         }
-
+        assertEquals(0, paidAmount.compareTo(loanAccount.calculateTotalRepayment()));
         assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
         assertTrue(loanAccount.getIsEnded());
-    }
-
-    @Test
-    public void testRepayLoan_INTEREST_BEFORE_PRINCIPAL() {
-        LoanAccount loanAccount= new LoanAccount("Test Loan", testUser, "Test Note",
-                true, 36, 0,
-                BigDecimal.valueOf(1.00), // 1% interest rate
-                BigDecimal.valueOf(5000.00), // Loan amount
-                LocalDate.now(),
-                LoanAccount.RepaymentType.INTEREST_BEFORE_PRINCIPAL);
-        //total repayment should be 5150.12
-        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5150.12)));
-        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5150.12)));
-
-        BigDecimal repayAmount = loanAccount.getMonthlyRepayment(loanAccount.getRepaidPeriods()+1);
-        assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(4.17))); //first month repayment
-
-        loanAccount.repayLoan();
-        assertEquals(1, loanAccount.getRepaidPeriods());
-        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5145.95)));
-        assertFalse(loanAccount.getIsEnded());
     }
 
     @Test
@@ -342,6 +264,10 @@ public class AccountUnitTest {
                 BigDecimal.valueOf(5000.00), // Loan amount
                 LocalDate.now(),
                 LoanAccount.RepaymentType.INTEREST_BEFORE_PRINCIPAL);
+        System.out.println("Loan Amount: " + loanAccount.getLoanAmount());
+        System.out.println("Total Repayment: " + loanAccount.calculateTotalRepayment());
+        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5150.12)));
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5150.12)));
 
         for (int i = 1; i <= loanAccount.getTotalPeriods(); i++) {
             BigDecimal repayAmount = loanAccount.getMonthlyRepayment(i);
@@ -358,6 +284,132 @@ public class AccountUnitTest {
             System.out.println("Remaining Amount after month " + i + ": " + loanAccount.getRemainingAmount());
         }
 
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertTrue(loanAccount.getIsEnded());
+    }
+
+    //test full flow with zero interest rate
+    @Test
+    public void testFullFlow_ZeroInterestRate_EUQAL_INTEREST() {
+        LoanAccount loanAccount= new LoanAccount("Test Loan", testUser, "Test Note", true,
+                36, 0,
+                BigDecimal.ZERO, // 0% interest rate
+                BigDecimal.valueOf(5000.00), // Loan amount
+                LocalDate.now(),
+                LoanAccount.RepaymentType.EQUAL_INTEREST);
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5000.00)));
+        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5000.00)));
+
+        for(int i = 1; i < loanAccount.getTotalPeriods(); i++) {
+            BigDecimal repayAmount = loanAccount.getMonthlyRepayment(i);
+            assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(138.89))); //monthly repayment should be constant
+
+            loanAccount.repayLoan();
+
+            assertEquals(i, loanAccount.getRepaidPeriods());
+            assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5000.00)
+                                   .subtract(BigDecimal.valueOf(138.89).multiply(BigDecimal.valueOf(i)))));
+        }
+        //last month
+        BigDecimal repayAmount = loanAccount.getMonthlyRepayment(36);
+        assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(138.85))); //last month repayment
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(138.85)));
+        loanAccount.repayLoan();
+        assertEquals(36, loanAccount.getRepaidPeriods());
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertTrue(loanAccount.getIsEnded());
+    }
+
+    @Test
+    public void testFullFlow_ZeroInterestRate_EQUAL_PRINCIPAL() {
+        LoanAccount loanAccount= new LoanAccount("Test Loan", testUser, "Test Note", true,
+                36, 0,
+                BigDecimal.ZERO, // 0% interest rate
+                BigDecimal.valueOf(5000.00), // Loan amount
+                LocalDate.now(),
+                LoanAccount.RepaymentType.EQUAL_PRINCIPAL);
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5000.00)));
+        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5000.00)));
+
+        for(int i = 1; i < loanAccount.getTotalPeriods(); i++) {
+            BigDecimal repayAmount = loanAccount.getMonthlyRepayment(i);
+            System.out.println("Month " + i + " repayment: " + repayAmount);
+            assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(138.89))); //monthly repayment should be constant
+
+            loanAccount.repayLoan();
+
+            assertEquals(i, loanAccount.getRepaidPeriods());
+            System.out.println("Remaining Amount after month " + i + ": " + loanAccount.getRemainingAmount());
+            assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5000.00).subtract(BigDecimal.valueOf(138.89).multiply(BigDecimal.valueOf(i)))));
+        }
+
+        //last month
+        BigDecimal repayAmount = loanAccount.getMonthlyRepayment(36);
+        assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(138.85)));
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(138.85)));
+        loanAccount.repayLoan();
+        assertEquals(36, loanAccount.getRepaidPeriods());
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertTrue(loanAccount.getIsEnded());
+    }
+
+    @Test
+    public void testFullFlow_ZeroInterestRate_EQUAL_PRINCIPAL_AND_INTEREST() {
+        LoanAccount loanAccount= new LoanAccount("Test Loan", testUser, "Test Note", true,
+                36, 0,
+                BigDecimal.ZERO, // 0% interest rate
+                BigDecimal.valueOf(5000.00), // Loan amount
+                LocalDate.now(),
+                LoanAccount.RepaymentType.EQUAL_PRINCIPAL_AND_INTEREST);
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5000.00)));
+        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5000.00)));
+
+        for(int i = 1; i < loanAccount.getTotalPeriods(); i++) {
+            BigDecimal repayAmount = loanAccount.getMonthlyRepayment(i);
+            assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(138.89))); //monthly repayment should be constant
+
+            loanAccount.repayLoan();
+
+            assertEquals(i, loanAccount.getRepaidPeriods());
+            assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5000.00).subtract(BigDecimal.valueOf(138.89).multiply(BigDecimal.valueOf(i)))));
+        }
+        //last month
+        BigDecimal repayAmount = loanAccount.getMonthlyRepayment(36);
+        assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(138.85)));
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(138.85)));
+        loanAccount.repayLoan();
+        assertEquals(36, loanAccount.getRepaidPeriods());
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
+        assertTrue(loanAccount.getIsEnded());
+    }
+
+    @Test
+    public void testFullFlow_ZeroInterestRate_INTEREST_BEFORE_PRINCIPAL() {
+        LoanAccount loanAccount= new LoanAccount("Test Loan", testUser, "Test Note", true,
+                36, 0,
+                BigDecimal.ZERO, // 0% interest rate
+                BigDecimal.valueOf(5000.00), // Loan amount
+                LocalDate.now(),
+                LoanAccount.RepaymentType.INTEREST_BEFORE_PRINCIPAL);
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5000.00)));
+        assertEquals(0, loanAccount.calculateTotalRepayment().compareTo(BigDecimal.valueOf(5000.00)));
+
+        for(int i = 1; i < loanAccount.getTotalPeriods(); i++) {
+            BigDecimal repayAmount = loanAccount.getMonthlyRepayment(i);
+            assertEquals(0, repayAmount.compareTo(BigDecimal.ZERO)); //first 35 months repayment should be 0
+
+            loanAccount.repayLoan();
+
+            assertEquals(i, loanAccount.getRepaidPeriods());
+            assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5000.00)));
+        }
+
+        //last month
+        BigDecimal repayAmount = loanAccount.getMonthlyRepayment(36);
+        assertEquals(0, repayAmount.compareTo(BigDecimal.valueOf(5000.00)));
+        assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.valueOf(5000.00)));
+        loanAccount.repayLoan();
+        assertEquals(36, loanAccount.getRepaidPeriods());
         assertEquals(0, loanAccount.getRemainingAmount().compareTo(BigDecimal.ZERO));
         assertTrue(loanAccount.getIsEnded());
     }
