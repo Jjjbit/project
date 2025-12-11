@@ -109,7 +109,7 @@ public class AccountUnitTest {
                 BigDecimal.valueOf(3000.00), //balance to be received from Alice
                 "Test Note", true, true, testUser, LocalDate.now());
 
-        lendingAccount.receiveRepayment(BigDecimal.valueOf(1000.00));
+        lendingAccount.debit(BigDecimal.valueOf(1000.00));
 
         assertEquals(0, lendingAccount.getBalance().compareTo(BigDecimal.valueOf(2000.00)));
         assertFalse(lendingAccount.getIsEnded());
@@ -121,7 +121,7 @@ public class AccountUnitTest {
                 BigDecimal.valueOf(3000.00), //balance to be received from Alice
                 "Test Note", true, true, testUser, LocalDate.now());
 
-        lendingAccount.receiveRepayment(BigDecimal.valueOf(3000.00));
+        lendingAccount.debit(BigDecimal.valueOf(3000.00));
 
         assertEquals(0, lendingAccount.getBalance().compareTo(BigDecimal.ZERO));
         assertTrue(lendingAccount.getIsEnded());
@@ -133,7 +133,7 @@ public class AccountUnitTest {
                 BigDecimal.valueOf(3000.00), //balance to be received from Alice
                 "Test Note", true, true, testUser, LocalDate.now());
 
-        lendingAccount.receiveRepayment(BigDecimal.valueOf(3500.00));
+        lendingAccount.debit(BigDecimal.valueOf(3500.00));
 
         assertEquals(0, lendingAccount.getBalance().compareTo(BigDecimal.ZERO));
         assertTrue(lendingAccount.getIsEnded());
