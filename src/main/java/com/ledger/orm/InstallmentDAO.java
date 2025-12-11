@@ -9,10 +9,8 @@ import java.util.List;
 public class InstallmentDAO {
     private final Connection connection;
     private final LedgerCategoryDAO categoryDAO;
-    private final AccountDAO accountDAO;
 
-    public InstallmentDAO(Connection connection, LedgerCategoryDAO categoryDAO, AccountDAO accountDAO) {
-        this.accountDAO = accountDAO;
+    public InstallmentDAO(Connection connection, LedgerCategoryDAO categoryDAO) {
         this.categoryDAO = categoryDAO;
         this.connection = connection;
     }

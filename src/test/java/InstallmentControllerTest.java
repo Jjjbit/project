@@ -47,7 +47,7 @@ public class InstallmentControllerTest {
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
         LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
         accountDAO = new AccountDAO(connection);
-        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO, accountDAO);
+        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);

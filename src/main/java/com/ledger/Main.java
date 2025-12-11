@@ -28,7 +28,7 @@ public class Main {
             LedgerDAO ledgerDAO = new LedgerDAO(connection);
             LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
             TransactionDAO transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
-            InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO, accountDAO);
+            InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
             CategoryDAO categoryDAO = new CategoryDAO(connection);
             BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
             ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
