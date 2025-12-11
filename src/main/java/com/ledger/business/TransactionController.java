@@ -40,28 +40,27 @@ public class TransactionController {
     }
 
     public List<Transaction> getTransactionsByInstallment(Installment installment) {
-        return installmentPaymentDAO.getTransactionsByInstallment(installment);
+        return installmentPaymentDAO.getTransactionsByInstallment(installment).stream()
+                .sorted((comparing(Transaction::getDate).reversed()))
+                .toList();
     }
-
     public List<Transaction> getTransactionsByReimbursement(Reimbursement reimbursement) {
-        return reimbursementTxLinkDAO.getTransactionsByReimbursement(reimbursement);
+        return reimbursementTxLinkDAO.getTransactionsByReimbursement(reimbursement).stream()
+                .sorted((comparing(Transaction::getDate).reversed()))
+                .toList();
     }
 
-    public List<Transaction> getTransactionsByLedgerInRangeDate(Ledger ledger, LocalDate startDate,
-                                                                LocalDate endDate){
+    public List<Transaction> getTransactionsByLedgerInRangeDate(Ledger ledger, LocalDate startDate, LocalDate endDate){
         return transactionDAO.getByLedgerId(ledger.getId()).stream()
                 .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
                 .sorted((comparing(Transaction::getDate).reversed()))
                 .toList();
     }
-
-    public List<Transaction> getTransactionsByAccountInRangeDate(Account account, LocalDate startDate,
-                                                                 LocalDate endDate) {
+    public List<Transaction> getTransactionsByAccountInRangeDate(Account account, LocalDate startDate, LocalDate endDate) {
         return transactionDAO.getByAccountId(account.getId()).stream()
                 .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
                 .sorted((comparing(Transaction::getDate).reversed()))
                 .toList();
-
     }
 
     public Income createIncome(Ledger ledger, Account toAccount, LedgerCategory category, String description,
@@ -69,42 +68,30 @@ public class TransactionController {
         if (ledger == null) {
             return null;
         }
-
         if (category == null) {
             return null;
         }
-
         if (category.getType() != CategoryType.INCOME) {
             return null;
         }
-
         if (toAccount == null) {
             return null;
         }
-
         if (!toAccount.getSelectable()) {
             return null;
         }
         if (amount == null) {
             return null;
         }
-
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
 
-        Income incomeTransaction = new Income(
-                date != null ? date : LocalDate.now(),
-                amount,
-                description,
-                toAccount,
-                ledger,
-                category
-        );
+        Income incomeTransaction = new Income(date != null ? date : LocalDate.now(), amount, description, toAccount,
+                ledger, category);
         transactionDAO.insert(incomeTransaction);
         toAccount.credit(amount);
         accountDAO.update(toAccount); //update balance in database
-
         return incomeTransaction;
     }
 
@@ -113,31 +100,27 @@ public class TransactionController {
         if (ledger == null) {
             return null;
         }
-
         if (category == null) {
             return null;
         }
-
         if (category.getType() != CategoryType.EXPENSE) {
             return null;
         }
-
+        if( fromAccount == null) {
+            return null;
+        }
+        if (!fromAccount.getSelectable()) {
+            return null;
+        }
         if (amount == null) {
             return null;
         }
-
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
 
-        Expense expenseTransaction = new Expense(
-                date != null ? date : LocalDate.now(),
-                amount,
-                description,
-                fromAccount,
-                ledger,
-                category
-        );
+        Expense expenseTransaction = new Expense(date != null ? date : LocalDate.now(), amount, description, fromAccount,
+                ledger, category);
         transactionDAO.insert(expenseTransaction);
         fromAccount.debit(amount);
         accountDAO.update(fromAccount); //update balance in database
@@ -168,14 +151,8 @@ public class TransactionController {
             return null;
         }
 
-        Transfer transferTransaction = new Transfer(
-                date != null ? date : LocalDate.now(),
-                description,
-                fromAccount,
-                toAccount,
-                amount,
-                ledger
-        );
+        Transfer transferTransaction = new Transfer(date != null ? date : LocalDate.now(), description, fromAccount,
+                toAccount, amount, ledger);
         transactionDAO.insert(transferTransaction);
 
         if (fromAccount != null) {
@@ -347,15 +324,14 @@ public class TransactionController {
     //date is null meaning no change
     //amount is null meaning no change
     //note is null meaning removal of old note
-    public boolean updateIncome(Income income, Account toAccount, LedgerCategory category, String note,
-                                LocalDate date, BigDecimal amount, Ledger ledger) {
+    public boolean updateIncome(Income income, Account toAccount, LedgerCategory category, String note, LocalDate date,
+                                BigDecimal amount, Ledger ledger) {
         if (income == null) {
             return false;
         }
         if(reimbursementTxLinkDAO.isTransactionReimbursed(income)) {
             return false;
         }
-
         if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
             return false;
         } //change amount and amount>0
@@ -364,42 +340,35 @@ public class TransactionController {
         Account oldToAccount = income.getToAccount();
         LedgerCategory oldCategory = income.getCategory();
         Ledger oldLedger = income.getLedger();
-
         if (ledger != null && ledger.getId() != oldLedger.getId()) {
             income.setLedger(ledger);
         }
-
         if (category != null && category.getId() != oldCategory.getId()) {
             if (category.getType() != CategoryType.INCOME) {
                 return false;
             }
-
             income.setCategory(category);
         }
-
         if (toAccount != null && toAccount.getId() != oldToAccount.getId()) { //change account
             //rollback old account
             oldToAccount.debit(oldAmount);
             accountDAO.update(oldToAccount);
-
             if (!toAccount.getSelectable()) {
                 return false;
             }
-
             //apply new account
             toAccount.credit(amount != null ? amount : oldAmount);
             income.setToAccount(toAccount);
             accountDAO.update(toAccount);
         }
-
         income.setAmount(amount != null ? amount : oldAmount);
         income.setDate(date != null ? date : income.getDate());
         income.setNote(note);
         return transactionDAO.update(income);
     }
 
-    public boolean updateExpense(Expense expense, Account fromAccount, LedgerCategory category, String note,
-                                 LocalDate date, BigDecimal amount, Ledger ledger) {
+    public boolean updateExpense(Expense expense, Account fromAccount, LedgerCategory category, String note, LocalDate date,
+                                 BigDecimal amount, Ledger ledger) {
         if (expense == null) {
             return false;
         }
@@ -409,43 +378,34 @@ public class TransactionController {
         if(installmentPaymentDAO.isInstallmentPaymentTransaction(expense)) {
             return false;
         }
-
         if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
             return false;
         } //change amount and amount>0
-
         BigDecimal oldAmount = expense.getAmount();
         Account oldFromAccount = expense.getFromAccount();
         LedgerCategory oldCategory = expense.getCategory();
         Ledger oldLedger = expense.getLedger();
-
         if (ledger != null && ledger.getId() != oldLedger.getId()) {
             expense.setLedger(ledger);
         }
-
         if (category != null && category.getId() != oldCategory.getId()) {
             if (category.getType() != CategoryType.EXPENSE) {
                 return false;
             }
-
             expense.setCategory(category);
         }
-
         if (fromAccount != null && fromAccount.getId() != oldFromAccount.getId()) { //change account
             //rollback old account
             oldFromAccount.credit(oldAmount);
             accountDAO.update(oldFromAccount);
-
             if (!fromAccount.getSelectable()) {
                 return false;
             }
-
             //apply new account
             fromAccount.debit(amount != null ? amount : oldAmount);
             expense.setFromAccount(fromAccount);
             accountDAO.update(fromAccount);
         }
-
         expense.setAmount(amount != null ? amount : oldAmount);
         expense.setDate(date != null ? date : expense.getDate());
         expense.setNote(note);
@@ -453,8 +413,8 @@ public class TransactionController {
     }
 
     //newFromAccount or newToAccount can be null meaning removal of that account
-    public boolean updateTransfer(Transfer transfer, Account newFromAccount, Account newToAccount,
-                                  String note, LocalDate date, BigDecimal amount, Ledger ledger) {
+    public boolean updateTransfer(Transfer transfer, Account newFromAccount, Account newToAccount, String note,
+                                  LocalDate date, BigDecimal amount, Ledger ledger) {
         if (transfer == null) {
             return false;
         }
@@ -473,11 +433,9 @@ public class TransactionController {
         if(lendingTxLinkDAO.isLendingReceivingTransaction(transfer)) {
             return false;
         }
-
         if( newFromAccount == null && newToAccount == null) {
             return false;
         }
-
         if (newFromAccount != null && newToAccount != null && newFromAccount.getId() == newToAccount.getId()) {
             return false;
         }
@@ -490,12 +448,10 @@ public class TransactionController {
         if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
             return false;
         } //change amount and amount>0
-
         BigDecimal oldAmount = transfer.getAmount();
         Account oldFromAccount = transfer.getFromAccount();
         Account oldToAccount = transfer.getToAccount();
         Ledger oldLedger = transfer.getLedger();
-
         if (ledger != null && ledger.getId() != oldLedger.getId()) {
             transfer.setLedger(ledger);
         } //change ledger
