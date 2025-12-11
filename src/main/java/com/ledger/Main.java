@@ -28,7 +28,7 @@ public class Main {
             LedgerDAO ledgerDAO = new LedgerDAO(connection);
             LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
             TransactionDAO transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
-            InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
+            InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO, accountDAO);
             CategoryDAO categoryDAO = new CategoryDAO(connection);
             BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
             ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
@@ -54,7 +54,7 @@ public class Main {
             //  create CLI layer
             UserCLI userCLI = new UserCLI(userController, reportController);
             AccountCLI accountCLI = new AccountCLI(accountController, userController, reportController, transactionController, ledgerController);
-            LedgerCLI ledgerCLI = new LedgerCLI(userController, reportController, ledgerController, transactionController, ledgerCategoryController);
+            LedgerCLI ledgerCLI = new LedgerCLI(userController, reportController, ledgerController, transactionController, ledgerCategoryController, budgetController);
             TransactionCLI transactionCLI = new TransactionCLI(transactionController, userController, accountController, ledgerController, ledgerCategoryController);
             InstallmentCLI installmentCLI = new InstallmentCLI(installmentController, userController, accountController, ledgerController, ledgerCategoryController, transactionController);
             BudgetCLI budgetCLI = new BudgetCLI(budgetController, reportController, userController, ledgerController, ledgerCategoryController);

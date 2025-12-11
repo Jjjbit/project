@@ -46,7 +46,7 @@ public class ReportControllerTest {
         AccountDAO accountDAO = new AccountDAO(connection);
         LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
         TransactionDAO transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
-        InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
+        InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO, accountDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
         ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);

@@ -1,5 +1,6 @@
 package com.ledger.orm;
 
+import com.ledger.domain.Account;
 import com.ledger.domain.Installment;
 
 import java.sql.*;
@@ -8,8 +9,10 @@ import java.util.List;
 public class InstallmentDAO {
     private final Connection connection;
     private final LedgerCategoryDAO categoryDAO;
+    private final AccountDAO accountDAO;
 
-    public InstallmentDAO(Connection connection, LedgerCategoryDAO categoryDAO) {
+    public InstallmentDAO(Connection connection, LedgerCategoryDAO categoryDAO, AccountDAO accountDAO) {
+        this.accountDAO = accountDAO;
         this.categoryDAO = categoryDAO;
         this.connection = connection;
     }
@@ -84,7 +87,7 @@ public class InstallmentDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public Installment getById(Long id) {
+    public Installment getById(long id) {
         String sql = "SELECT id, linked_account_id, total_amount, plan_remaining_amount, total_periods, " +
                 "paid_periods, interest, strategy, repayment_start_date, name, category_id, included_in_current_debt " +
                 "FROM installment WHERE id = ?";
@@ -104,12 +107,10 @@ public class InstallmentDAO {
                     plan.setName(rs.getString("name"));
                     plan.setIncludedInCurrentDebts(rs.getBoolean("included_in_current_debt"));
                     //set linked account
-                    AccountDAO accountDAO = new AccountDAO(connection);
-                    plan.setLinkedAccount(accountDAO.getAccountById(rs.getLong("linked_account_id")));
+//                    plan.setLinkedAccount(accountDAO.getAccountById(rs.getLong("linked_account_id")));
 
                     //set category
                     plan.setCategory(categoryDAO.getById(rs.getLong("category_id")));
-
                     return plan;
                 }
             }
@@ -120,12 +121,12 @@ public class InstallmentDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<Installment> getByAccountId(Long id) {
+    public List<Installment> getByAccount(Account account) {
         String sql = "SELECT id, linked_account_id, total_amount, plan_remaining_amount, total_periods, " +
                 "paid_periods, interest, strategy, repayment_start_date, name, category_id, included_in_current_debt " +
                 "FROM installment WHERE linked_account_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, id);
+            stmt.setLong(1, account.getId());
             try (ResultSet rs = stmt.executeQuery()) {
                 List<Installment> plans = new java.util.ArrayList<>();
                 while (rs.next()) {
@@ -140,6 +141,8 @@ public class InstallmentDAO {
                     plan.setRepaymentStartDate(rs.getDate("repayment_start_date").toLocalDate());
                     plan.setName(rs.getString("name"));
                     plan.setIncludedInCurrentDebts(rs.getBoolean("included_in_current_debt"));
+                    //set linked account
+                    plan.setLinkedAccount(account);
 
                     plan.setCategory(categoryDAO.getById(rs.getLong("category_id")));
                     plans.add(plan);

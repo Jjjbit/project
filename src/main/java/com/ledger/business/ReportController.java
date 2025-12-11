@@ -87,7 +87,7 @@ public class ReportController {
         BigDecimal totalInstallmentDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
                 .filter(account -> account instanceof CreditAccount)
                 .filter(account -> account.getIncludedInNetAsset() && !account.getHidden())
-                .map(account -> installmentDAO.getByAccountId(account.getId()).stream()
+                .map(account -> installmentDAO.getByAccount(account).stream()
                             .filter(plan -> !plan.isIncludedInCurrentDebts())
                             .map(Installment::getRemainingAmount)
                             .reduce(BigDecimal.ZERO, BigDecimal::add))

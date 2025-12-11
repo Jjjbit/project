@@ -45,7 +45,7 @@ public class AccountControllerTest {
         LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
-        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
+        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO, accountDAO);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
         ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
@@ -590,7 +590,7 @@ public class AccountControllerTest {
 
         //deleted account and installment plan from db
         assertNull(installmentDAO.getById(plan.getId()));
-        assertEquals(0, installmentDAO.getByAccountId(testUser.getId()).size());
+        assertEquals(0, installmentDAO.getByAccount(account).size());
     }
 
     @Test

@@ -26,15 +26,13 @@ public class InstallmentController {
     }
 
     public List<Installment> getActiveInstallments(CreditAccount account) {
-        return installmentDAO.getByAccountId(account.getId()).stream()
+        return installmentDAO.getByAccount(account).stream()
                 .filter(plan -> plan.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0)
                 .toList();
     }
 
-    public Installment createInstallment(CreditAccount creditAccount, String name, BigDecimal totalAmount,
-                                         int totalPeriods, BigDecimal interest, Installment.Strategy strategy,
-                                         LocalDate repaymentStartDate, LedgerCategory category, Boolean includedInCurrentDebts,
-                                         Ledger ledger) {
+    public Installment createInstallment(CreditAccount creditAccount, String name, BigDecimal totalAmount, int totalPeriods, BigDecimal interest, Installment.Strategy strategy,
+                                         LocalDate repaymentStartDate, LedgerCategory category, Boolean includedInCurrentDebts, Ledger ledger) {
         if(creditAccount == null){
             return null;
         }
@@ -59,79 +57,59 @@ public class InstallmentController {
         if(repaymentStartDate == null){
             repaymentStartDate = LocalDate.now();
         }
-
         if(includedInCurrentDebts == null){
             includedInCurrentDebts = true;
         }
-
         int repaidPeriods;
         LocalDate today = LocalDate.now();
         if (repaymentStartDate.isBefore(today)) {
             repaidPeriods = (int) ChronoUnit.MONTHS.between(repaymentStartDate, today); //number of month between dates
-
             int startDay = repaymentStartDate.getDayOfMonth();
             int todayDay = today.getDayOfMonth();
-
             if (todayDay > startDay) {
                 repaidPeriods += 1;
             }
-
             if (repaidPeriods > totalPeriods) {
                 repaidPeriods = totalPeriods;
             }
-
         }else if(repaymentStartDate.isEqual(today)){
             repaidPeriods = 1;
         }else{
             repaidPeriods = 0;
         }
 
-        Installment plan = new Installment(name, totalAmount, totalPeriods,
-                interest != null ? interest : BigDecimal.ZERO,
-                repaidPeriods, strategy, creditAccount,
-                repaymentStartDate, category,
-                includedInCurrentDebts
-        );
+        Installment plan = new Installment(name, totalAmount, totalPeriods, interest != null ? interest : BigDecimal.ZERO, repaidPeriods, strategy, creditAccount,
+                repaymentStartDate, category, includedInCurrentDebts);
         installmentDAO.insert(plan); //insert to db
         if(includedInCurrentDebts){
             BigDecimal oldDebt = creditAccount.getCurrentDebt();
             creditAccount.setCurrentDebt(oldDebt.add(plan.getRemainingAmount()));
             accountDAO.update(creditAccount); //update current debt in db
         }
-
         if(repaidPeriods > 0){
             BigDecimal remainingAmount = plan.getRemainingAmountWithRepaidPeriods();
             BigDecimal repaidAmount = plan.getTotalPayment().subtract(remainingAmount);
-            Expense tx = new Expense(
-                    LocalDate.now(),
-                    repaidAmount,
-                    "Record of already repaid installments for " + name,
-                    creditAccount,
-                    ledger,
-                    category
-            );
+            Expense tx = new Expense(LocalDate.now(), repaidAmount, "Record of already repaid installments for " + name, creditAccount, ledger,
+                    category);
             transactionDAO.insert(tx); //insert transaction to db
             creditAccount.debit(repaidAmount); //reduce balance or increase debt
             accountDAO.update(creditAccount); //update balance and current debt in db
             installmentPaymentDAO.insert(plan, tx); //link transaction and installment plan
         }
-
         return plan;
-
     }
 
     //installment, all linked transactions will be deleted and amounts refunded
-    public boolean deleteInstallment(Installment plan, CreditAccount account) {
+    public boolean deleteInstallment(Installment plan) {
         if (plan == null) {
             return false;
         }
-
+        CreditAccount account = (CreditAccount) plan.getLinkedAccount();
         if(plan.isIncludedInCurrentDebts()){
             BigDecimal oldDebt = account.getCurrentDebt();
             account.setCurrentDebt(oldDebt.subtract(plan.getRemainingAmount()));
             accountDAO.update(account); //update current debt in db
         }
-
 
         List<Transaction> linkedTransactions = installmentPaymentDAO.getTransactionsByInstallment(plan);
         for (Transaction tx : linkedTransactions) {
@@ -143,15 +121,15 @@ public class InstallmentController {
             }
             transactionDAO.delete(tx); //delete linked transactions
         }
-
         return installmentDAO.delete(plan);
     }
 
     //includedInCurrentDebts is null means no change
-    public boolean editInstallment(Installment plan, Boolean includedInCurrentDebts, CreditAccount account) {
+    public boolean editInstallment(Installment plan, Boolean includedInCurrentDebts) {
         if(plan == null){
             return false;
         }
+        CreditAccount account = (CreditAccount) plan.getLinkedAccount();
 
         if(includedInCurrentDebts != null && includedInCurrentDebts != plan.isIncludedInCurrentDebts()) {
             BigDecimal oldDebt = account.getCurrentDebt();
@@ -184,8 +162,7 @@ public class InstallmentController {
         Ledger ledger = category.getLedger();
 
         Expense tx = new Expense(LocalDate.now(), paymentAmount,
-                "Installment payment " + (plan.getPaidPeriods() + 1) + " " + plan.getName(),
-                account, ledger, category);
+                "Installment payment " + (plan.getPaidPeriods() + 1) + " " + plan.getName(), account, ledger, category);
         transactionDAO.insert(tx); //insert transaction to db
         installmentPaymentDAO.insert(plan, tx); //link transaction and installment plan
 
@@ -196,7 +173,6 @@ public class InstallmentController {
             account.setCurrentDebt(oldDebt.subtract(paymentAmount));
         }
         accountDAO.update(account); //update balance and current debt in db
-
         return installmentDAO.update(plan); //update plan in db
     }
 }

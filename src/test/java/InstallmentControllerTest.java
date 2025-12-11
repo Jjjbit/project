@@ -47,7 +47,7 @@ public class InstallmentControllerTest {
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
         LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
         accountDAO = new AccountDAO(connection);
-        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
+        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO, accountDAO);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
@@ -144,8 +144,8 @@ public class InstallmentControllerTest {
         //current debt increased by 126
         assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(135.50))); //20+115.5=135.5
 
-        assertEquals(1, installmentDAO.getByAccountId(account.getId()).size());
-        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).getFirst().getId());
+        assertEquals(1, installmentDAO.getByAccount(account).size());
+        assertEquals(savedPlan.getId(), installmentDAO.getByAccount(account).getFirst().getId());
         assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
         assertEquals(1, transactionDAO.getByCategoryId(category.getId()).size());
         assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
@@ -175,8 +175,8 @@ public class InstallmentControllerTest {
         //current debt remains the same
         assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(20.00)));
 
-        assertEquals(1, installmentDAO.getByAccountId(account.getId()).size());
-        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).getFirst().getId());
+        assertEquals(1, installmentDAO.getByAccount(account).size());
+        assertEquals(savedPlan.getId(), installmentDAO.getByAccount(account).getFirst().getId());
         assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
     }
 
@@ -202,8 +202,8 @@ public class InstallmentControllerTest {
         assertEquals(0, savedPlan.getInterest().compareTo(BigDecimal.valueOf(5.00)));
         assertEquals(Installment.Strategy.EVENLY_SPLIT, savedPlan.getStrategy());
 
-        assertEquals(1, installmentDAO.getByAccountId(account.getId()).size());
-        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).getFirst().getId());
+        assertEquals(1, installmentDAO.getByAccount(account).size());
+        assertEquals(savedPlan.getId(), installmentDAO.getByAccount(account).getFirst().getId());
         assertEquals(1, transactionDAO.getByAccountId(account.getId()).size());
         assertEquals(1, transactionDAO.getByCategoryId(category.getId()).size());
 
@@ -245,8 +245,8 @@ public class InstallmentControllerTest {
         //current debt increased by 126
         assertEquals(0, updatedAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(146.00))); //20+126=146
 
-        assertEquals(1, installmentDAO.getByAccountId(account.getId()).size());
-        assertEquals(savedPlan.getId(), installmentDAO.getByAccountId(account.getId()).getFirst().getId());
+        assertEquals(1, installmentDAO.getByAccount(account).size());
+        assertEquals(savedPlan.getId(), installmentDAO.getByAccount(account).getFirst().getId());
         assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
     }
 
@@ -260,10 +260,10 @@ public class InstallmentControllerTest {
                 LocalDate.now(), //repaid periods =0
                 category, true, testLedger);
 
-        boolean deleted = installmentController.deleteInstallment(plan, account);
+        boolean deleted = installmentController.deleteInstallment(plan);
         assertTrue(deleted);
         assertNull(installmentDAO.getById(plan.getId()));
-        assertEquals(0, installmentDAO.getByAccountId(account.getId()).size());
+        assertEquals(0, installmentDAO.getByAccount(account).size());
     }
 
     @Test
@@ -280,11 +280,11 @@ public class InstallmentControllerTest {
         //remaining amount = 126 - (10.5 * 5) = 73.5
         //repaid amount = 10.5 *5 =52.5
 
-        boolean deleted = installmentController.deleteInstallment(plan, account);
+        boolean deleted = installmentController.deleteInstallment(plan);
         assertTrue(deleted);
 
         assertNull(installmentDAO.getById(plan.getId()));
-        assertEquals(0, installmentDAO.getByAccountId(account.getId()).size());
+        assertEquals(0, installmentDAO.getByAccount(account).size());
         assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
         assertEquals(0, transactionDAO.getByCategoryId(category.getId()).size());
 
@@ -384,7 +384,7 @@ public class InstallmentControllerTest {
         //balance of account =1000-10.5=989.5
         //current debt =20 +115.5=135.5
 
-        boolean edited = installmentController.editInstallment(plan, false, account);
+        boolean edited = installmentController.editInstallment(plan, false);
         assertTrue(edited);
 
         Installment updatedPlan = installmentDAO.getById(plan.getId());
@@ -407,7 +407,7 @@ public class InstallmentControllerTest {
         //balance of account =1000-10.5=989.5
         //current debt =20
 
-        boolean edited = installmentController.editInstallment(plan, true, account);
+        boolean edited = installmentController.editInstallment(plan, true);
         assertTrue(edited);
 
         Installment updatedPlan = installmentDAO.getById(plan.getId());

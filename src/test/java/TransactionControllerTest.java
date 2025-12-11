@@ -59,7 +59,7 @@ public class TransactionControllerTest {
         reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         transactionTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
-        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
+        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO, accountDAO);
         installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
         loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
         borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
@@ -116,6 +116,10 @@ public class TransactionControllerTest {
             throw new RuntimeException("Failed to execute " + filePath, e);
         }
     }
+
+    //test edit transfer of loan
+    //test edit transfer of borrowing
+    //test edit transfer of lending
 
     //test edit income of reimbursement
     @Test

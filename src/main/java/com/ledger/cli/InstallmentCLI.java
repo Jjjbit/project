@@ -194,7 +194,7 @@ public class InstallmentCLI {
         String confirm = scanner.nextLine().trim().toLowerCase();
 
         if (confirm.equals("y") || confirm.equals("yes")) {
-            boolean success= installmentController.deleteInstallment(selectedPlan, creditAccount);
+            boolean success= installmentController.deleteInstallment(selectedPlan);
             if(!success){
                 System.out.println("Deletion failed!");
                 return;
@@ -246,7 +246,7 @@ public class InstallmentCLI {
             includeInCurrentDebt = !selectedPlan.isIncludedInCurrentDebts();
         }
 
-        boolean success= installmentController.editInstallment(selectedPlan, includeInCurrentDebt, creditAccount);
+        boolean success= installmentController.editInstallment(selectedPlan, includeInCurrentDebt);
         if(!success) {
             System.out.println("Edit failed!");
             return;
@@ -418,6 +418,10 @@ public class InstallmentCLI {
                 .filter(cat -> cat.getType() == CategoryType.EXPENSE)
                 .filter(cat -> cat.getParent() == null)
                 .toList();
+        if (parentCategories.isEmpty()) {
+            System.out.println("No expense categories found in the selected ledger. Please create an expense category first.");
+            return null;
+        }
 
         // display parent categories
         for (int i = 0; i < parentCategories.size(); i++) {
@@ -452,7 +456,7 @@ public class InstallmentCLI {
 
             LedgerCategory parentCategory = parentCategories.get(parentIndex);
             List<LedgerCategory> subCategories = categories.stream()
-                    .filter(cat -> parentCategory.getId() == cat.getParent().getId())
+                    .filter(cat -> cat.getParent() != null &&  cat.getParent().getId() == parentCategory.getId())
                     .toList();
             if (childIndex < 0 || childIndex >= subCategories.size()) {
                 System.out.println("Invalid subcategory choice!");
@@ -473,7 +477,7 @@ public class InstallmentCLI {
 
     private String formatInstallment(Installment plan) {
         return String.format(
-                "Total to pay: %s | Paid amount: %s |Periods: %d/%d | Next month: %s | Remaining: %s | include in current debt: %s | Strategy: %s",
+                "Total to pay: %s | Paid amount: %s |Periods: %d/%d | Next month: %s | Remaining: %s | include in current debt: %s | Strategy: %s | Category: %s",
                 plan.getTotalPayment(),
                 plan.getTotalPayment().subtract(plan.getRemainingAmount()).setScale(2, RoundingMode.HALF_UP),
                 plan.getPaidPeriods(),
@@ -481,7 +485,8 @@ public class InstallmentCLI {
                 plan.getMonthlyPayment(plan.getPaidPeriods() + 1),
                 plan.getRemainingAmount(),
                 plan.isIncludedInCurrentDebts() ? "Yes" : "No",
-                formatStrategy(plan.getStrategy())
+                formatStrategy(plan.getStrategy()),
+                plan.getCategory().getName()
         );
     }
 
