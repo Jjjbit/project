@@ -51,7 +51,7 @@ public class InstallmentControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
-        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
+        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
         InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
         LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
         BorrowingTxLinkDAO borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);

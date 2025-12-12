@@ -58,7 +58,7 @@ public class TransactionControllerTest {
         BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
         reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         transactionTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
-        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
+        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
         installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
         loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);

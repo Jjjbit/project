@@ -47,7 +47,7 @@ public class LedgerCategoryControllerTest {
         budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
         ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
-        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
+        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
         InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
         LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
@@ -728,17 +728,17 @@ public class LedgerCategoryControllerTest {
     @Test
     public void testLedgerCategoryTreeStructure() {
         List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(testLedger);
-        assertEquals(18, categories.size());
+        assertEquals(17, categories.size());
 
         List<LedgerCategory> rootCategories = categories.stream()
                 .filter(c -> c.getParent() == null)
                 .toList();
-        assertEquals(13, rootCategories.size());
+        assertEquals(12, rootCategories.size());
 
         List<LedgerCategory> incomeRootCategories = rootCategories.stream()
                 .filter(c -> c.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(4, incomeRootCategories.size());
+        assertEquals(3, incomeRootCategories.size());
 
         List<LedgerCategory> expenseRootCategories = rootCategories.stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
