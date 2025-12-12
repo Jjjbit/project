@@ -99,7 +99,7 @@ public class InstallmentController {
         return plan;
     }
 
-    //installment, all linked transactions will be deleted and amounts refunded
+    //installment, all linked transactions will be deleted and money refunded to fromAccounts
     public boolean deleteInstallment(Installment plan) {
         if (plan == null) {
             return false;

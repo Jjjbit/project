@@ -30,14 +30,12 @@ public class LedgerCategoryController {
         if(ledger == null){
             return null;
         }
-
         if(name == null || name.isEmpty()) {
             return null;
         }
         if(type == null){
             return null;
         }
-
         if(ledgerCategoryDAO.getByNameAndLedger(name, ledger) != null) {
             return null;
         }
@@ -49,7 +47,6 @@ public class LedgerCategoryController {
             Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
             budgetDAO.insert(budget);
         }
-
         return category;
     }
 
@@ -76,7 +73,6 @@ public class LedgerCategoryController {
             Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
             budgetDAO.insert(budget);
         }
-
         return category;
     }
 
@@ -87,7 +83,6 @@ public class LedgerCategoryController {
         if (subCategory.getParent() == null) {
             return false;
         }
-
         subCategory.setParent(null);
         return ledgerCategoryDAO.update(subCategory); //update parent_id in database
     }
@@ -114,7 +109,6 @@ public class LedgerCategoryController {
         if (category.getType() != newParent.getType()) {
             return false;
         }
-
         category.setParent(newParent);
         return ledgerCategoryDAO.update(category); //update parent_id in database
     }
@@ -134,7 +128,6 @@ public class LedgerCategoryController {
         if(existingCategory != null && existingCategory.getId() != category.getId()) {
             return false;
         }
-
         category.setName(newName);
         return ledgerCategoryDAO.update(category);
     }
@@ -146,7 +139,6 @@ public class LedgerCategoryController {
         if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId()).isEmpty()){
             return false;
         }
-
         List<Transaction> txs = transactionDAO.getByCategoryId(category.getId()); //get transactions from db
 
         if(deleteTransaction){//delete transactions
@@ -168,7 +160,6 @@ public class LedgerCategoryController {
                 transactionDAO.update(tx);
             }
         }
-
         return ledgerCategoryDAO.delete(category);
     }
 
@@ -193,7 +184,6 @@ public class LedgerCategoryController {
         } else {
             return false; //cannot set parent to null with this method
         }
-
         category.setParent(newParent);
         return ledgerCategoryDAO.update(category);
     }

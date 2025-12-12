@@ -20,16 +20,12 @@ public class LendingTxLinkDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean insert(Account account, Transaction tx) {
-        String sql = "INSERT INTO lending_tx_link (account_id, transaction_id) " +
-                "VALUES (?, ?)";
-
+        String sql = "INSERT INTO lending_tx_link (account_id, transaction_id) VALUES (?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, account.getId());
             stmt.setLong(2, tx.getId());
-
             int affected = stmt.executeUpdate();
             return affected > 0;
-
         } catch (SQLException e) {
             System.err.println("SQL Exception during lending receiving insert: " + e.getMessage());
         }
@@ -39,10 +35,8 @@ public class LendingTxLinkDAO {
     @SuppressWarnings("SqlResolve")
     public boolean isLendingReceivingTransaction(Transaction transaction) {
         String sql = "SELECT 1 FROM lending_tx_link WHERE transaction_id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, transaction.getId());
-
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next();
             }
@@ -55,11 +49,9 @@ public class LendingTxLinkDAO {
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getTransactionByLending(Account account) {
         List<Transaction> transactions = new ArrayList<>();
-
         String sql = "SELECT * FROM lending_tx_link WHERE account_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, account.getId());
-
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     long transactionId = rs.getLong("transaction_id");

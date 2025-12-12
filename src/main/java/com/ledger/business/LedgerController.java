@@ -30,34 +30,27 @@ public class LedgerController {
     }
 
     public Ledger createLedger(String name, User owner) {
-
         if(name == null || name.isEmpty()) {
             return null;
         }
         if(owner == null){
             return null;
         }
-
         if (ledgerDAO.getByNameAndOwnerId(name, owner.getId()) != null) {
             return null;
         }
-
         Ledger ledger = new Ledger(name, owner);
         ledgerDAO.insert(ledger); //insert to db
-
         List<Category> templateCategories = new ArrayList<>(categoryDAO.getCategoriesNullParent()); //get only parents
-
         List<LedgerCategory> allCategories = new ArrayList<>();
         for (Category template : templateCategories) {
             allCategories.addAll(copyCategoryTree(template, ledger));
         }
-
         //create Budget for ledger level for each Period
         for (Budget.Period period : Budget.Period.values()) {
             Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, ledger);
             budgetDAO.insert(ledgerBudget);
         }
-
         //create Budget for each default category
         for (LedgerCategory cat : allCategories) {
             if (cat.getType() == CategoryType.EXPENSE) {
@@ -67,7 +60,6 @@ public class LedgerController {
                 }
             }
         }
-
         return ledger;
     }
 
@@ -89,7 +81,6 @@ public class LedgerController {
             }
             result.addAll(childCopies);
         }
-
         return result;
     }
 
@@ -129,7 +120,6 @@ public class LedgerController {
                     break;
             }
         }
-
         return ledgerDAO.delete(ledger);
     }
 
@@ -137,13 +127,11 @@ public class LedgerController {
         if(original == null){
             return null;
         }
-
         String newName = original.getName() + " Copy";
         Ledger copy = new Ledger(newName, user);
         ledgerDAO.insert(copy); // insert to db
 
         List<LedgerCategory> parents = new ArrayList<>(ledgerCategoryDAO.getCategoriesNullParent(original.getId()));
-
         List<LedgerCategory> categoryCopies = new ArrayList<>();
         for (LedgerCategory originalCat : parents) {
             categoryCopies.addAll(copyLedgerCategoryTree(originalCat, copy));
@@ -164,7 +152,6 @@ public class LedgerController {
                 }
             }
         }
-
         return copy;
     }
 
@@ -186,9 +173,7 @@ public class LedgerController {
             }
             result.addAll(childCategories);
         }
-
         return result;
-
     }
 
     public boolean renameLedger(Ledger ledger, String newName, User user) {
@@ -198,12 +183,10 @@ public class LedgerController {
         if(newName == null || newName.isEmpty()) {
             return false;
         }
-
         Ledger existingLedger = ledgerDAO.getByNameAndOwnerId(newName, user.getId());
         if (existingLedger != null && existingLedger.getId() != ledger.getId()) {
             return false;
         }
-
         ledger.setName(newName);
         return ledgerDAO.update(ledger);
     }

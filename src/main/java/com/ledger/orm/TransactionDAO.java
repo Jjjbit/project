@@ -23,52 +23,37 @@ public class TransactionDAO {
 
     @SuppressWarnings("SqlResolve")
     public <T extends Transaction> boolean insert(T transaction) {
-        // insert into transactions table
-        String transactionSql = "INSERT INTO transactions (transaction_date, amount, note, from_account_id," +
-                " to_account_id, ledger_id, category_id, dtype) " +
+        String transactionSql = "INSERT INTO transactions (transaction_date, amount, note, from_account_id, to_account_id, ledger_id, category_id, dtype) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
         try (PreparedStatement stmt = connection.prepareStatement(transactionSql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setObject(1, transaction.getDate());
             stmt.setBigDecimal(2, transaction.getAmount());
             stmt.setString(3, transaction.getNote());
-
-            // insert fromAccount id
             if (transaction.getFromAccount() != null) {
                 stmt.setLong(4, transaction.getFromAccount().getId());
             } else {
                 stmt.setNull(4, Types.BIGINT);
             }
-
-            //insert toAccount id
             if (transaction.getToAccount() != null) {
                 stmt.setLong(5, transaction.getToAccount().getId());
             } else {
                 stmt.setNull(5, Types.BIGINT);
             }
-
-            // insert ledger id
             if (transaction.getLedger() != null) {
                 stmt.setLong(6, transaction.getLedger().getId());
             } else {
                 stmt.setNull(6, Types.BIGINT);
             }
-
-            // insert category id
             if (transaction.getCategory() != null) {
                 stmt.setLong(7, transaction.getCategory().getId());
             } else {
                 stmt.setNull(7, Types.BIGINT);
             }
-
             stmt.setString(8, transaction.getType().name());
-
             int affectedRows = stmt.executeUpdate();
             if (affectedRows == 0) {
                 return false;
             }
-
-            // get generated transaction ID
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
                     transaction.setId(rs.getLong(1));
@@ -96,48 +81,39 @@ public class TransactionDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean update(Transaction transaction) {
-        String sql = "UPDATE transactions SET transaction_date = ?, amount = ?, note = ?, from_account_id = ?, " +
-                "to_account_id = ?, ledger_id = ?, category_id = ?, dtype = ?  " +
+        String sql = "UPDATE transactions SET transaction_date = ?, amount = ?, note = ?, from_account_id = ?, to_account_id = ?, ledger_id = ?, category_id = ?, dtype = ?  " +
                 "WHERE id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setObject(1, transaction.getDate());
             stmt.setBigDecimal(2, transaction.getAmount());
             stmt.setString(3, transaction.getNote());
-
             // update fromAccount id
             if (transaction.getFromAccount() != null) {
                 stmt.setLong(4, transaction.getFromAccount().getId());
             } else {
                 stmt.setNull(4, Types.BIGINT);
             }
-
             // update toAccount id
             if (transaction.getToAccount() != null) {
                 stmt.setLong(5, transaction.getToAccount().getId());
             } else {
                 stmt.setNull(5, Types.BIGINT);
             }
-
             // update ledger id
             if (transaction.getLedger() != null) {
                 stmt.setLong(6, transaction.getLedger().getId());
             } else {
                 stmt.setNull(6, Types.BIGINT);
             }
-
             // update category id
             if (transaction.getCategory() != null) {
                 stmt.setLong(7, transaction.getCategory().getId());
             } else {
                 stmt.setNull(7, Types.BIGINT);
             }
-
             //update type
             stmt.setString(8, transaction.getType().name());
-
             stmt.setLong(9, transaction.getId());
-
             return stmt.executeUpdate() > 0;
         }catch (SQLException e){
             System.err.println("SQL Exception during transaction update: " + e.getMessage());
@@ -146,7 +122,7 @@ public class TransactionDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public Transaction getById(Long id) {
+    public Transaction getById(long id) {
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
                 "ta.id as to_account_id, ta.name as to_account_name, " +
@@ -161,7 +137,6 @@ public class TransactionDAO {
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, id);
-
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return mapResultSetToTransaction(rs);
@@ -174,7 +149,7 @@ public class TransactionDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<Transaction> getByLedgerId(Long ledgerId) {
+    public List<Transaction> getByLedgerId(long ledgerId) {
         List<Transaction> transactions = new ArrayList<>();
 
         String sql = "SELECT t.*, " +
@@ -192,7 +167,6 @@ public class TransactionDAO {
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, ledgerId);
-
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     transactions.add(mapResultSetToTransaction(rs));
@@ -205,7 +179,7 @@ public class TransactionDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<Transaction> getByCategoryId(Long categoryId) {
+    public List<Transaction> getByCategoryId(long categoryId) {
         List<Transaction> transactions = new ArrayList<>();
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
@@ -234,9 +208,8 @@ public class TransactionDAO {
         return transactions;
     }
 
-
     @SuppressWarnings("SqlResolve")
-    public List<Transaction> getByAccountId(Long accountId) {
+    public List<Transaction> getByAccountId(long accountId) {
         List<Transaction> transactions = new ArrayList<>();
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
@@ -266,11 +239,9 @@ public class TransactionDAO {
         return transactions;
     }
 
-    // set account, category objects
     private Transaction mapResultSetToTransaction(ResultSet rs) throws SQLException {
         Transaction transaction;
         String dtype = rs.getString("dtype").toUpperCase();
-
         // based on dtype, create appropriate subclass instance
         switch (dtype) {
             case "TRANSFER":
@@ -286,14 +257,12 @@ public class TransactionDAO {
                 System.err.println("Unknown transaction type: " + dtype);
                 return null;
         }
-
         // set common fields
         transaction.setId(rs.getLong("id"));
         transaction.setDate(rs.getObject("transaction_date", LocalDate.class));
         transaction.setAmount(rs.getBigDecimal("amount"));
         transaction.setNote(rs.getString("note"));
         transaction.setType(TransactionType.valueOf(rs.getString("dtype")));
-
         //set fromAccount
         if( rs.getLong("from_account_id") != 0) {
             transaction.setFromAccount(accountDAO.getAccountById(rs.getLong("from_account_id")));
@@ -302,7 +271,6 @@ public class TransactionDAO {
         if( rs.getLong("to_account_id") != 0) {
             transaction.setToAccount(accountDAO.getAccountById(rs.getLong("to_account_id")));
         }
-
         //set ledger
         if( rs.getLong("ledger_id") != 0) {
             transaction.setLedger(ledgerDAO.getById(rs.getLong("ledger_id")));

@@ -185,6 +185,9 @@ public class AccountCLI {
             String balanceInput = scanner.nextLine().trim();
             if (!balanceInput.isEmpty()) {
                 newBalance = new BigDecimal(balanceInput);
+                if( newBalance.compareTo(BigDecimal.ZERO) < 0) {
+                    newBalance = null;
+                }
             }
         }
 
@@ -223,7 +226,7 @@ public class AccountCLI {
                 System.out.print(". Enter new credit limit (or press Enter to skip): ");
                 String inputCreditLimit = scanner.nextLine().trim();
                 BigDecimal newCreditLimit = inputCreditLimit.isEmpty() ? null : new BigDecimal(inputCreditLimit);
-                if (newCreditLimit != null && newCreditLimit.compareTo(BigDecimal.ZERO) < 0) newCreditLimit = null;
+                if (newCreditLimit != null && newCreditLimit.compareTo(BigDecimal.ZERO) <= 0) newCreditLimit = null;
 
                 System.out.print("Current debt: " + credit.getCurrentDebt());
                 System.out.print(". Enter new current debt (or press Enter to skip): ");

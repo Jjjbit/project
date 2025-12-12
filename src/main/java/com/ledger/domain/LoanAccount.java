@@ -101,6 +101,7 @@ public class LoanAccount extends Account {
     @Override
     public void credit(BigDecimal amount) {
         this.remainingAmount = this.remainingAmount.subtract(amount).setScale(2, RoundingMode.HALF_UP);
+        checkAndUpdateStatus();
     }
 
     public int getTotalPeriods(){return this.totalPeriods;}
@@ -120,9 +121,6 @@ public class LoanAccount extends Account {
     }
 
     public BigDecimal calculateRemainingAmount() {
-        if (loanAmount == null || totalPeriods == 0) {
-            return BigDecimal.ZERO;
-        }
         BigDecimal total = BigDecimal.ZERO;
         for (int i = repaidPeriods + 1; i <= totalPeriods; i++) {
             total = total.add(getMonthlyRepayment(i));

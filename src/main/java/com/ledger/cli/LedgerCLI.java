@@ -14,11 +14,14 @@ public class LedgerCLI {
     private final LedgerController ledgerController;
     private final TransactionController transactionController;
     private final LedgerCategoryController ledgerCategoryController;
+    private final BudgetController budgetController;
     private final Scanner scanner = new Scanner(System.in);
 
     public LedgerCLI(UserController userController, ReportController reportController,
                      LedgerController ledgerController, TransactionController transactionController,
-                     LedgerCategoryController ledgerCategoryController) {
+                     LedgerCategoryController ledgerCategoryController,
+                     BudgetController budgetController) {
+        this.budgetController = budgetController;
         this.ledgerCategoryController = ledgerCategoryController;
         this.transactionController = transactionController;
         this.userController = userController;
@@ -93,6 +96,13 @@ public class LedgerCLI {
             endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
         }
 
+        //get budget
+        Budget budget;
+        if(summaryType.equals("y") || summaryType.equals("yearly")){
+            budget = budgetController.getActiveBudgetByLedger(selectedLedger, Budget.Period.YEARLY);
+        } else {
+            budget = budgetController.getActiveBudgetByLedger(selectedLedger, Budget.Period.MONTHLY);
+        }
 
         BigDecimal totalIncome = reportController.getTotalIncomeByLedger(selectedLedger, startDate, endDate);
         BigDecimal totalExpense = reportController.getTotalExpenseByLedger(selectedLedger, startDate, endDate);
@@ -101,7 +111,8 @@ public class LedgerCLI {
         System.out.println("Ledger Name: " + selectedLedger.getName() + ", from " + startDate + " to " + endDate);
         System.out.print("Total Income: " + totalIncome
                 + ", Total Expense: " + totalExpense
-                + ", Remaining Amount: " + restAmount);
+                + ", Remaining Amount: " + restAmount
+                + (reportController.isOverBudget(budget) ? ", [OVER BUDGET]" : ", (within budget)"));
 
         //show transaction
         List<Transaction> transactions = transactionController.getTransactionsByLedgerInRangeDate(

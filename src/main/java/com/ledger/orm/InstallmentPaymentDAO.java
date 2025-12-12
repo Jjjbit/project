@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class InstallmentPaymentDAO {
@@ -22,16 +23,12 @@ public class InstallmentPaymentDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean insert(Installment plan, Transaction tx) {
-        String sql = "INSERT INTO installment_payments (installment_id, transaction_id) " +
-                "VALUES (?, ?)";
-
+        String sql = "INSERT INTO installment_payments (installment_id, transaction_id) VALUES (?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, plan.getId());
             stmt.setLong(2, tx.getId());
-
             int affected = stmt.executeUpdate();
             return affected > 0;
-
         } catch (SQLException e) {
             System.err.println("SQL Exception during installment payment insert: " + e.getMessage());
         }
@@ -41,10 +38,8 @@ public class InstallmentPaymentDAO {
     @SuppressWarnings("SqlResolve")
     public boolean isInstallmentPaymentTransaction(Transaction transaction) {
         String sql = "SELECT 1 FROM installment_payments WHERE transaction_id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, transaction.getId());
-
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next();
             }
@@ -56,12 +51,10 @@ public class InstallmentPaymentDAO {
 
     @SuppressWarnings("SqlResolve")
     public Installment getInstallmentByTransaction(Transaction transaction) {
-        String sql = "SELECT installment_id FROM installment_payments " +
-                "WHERE transaction_id = ?";
+        String sql = "SELECT installment_id FROM installment_payments WHERE transaction_id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, transaction.getId());
-
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     long installmentId = rs.getLong("installment_id");
@@ -76,13 +69,10 @@ public class InstallmentPaymentDAO {
 
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getTransactionsByInstallment(Installment installment) {
-        List<Transaction> transactions = new java.util.ArrayList<>();
-
+        List<Transaction> transactions = new ArrayList<>();
         String sql = "SELECT * FROM installment_payments WHERE installment_id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, installment.getId());
-
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Transaction transaction = transactionDAO.getById(rs.getLong("transaction_id"));

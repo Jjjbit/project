@@ -18,9 +18,8 @@ public class LedgerCategoryDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public LedgerCategory getById(Long id) {
+    public LedgerCategory getById(long id) {
         String sql = "SELECT id, name, type, ledger_id FROM ledger_categories WHERE id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, id);
             try(ResultSet rs = stmt.executeQuery()) {
@@ -29,9 +28,7 @@ public class LedgerCategoryDAO {
                     category.setId(rs.getLong("id"));
                     category.setName(rs.getString("name"));
                     category.setType(CategoryType.valueOf(rs.getString("type")));
-
-                    Ledger ledger = ledgerDAO.getById(rs.getLong("ledger_id"));
-                    category.setLedger(ledger);
+                    category.setLedger(ledgerDAO.getById(rs.getLong("ledger_id")));
                     return category;
                 }
             }
@@ -71,16 +68,15 @@ public class LedgerCategoryDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean update(LedgerCategory category) {
-        String sql = "UPDATE ledger_categories SET name = ?, type = ?, parent_id = ? WHERE id = ?";
+        String sql = "UPDATE ledger_categories SET name = ?, parent_id = ? WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, category.getName());
-            stmt.setString(2, category.getType().name());
             if (category.getParent() != null) {
-                stmt.setLong(3, category.getParent().getId());
+                stmt.setLong(2, category.getParent().getId());
             } else {
-                stmt.setNull(3, Types.BIGINT);
+                stmt.setNull(2, Types.BIGINT);
             }
-            stmt.setLong(4, category.getId());
+            stmt.setLong(3, category.getId());
             return stmt.executeUpdate() > 0;
         }catch (SQLException e){
             System.err.println("SQL Exception during update: " + e.getMessage());
@@ -88,21 +84,16 @@ public class LedgerCategoryDAO {
         }
     }
 
-    //set parent and children
-    public List<LedgerCategory> getTreeByLedgerId(Long ledgerId) {
+    public List<LedgerCategory> getTreeByLedgerId(long ledgerId) {
         List<LedgerCategory> categoriesNullParent = getCategoriesNullParent(ledgerId);
         return buildCategoryTree(categoriesNullParent);
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<LedgerCategory> getCategoriesNullParent(Long ledgerId) {
+    public List<LedgerCategory> getCategoriesNullParent(long ledgerId) {
         List<LedgerCategory> categories = new ArrayList<>();
-
-        String sql = "SELECT id, name, parent_id, type, ledger_id " +
-                "FROM ledger_categories " +
-                "WHERE parent_id IS NULL AND ledger_id = ? " +
+        String sql = "SELECT id, name, parent_id, type, ledger_id FROM ledger_categories WHERE parent_id IS NULL AND ledger_id = ? " +
                 "ORDER BY id";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, ledgerId);
             try(ResultSet rs = stmt.executeQuery()) {
@@ -112,25 +103,20 @@ public class LedgerCategoryDAO {
                     category.setName(rs.getString("name"));
                     category.setType(CategoryType.valueOf(rs.getString("type")));
                     category.setParent(null);
-
-                    LedgerDAO ledgerDAO = new LedgerDAO(connection);
-                    Ledger ledger = ledgerDAO.getById(rs.getLong("ledger_id"));
-                    category.setLedger(ledger);
+                    category.setLedger(ledgerDAO.getById(rs.getLong("ledger_id")));
                     categories.add(category);
                 }
             }
         } catch (SQLException e){
             System.err.println("SQL Exception during getCategoriesNullParent: " + e.getMessage());
         }
-
         return categories;
     }
+
     @SuppressWarnings("SqlResolve")
-    public List<LedgerCategory> getCategoriesByParentId(Long parentId) {
+    public List<LedgerCategory> getCategoriesByParentId(long parentId) {
         List<LedgerCategory> categories = new ArrayList<>();
-
         String sql = "SELECT id, name, parent_id, type, ledger_id FROM ledger_categories WHERE parent_id = ? ORDER BY id";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, parentId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -139,11 +125,7 @@ public class LedgerCategoryDAO {
                     category.setId(rs.getLong("id"));
                     category.setName(rs.getString("name"));
                     category.setType(CategoryType.valueOf(rs.getString("type")));
-
-                    LedgerDAO ledgerDAO = new LedgerDAO(connection);
-                    Ledger ledger = ledgerDAO.getById(rs.getLong("ledger_id"));
-                    category.setLedger(ledger);
-
+                    category.setLedger( ledgerDAO.getById(rs.getLong("ledger_id")));
                     categories.add(category);
                 }
             }
@@ -165,7 +147,6 @@ public class LedgerCategoryDAO {
                 allCategories.add(child);
             }
         }
-
         return allCategories;
     }
 

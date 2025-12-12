@@ -16,16 +16,14 @@ public class LedgerDAO {
     @SuppressWarnings("SqlResolve")
     public boolean insert(Ledger ledger) {
         String sql = "INSERT INTO ledgers (user_id, name) VALUES (?, ?)";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setLong(1, ledger.getOwner().getId());
             stmt.setString(2, ledger.getName());
-
             int affected = stmt.executeUpdate();
             if (affected > 0) {
-                try (ResultSet keys = stmt.getGeneratedKeys()) {
-                    if (keys.next()) {
-                        ledger.setId(keys.getLong(1));
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        ledger.setId(rs.getLong(1));
                         return true;
                     }
                 }
@@ -49,7 +47,6 @@ public class LedgerDAO {
         return false;
     }
 
-
     @SuppressWarnings("SqlResolve")
     public boolean update(Ledger ledger) {
         String sql = "UPDATE ledgers SET name = ? WHERE id = ?";
@@ -64,7 +61,7 @@ public class LedgerDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public Ledger getById(Long id) {
+    public Ledger getById(long id) {
         String sql = "SELECT id, name, user_id FROM ledgers WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, id);
@@ -83,7 +80,7 @@ public class LedgerDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public Ledger getByNameAndOwnerId(String name, Long ownerId){
+    public Ledger getByNameAndOwnerId(String name, long ownerId){
         String sql = "SELECT id, name FROM ledgers WHERE name = ? AND user_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, name);
@@ -95,19 +92,16 @@ public class LedgerDAO {
                 ledger.setName(rs.getString("name"));
                 return ledger;
             }
-
         }catch (SQLException e){
             System.err.println("SQL Exception during getByNameAndOwnerId: " + e.getMessage());
         }
         return null;
     }
 
-
     @SuppressWarnings("SqlResolve")
-    public List<Ledger> getLedgersByUserId(Long userId) {
+    public List<Ledger> getLedgersByUserId(long userId) {
         List<Ledger> ledgers = new ArrayList<>();
         String sql = "SELECT * FROM ledgers WHERE user_id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, userId);
             try(ResultSet rs = stmt.executeQuery()) {
@@ -118,11 +112,9 @@ public class LedgerDAO {
                     ledgers.add(ledger);
                 }
             }
-
         }catch (SQLException e){
             System.err.println("SQL Exception during getLedgersByUserId: " + e.getMessage());
         }
         return ledgers;
     }
-
 }

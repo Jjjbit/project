@@ -12,7 +12,6 @@ public class ConnectionManager {
 
     public static Connection getConnection()  {
         boolean shouldReconnect = false;
-
         if (connection == null) { //does not exist yet connection
             shouldReconnect = true;
         } else { //exists connection
@@ -26,7 +25,6 @@ public class ConnectionManager {
                 shouldReconnect = true;
             }
         }
-
         if (shouldReconnect) {
             try {
                 // try to establish a new connection
@@ -35,7 +33,6 @@ public class ConnectionManager {
                 System.err.println("Error connecting to database: " + e.getMessage());
             }
         }
-
         return connection;
     }
 

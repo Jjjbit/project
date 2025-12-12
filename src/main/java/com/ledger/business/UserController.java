@@ -31,8 +31,6 @@ public class UserController {
         if(password.length() < 6) {
             return false;
         }
-
-
         if (userDAO.getUserByUsername(username) == null) {
             User user = new User(username, PasswordUtils.hash(password));
             return userDAO.register(user);
@@ -47,7 +45,6 @@ public class UserController {
         if(newUsername.isEmpty()) {
             return false;
         }
-
         if (userDAO.getUserByUsername(newUsername) != null) {
             return currentUser.getUsername().equals(newUsername);
         }

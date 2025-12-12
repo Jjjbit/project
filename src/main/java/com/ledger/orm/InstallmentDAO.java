@@ -4,6 +4,7 @@ import com.ledger.domain.Account;
 import com.ledger.domain.Installment;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class InstallmentDAO {
@@ -17,10 +18,9 @@ public class InstallmentDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean insert(Installment plan) {
-        String sql = "INSERT INTO installment (linked_account_id, total_amount, plan_remaining_amount," +
-                " total_periods, paid_periods, interest, strategy, repayment_start_date, name, category_id, included_in_current_debt) " +
+        String sql = "INSERT INTO installment (linked_account_id, total_amount, plan_remaining_amount, total_periods, paid_periods, interest, " +
+                "strategy, repayment_start_date, name, category_id, included_in_current_debt) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setLong(1, plan.getLinkedAccount().getId());
             stmt.setBigDecimal(2, plan.getTotalAmount());
@@ -62,8 +62,7 @@ public class InstallmentDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean update(Installment plan) {
-        String sql = "UPDATE installment SET " +
-                "total_amount = ?, plan_remaining_amount = ?, total_periods = ?, paid_periods = ?, " +
+        String sql = "UPDATE installment SET total_amount = ?, plan_remaining_amount = ?, total_periods = ?, paid_periods = ?, " +
                 "interest = ?, strategy = ?, repayment_start_date = ?, name = ? , included_in_current_debt = ? " +
                 "WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -104,10 +103,6 @@ public class InstallmentDAO {
                     plan.setRepaymentStartDate(rs.getDate("repayment_start_date").toLocalDate());
                     plan.setName(rs.getString("name"));
                     plan.setIncludedInCurrentDebts(rs.getBoolean("included_in_current_debt"));
-                    //set linked account
-//                    plan.setLinkedAccount(accountDAO.getAccountById(rs.getLong("linked_account_id")));
-
-                    //set category
                     plan.setCategory(categoryDAO.getById(rs.getLong("category_id")));
                     return plan;
                 }
@@ -120,13 +115,13 @@ public class InstallmentDAO {
 
     @SuppressWarnings("SqlResolve")
     public List<Installment> getByAccount(Account account) {
+        List<Installment> plans = new ArrayList<>();
         String sql = "SELECT id, linked_account_id, total_amount, plan_remaining_amount, total_periods, " +
                 "paid_periods, interest, strategy, repayment_start_date, name, category_id, included_in_current_debt " +
                 "FROM installment WHERE linked_account_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, account.getId());
             try (ResultSet rs = stmt.executeQuery()) {
-                List<Installment> plans = new java.util.ArrayList<>();
                 while (rs.next()) {
                     Installment plan = new Installment();
                     plan.setId(rs.getLong("id"));
@@ -139,18 +134,15 @@ public class InstallmentDAO {
                     plan.setRepaymentStartDate(rs.getDate("repayment_start_date").toLocalDate());
                     plan.setName(rs.getString("name"));
                     plan.setIncludedInCurrentDebts(rs.getBoolean("included_in_current_debt"));
-                    //set linked account
                     plan.setLinkedAccount(account);
-
                     plan.setCategory(categoryDAO.getById(rs.getLong("category_id")));
                     plans.add(plan);
                 }
-                return plans;
             }
         }catch (SQLException e){
             System.err.println("SQL Exception during installment getByAccountId: " + e.getMessage());
         }
-        return null;
+        return plans;
     }
 
 }

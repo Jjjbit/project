@@ -186,7 +186,7 @@ public class Installment {
         remainingAmount = remainingAmount.subtract(monthlyPayment).setScale(2, RoundingMode.HALF_UP);
         paidPeriods++;
     }
-    public BigDecimal getRemainingAmountWithRepaidPeriods() {//dipende da paidPeriods
+    public BigDecimal getRemainingAmountWithRepaidPeriods() {
         BigDecimal total = BigDecimal.ZERO;
         for (int i = paidPeriods + 1; i <= totalPeriods; i++) {
             total = total.add(getMonthlyPayment(i));

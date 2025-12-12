@@ -83,7 +83,7 @@ public class Budget {
         return endDate;
     }
 
-    public void refreshIfExpired() { //updates start and end date if budget period has passed
+    public void refreshIfExpired() {
         LocalDate today = LocalDate.now();
         if (today.isAfter(endDate)) {
             amount = BigDecimal.ZERO; //reset amount
