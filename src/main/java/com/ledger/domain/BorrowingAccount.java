@@ -49,6 +49,7 @@ public class BorrowingAccount extends Account{
     @Override
     public void credit(BigDecimal amount) {
         this.remainingAmount = this.remainingAmount.subtract(amount).setScale(2, RoundingMode.HALF_UP);
+        checkAndUpdateStatus();
     }
 
     @Override
