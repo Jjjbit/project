@@ -23,13 +23,11 @@ public class ReimbursementTxLinkDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean insert(long reimbursementId, long transactionId) {
-        String sql = "INSERT INTO reimbursement_tx_link (reimbursement_plan_id, reimbursement_transaction_id) " +
-                "VALUES (?, ?)";
+    public boolean insert(Reimbursement reimbursement, Transaction transaction) {
+        String sql = "INSERT INTO reimbursement_tx_link (reimbursement_plan_id, reimbursement_transaction_id) VALUES (?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, reimbursementId);
-            stmt.setLong(2, transactionId);
-
+            stmt.setLong(1, reimbursement.getId());
+            stmt.setLong(2, transaction.getId());
             int affected = stmt.executeUpdate();
             return affected > 0;
         } catch (SQLException e) {
@@ -41,12 +39,9 @@ public class ReimbursementTxLinkDAO {
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getTransactionsByReimbursement(Reimbursement reimbursement) {
         List<Transaction> transactions = new ArrayList<>();
-
         String sql = "SELECT * FROM reimbursement_tx_link WHERE reimbursement_plan_id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, reimbursement.getId());
-
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     Transaction transaction = transactionDAO.getById(rs.getLong("reimbursement_transaction_id"));
@@ -64,10 +59,8 @@ public class ReimbursementTxLinkDAO {
     @SuppressWarnings("SqlResolve")
     public boolean isTransactionReimbursed(Transaction transaction) {
         String sql = "SELECT 1 FROM reimbursement_tx_link WHERE reimbursement_transaction_id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, transaction.getId());
-
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next();
             }
@@ -80,10 +73,8 @@ public class ReimbursementTxLinkDAO {
     @SuppressWarnings("SqlResolve")
     public Reimbursement getReimbursementByTransaction(Transaction transaction) {
         String sql = "SELECT reimbursement_plan_id FROM reimbursement_tx_link WHERE reimbursement_transaction_id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, transaction.getId());
-
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return reimbursementDAO.getById(rs.getLong("reimbursement_plan_id"));
