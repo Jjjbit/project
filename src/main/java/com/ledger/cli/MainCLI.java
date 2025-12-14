@@ -199,9 +199,10 @@ public class MainCLI {
         System.out.println("5. Hide Account");
         System.out.println("6. Pay Debt of Credit Card");
         System.out.println("7. Pay Loan");
-        System.out.println("8. Show Account's Summary");
-        System.out.println("9. Installments Management");
-        System.out.println("10. Back to Main Menu");
+        System.out.println("8. Repay Borrowing");
+        System.out.println("9. Receive Lending Payment");
+        System.out.println("10. Show Account's Summary");
+        System.out.println("11. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -229,18 +230,20 @@ public class MainCLI {
                 accountCLI.payLoan();
                 break;
             case "8":
-                accountCLI.viewAccountSummary();
+                accountCLI.makeBorrowingPayment();
                 break;
             case "9":
-                // go back to main menu
-                showInstallmentMenu();
+                accountCLI.receiveLendingPayment();
                 break;
             case "10":
+                accountCLI.viewAccountSummary();
+                break;
+            case "11":
                 // go back to main menu
                 showMainMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-10.");
+                System.out.println("Invalid option! Please choose 1-11.");
                 showAccountMenu();
         }
     }

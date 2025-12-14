@@ -179,14 +179,15 @@ public class AccountCLI {
             } else if (input.equals("n") || input.equals("no")) {
                 newSelectable = false;
             }
-
-            //update balance
-            System.out.print("Current balance: " + accountToUpdate.getBalance() + ". (press Enter to skip) Enter new balance: ");
-            String balanceInput = scanner.nextLine().trim();
-            if (!balanceInput.isEmpty()) {
-                newBalance = new BigDecimal(balanceInput);
-                if( newBalance.compareTo(BigDecimal.ZERO) < 0) {
-                    newBalance = null;
+            if(!(accountToUpdate instanceof BorrowingAccount)){
+                //update balance
+                System.out.print("Current balance: " + accountToUpdate.getBalance() + ". (press Enter to skip) Enter new balance: ");
+                String balanceInput = scanner.nextLine().trim();
+                if (!balanceInput.isEmpty()) {
+                    newBalance = new BigDecimal(balanceInput);
+                    if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
+                        newBalance = null;
+                    }
                 }
             }
         }
@@ -309,7 +310,6 @@ public class AccountCLI {
                 }else{
                     newRepaymentType = types[choice - 1];
                 }
-
                 boolean success = accountController.editLoanAccount(loan, newName, newNote,
                         newIncludedInNetWorth, newTotalPeriods, newRepaidPeriods,
                         newAnnualInterestRate, newLoanAmount, newRepaymentDate,
@@ -320,6 +320,51 @@ public class AccountCLI {
                     return;
                 }
                 System.out.println("Account updated successfully: " + loan.getName());
+            }
+            case BorrowingAccount borrowing ->{
+                System.out.print("Current borrowing amount: " + borrowing.getBorrowingAmount());
+                System.out.print(". Enter new borrowing amount (press Enter to skip): ");
+                String inputBorrowingAmount = scanner.nextLine().trim();
+                BigDecimal newBorrowingAmount =null;
+                if (!inputBorrowingAmount.isEmpty()) {
+                    newBorrowingAmount = new BigDecimal(inputBorrowingAmount);
+                }
+                System.out.print("Current borrowing: " + (borrowing.getIsEnded() ? "is ended." : "is not ended.") +
+                        ". Enter new status (y/n, press Enter to skip): ");
+                String inputIsEnded = scanner.nextLine().trim().toLowerCase();
+                Boolean newIsEnded = null;
+                if (inputIsEnded.equals("y") || inputIsEnded.equals("yes")) {
+                    newIsEnded = true;
+                } else if (inputIsEnded.equals("n") || inputIsEnded.equals("no")) {
+                    newIsEnded = false;
+                }
+                boolean success = accountController.editBorrowingAccount(borrowing, newName, newBorrowingAmount,
+                        newNote, newIncludedInNetWorth, newSelectable, newIsEnded);
+
+                if (!success) {
+                    System.out.println("Failed to update account: " + borrowing.getName());
+                    return;
+                }
+                System.out.println("Account updated successfully: " + borrowing.getName());
+            }
+            case LendingAccount lending ->{
+                System.out.print("Current lending: " + (lending.getIsEnded() ? "is ended." : "is not ended.") +
+                        ". Enter new status (y/n, press Enter to skip): ");
+                String inputIsEnded = scanner.nextLine().trim().toLowerCase();
+                Boolean newIsEnded = null;
+                if (inputIsEnded.equals("y") || inputIsEnded.equals("yes")) {
+                    newIsEnded = true;
+                } else if (inputIsEnded.equals("n") || inputIsEnded.equals("no")) {
+                    newIsEnded = false;
+                }
+                boolean success = accountController.editLendingAccount(lending, newName, newBalance,
+                        newNote, newIncludedInNetWorth, newSelectable, newIsEnded);
+
+                if (!success) {
+                    System.out.println("Failed to update account: " + lending.getName());
+                    return;
+                }
+                System.out.println("Account updated successfully: " + lending.getName());
             }
 
             default -> System.out.println("Unknown account type.");
@@ -524,6 +569,212 @@ public class AccountCLI {
                 " | Repaid Periods: " + accountToPayLoan.getRepaidPeriods() + "/" + accountToPayLoan.getTotalPeriods());
     }
 
+    public void makeBorrowingPayment() {
+        System.out.println("\n === Making a borrowing payment ===");
+
+        //select borrowing to make payment
+        System.out.println("Select the borrowing to make a payment to:");
+        List<BorrowingAccount> userBorrowings = accountController.getVisibleBorrowingAccounts(userController.getCurrentUser());
+
+        for(int i=0;i<userBorrowings.size();i++){
+            BorrowingAccount borrowing=userBorrowings.get(i);
+            System.out.println((i+1) + ". " + "Name: " + borrowing.getName() +
+                    " | Total Borrowing: " + borrowing.getBorrowingAmount() +
+                    ", Remaining Amount: " + borrowing.getRemainingAmount() +
+                    " | Included in Net Worth: " + (borrowing.getIncludedInNetAsset() ? "Yes" : "No") +
+                    " | Status: " + (borrowing.getIsEnded() ? "Ended" : "Active") +
+                    (borrowing.getNotes()!=null ? " | Note: " + borrowing.getNotes() : " | No Note"));
+        }
+
+        System.out.println("0. Cancel");
+        System.out.print("Select a borrowing by number: ");
+        String borrowingInput = scanner.nextLine().trim();
+        int borrowingIndex = Integer.parseInt(borrowingInput) - 1;
+        if(borrowingIndex == -1) {
+            System.out.println("Borrowing payment cancelled.");
+            return;
+        }
+        if(borrowingIndex < 0 || borrowingIndex >= userBorrowings.size()) {
+            System.out.println("Invalid borrowing selection.");
+            return;
+        }
+
+        BorrowingAccount borrowingToPay = userBorrowings.get(borrowingIndex);
+
+        //enter payment amount
+        System.out.print("Enter payment amount: ");
+        String paymentAmountStr = scanner.nextLine().trim();
+        if(paymentAmountStr.isEmpty()) {
+            System.out.println("Payment amount cannot be empty.");
+            return;
+        }
+        BigDecimal paymentAmount= new BigDecimal(paymentAmountStr);
+
+        //select from account
+        System.out.print("Do you want to select an account to make the payment from? (y/n): ");
+        String selectAccountInput = scanner.nextLine().trim().toLowerCase();
+        Account fromAccount = null;
+        if (selectAccountInput.equals("y") || selectAccountInput.equals("yes")) {
+            System.out.println("Select an account to make the payment from:");
+            List<Account> accounts = accountController.getSelectableAccounts(userController.getCurrentUser());
+            for (int i = 0; i < accounts.size(); i++) {
+                System.out.println((i + 1) + ". " + accounts.get(i).getName());
+            }
+            System.out.println("0. Cancel");
+            System.out.print("Enter the number corresponding to the account: ");
+            String accountInput = scanner.nextLine().trim();
+            int accountIndex = Integer.parseInt(accountInput) - 1;
+
+            if(accountIndex == -1) {
+                System.out.println("Borrowing payment cancelled.");
+                return;
+            }
+            if (accountIndex < 0 || accountIndex >= accounts.size()) {
+                System.out.println("Invalid account selection.");
+                return;
+            }
+            fromAccount = accounts.get(accountIndex);
+        }
+
+        System.out.println("Select a ledger to associate with this payment:");
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(userController.getCurrentUser());
+        for (int i = 0; i < ledgers.size(); i++) {
+            System.out.println((i + 1) + ". " + ledgers.get(i).getName());
+        }
+        System.out.println("0. Cancel");
+        System.out.print("Enter the number corresponding to the ledger: ");
+        String ledgerInput = scanner.nextLine().trim();
+        int ledgerIndex = Integer.parseInt(ledgerInput);
+        if (ledgerIndex == 0) {
+            System.out.println("Borrowing payment cancelled.");
+            return;
+        }
+
+        if (ledgerIndex < 1 || ledgerIndex > ledgers.size()) {
+            System.out.println("Invalid ledger selection.");
+            return;
+        }
+        Ledger ledger = ledgers.get(ledgerIndex-1);
+
+        boolean success = accountController.payBorrowing(borrowingToPay, paymentAmount, fromAccount, ledger);
+
+        if (!success) {
+            System.out.println("Failed to make borrowing payment.");
+            return;
+        }
+        System.out.println("Borrowing payment made successfully.");
+    }
+    public void receiveLendingPayment() {
+        System.out.println("\n === Receiving a lending payment ===");
+
+        System.out.println("Select the lending to receive payment for:");
+        List<LendingAccount> userLendings = accountController.getVisibleLendingAccounts(userController.getCurrentUser());
+        System.out.println("0. Cancel");
+        for(int i=0;i<userLendings.size();i++){
+            LendingAccount lending=userLendings.get(i);
+            System.out.println((i+1) + ". " + "Name: " + lending.getName() +
+                    " | Remaining Amount: " + lending.getBalance() +
+                    " | Included in Net Worth: " + (lending.getIncludedInNetAsset() ? "Yes" : "No") +
+                    " | Selectable: " + (lending.getSelectable() ? "Yes" : "No") +
+                    " | Status: " + (lending.getIsEnded() ? "Ended" : "Active") +
+                    " | Lending Date: " + lending.getDate() +
+                    (lending.getNotes() != null ? " | Note: " + lending.getNotes() : " | No note"));
+        }
+
+        System.out.print("Select a lending by number: ");
+
+        String lendingInput = scanner.nextLine().trim();
+        int lendingIndex = Integer.parseInt(lendingInput) - 1;
+
+        if(lendingIndex == -1) {
+            System.out.println("Lending payment cancelled.");
+            return;
+        }
+        if(lendingIndex < 0 || lendingIndex >= userLendings.size()) {
+            System.out.println("Invalid lending selection.");
+            return;
+        }
+
+        LendingAccount lendingToReceivePayment = userLendings.get(lendingIndex);
+
+        System.out.print("Enter payment amount: ");
+        String paymentAmountStr = scanner.nextLine().trim();
+        if(paymentAmountStr.isEmpty()) {
+            System.out.println("Payment amount cannot be empty.");
+            return;
+        }
+        BigDecimal paymentAmount = new BigDecimal(paymentAmountStr);
+
+        //select to account option can be added later
+        System.out.print("Do you want to  select an account to receive payment? (y/n):");
+        String toAccountChoice = scanner.nextLine().trim().toLowerCase();
+        Account toAccount = null;
+        if(toAccountChoice.equals("y") || toAccountChoice.equals("yes")) {
+            List<Account> accounts = accountController.getSelectableAccounts(userController.getCurrentUser());
+            if (accounts.isEmpty()) {
+                System.out.println("No available accounts to select.");
+                return;
+            }
+
+            System.out.println("Select an account to receive payment into:");
+            System.out.println("0. Cancel");
+            for (int i = 0; i < accounts.size(); i++) {
+                System.out.println((i + 1) + ". " + accounts.get(i).getName());
+            }
+            System.out.print("Enter the number of the account: ");
+
+            String accountInput = scanner.nextLine().trim();
+            int accountIndex = Integer.parseInt(accountInput);
+
+            if(accountIndex == 0) {
+                System.out.println("Lending payment cancelled.");
+                return;
+            }
+            if (accountIndex < 1 || accountIndex > accounts.size()) {
+                System.out.println("Invalid account selection.");
+                return;
+            }
+            toAccount = accounts.get(accountIndex - 1);
+        }
+
+        //select ledger option can be added later
+        System.out.println("Select a ledger to associate with this receiving:");
+        List<Ledger> ledgers = ledgerController.getLedgersByUser(userController.getCurrentUser());
+        if (ledgers.isEmpty()) {
+            System.out.println("No available ledgers to select.");
+            return;
+        }
+
+        for (int i = 0; i < ledgers.size(); i++) {
+            System.out.println((i + 1) + ". " + ledgers.get(i).getName());
+        }
+        System.out.println("0. Cancel");
+        System.out.print("Enter the number of the ledger: ");
+
+        String ledgerInput = scanner.nextLine().trim();
+        int ledgerIndex = Integer.parseInt(ledgerInput);
+
+        if(ledgerIndex == 0) {
+            System.out.println("Lending payment cancelled.");
+            return;
+        }
+        if (ledgerIndex < 1 || ledgerIndex > ledgers.size()) {
+            System.out.println("Invalid ledger selection.");
+            return;
+        }
+        Ledger ledger = ledgers.get(ledgerIndex - 1);
+
+
+        boolean success = accountController.receiveLending(lendingToReceivePayment, paymentAmount,
+                toAccount, ledger);
+
+        if(!success) {
+            System.out.println("Failed to receive lending payment.");
+            return;
+        }
+        System.out.println("Lending payment received successfully.");
+    }
+
     public void viewAccountSummary() {
         System.out.println("\n=== Account Summary ===");
 
@@ -578,7 +829,6 @@ public class AccountCLI {
             }else{
                 month = LocalDate.now().getMonthValue();
             }
-
             startDate = LocalDate.of(LocalDate.now().getYear(), month, 1);
             endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
         } else {
