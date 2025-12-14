@@ -48,7 +48,7 @@ public class ReportControllerTest {
         TransactionDAO transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
-        budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+        budgetDAO = new BudgetDAO(connection);
         ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
@@ -399,7 +399,7 @@ public class ReportControllerTest {
                 .findFirst()
                 .orElse(null);
         assertNotNull(food);
-        Budget budget = budgetDAO.getBudgetByCategoryId(food.getId(), Budget.Period.MONTHLY);
+        Budget budget = budgetDAO.getBudgetByCategory(food, Budget.Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(200.00)); //set monthly budget to 200
 
@@ -408,7 +408,7 @@ public class ReportControllerTest {
                 .findFirst()
                 .orElse(null);
         assertNotNull(lunch);
-        Budget budget2 = budgetDAO.getBudgetByCategoryId(lunch.getId(), Budget.Period.MONTHLY);
+        Budget budget2 = budgetDAO.getBudgetByCategory(lunch, Budget.Period.MONTHLY);
         assertNotNull(budget2);
         budgetController.editBudget(budget2, BigDecimal.valueOf(500.00)); //set monthly budget to 500
 
@@ -440,12 +440,12 @@ public class ReportControllerTest {
                 .findFirst()
                 .orElse(null);
         assertNotNull(transport);
-        Budget budget = budgetDAO.getBudgetByCategoryId(transport.getId(), Budget.Period.MONTHLY);
+        Budget budget = budgetDAO.getBudgetByCategory(transport, Budget.Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(300.00));
 
         //ledger-level budget
-        Budget budget2 = budgetDAO.getBudgetByLedgerId(testLedger.getId(), Budget.Period.MONTHLY);
+        Budget budget2 = budgetDAO.getBudgetByLedger(testLedger, Budget.Period.MONTHLY);
         assertNotNull(budget2);
         budgetController.editBudget(budget2, BigDecimal.valueOf(800.00));
 
@@ -461,7 +461,7 @@ public class ReportControllerTest {
                 .findFirst()
                 .orElse(null);
         assertNotNull(entertainment);
-        Budget budget = budgetDAO.getBudgetByCategoryId(entertainment.getId(), Budget.Period.MONTHLY);
+        Budget budget = budgetDAO.getBudgetByCategory(entertainment, Budget.Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
         //simulate expired budget by setting start and end date in the past
@@ -485,7 +485,7 @@ public class ReportControllerTest {
                 .findFirst()
                 .orElse(null);
         assertNotNull(entertainment);
-        Budget budget = budgetDAO.getBudgetByCategoryId(entertainment.getId(), Budget.Period.MONTHLY);
+        Budget budget = budgetDAO.getBudgetByCategory(entertainment, Budget.Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
 
@@ -497,7 +497,7 @@ public class ReportControllerTest {
 
     @Test
     public void testIsOverBudget_BoundaryCase() {
-        Budget budget1 = budgetDAO.getBudgetByLedgerId(testLedger.getId(), Budget.Period.MONTHLY);
+        Budget budget1 = budgetDAO.getBudgetByLedger(testLedger, Budget.Period.MONTHLY);
         assertNotNull(budget1);
         budgetController.editBudget(budget1, BigDecimal.valueOf(300.00));
 
@@ -506,7 +506,7 @@ public class ReportControllerTest {
                 .findFirst()
                 .orElse(null);
         assertNotNull(food);
-        Budget budget = budgetDAO.getBudgetByCategoryId(food.getId(), Budget.Period.MONTHLY);
+        Budget budget = budgetDAO.getBudgetByCategory(food, Budget.Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(120.00));
 
