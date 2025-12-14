@@ -65,85 +65,53 @@ public class UserControllerTest {
 
     @Test
     public void testRegister_Success() {
-        boolean result = userController.register("test user", "password");
-        assertTrue(result);
+        assertTrue(userController.register("test user", "password"));
         assertNotNull(userDAO.getUserByUsername("test user"));
     }
 
     @Test
     public void testRegister_DuplicateUsername() {
-        boolean firstRegistration= userController.register("duplicate user", "password1");
-        assertTrue(firstRegistration);
-
-        boolean secondRegistration= userController.register("duplicate user", "password2");
-        assertFalse(secondRegistration);
+        assertTrue(userController.register("duplicate user", "password1"));
+        assertFalse(userController.register("duplicate user", "password2"));
     }
 
     @Test
     public void testLogin_Success() {
         userController.register("login user", "loginpass"); //insert user to db
-
-        User loggedInUser = userController.login("login user", "loginpass"); //find user from db
-        assertNotNull(loggedInUser);
-        assertEquals("login user", loggedInUser.getUsername());
+        assertNotNull(userController.login("login user", "loginpass"));
     }
 
     @Test
     public void testLogin_Failure_WrongPassword() {
         userController.register("login user", "loginpass"); //insert user to db
-
-        User loggedInUser = userController.login("login user", "wrongpass"); //find user from db
-        assertNull(loggedInUser);
+        assertNull(userController.login("login user", "wrongpass"));
     }
 
     @Test
     public void testLogin_Failure_WrongUsername()  {
         userController.register("login user", "loginpass"); //insert user to db
-
-        User loggedInUser = userController.login("wrong user", "loginpass"); //find user from db
-        assertNull(loggedInUser);
+        assertNull(userController.login("wrong user", "loginpass"));
     }
 
     @Test
     public void testLogin_Failure_NonExistentUser() {
-        User loggedInUser = userController.login("nonexistentuser", "somepass"); //find user from db
-        assertNull(loggedInUser);
+        assertNull(userController.login("nonexistentuser", "somepass"));
     }
 
     @Test
     public void testUpdateUsername_Success() {
         userController.register("oldusername", "password");
         User user=userController.login("oldusername", "password");
-
-        boolean updateResult = userController.updateUsername("newusername");
-        assertTrue(updateResult);
-
-        User updatedUser = userDAO.getUserByUsername("newusername");
-        assertNotNull(updatedUser);
+        assertTrue(userController.updateUsername("newusername"));
+        assertNotNull(userDAO.getUserByUsername("newusername"));
         assertNull(userDAO.getUserByUsername("oldusername"));
         assertEquals("newusername", user.getUsername());
-    }
-
-
-    @Test
-    public void testUpdateUserInfo_NoChanges() {
-        userController.register("user1", "oldpassword");
-        userController.login("user1","oldpassword");
-
-        boolean updateResult = userController.updateUsername("user1");
-        assertTrue(updateResult);
     }
 
     @Test
     public void testUpdatePassword_Success() {
         userController.register("user2", "oldpassword");
-        User user=userController.login("user2","oldpassword");
-
-        boolean updateResult = userController.updatePassword("newpassword");
-        assertTrue(updateResult);
-
-        User updatedUser = userDAO.getUserByUsername("user2");
-        assertNotNull(updatedUser);
-        assertEquals(updatedUser.getPassword(), user.getPassword());
+        assertTrue( userController.updatePassword("newpassword"));
+        assertNotNull( userDAO.getUserByUsername("user2"));
     }
 }

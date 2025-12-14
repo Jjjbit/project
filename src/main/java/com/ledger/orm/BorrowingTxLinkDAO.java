@@ -20,16 +20,12 @@ public class BorrowingTxLinkDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean insert(Account account, Transaction tx) {
-        String sql = "INSERT INTO borrowing_tx_link (account_id, transaction_id) " +
-                "VALUES (?, ?)";
-
+        String sql = "INSERT INTO borrowing_tx_link (account_id, transaction_id) VALUES (?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, account.getId());
             stmt.setLong(2, tx.getId());
-
             int affected = stmt.executeUpdate();
             return affected > 0;
-
         } catch (SQLException e) {
             System.err.println("SQL Exception during borrowing payment insert: " + e.getMessage());
         }
@@ -39,11 +35,9 @@ public class BorrowingTxLinkDAO {
     @SuppressWarnings("SqlResolve")
     public boolean isBorrowingPaymentTransaction(Transaction transaction) {
         String sql = "SELECT 1 FROM borrowing_tx_link WHERE transaction_id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, transaction.getId());
-
-            try (var rs = stmt.executeQuery()) {
+            try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next();
             }
         } catch (SQLException e) {
@@ -55,15 +49,12 @@ public class BorrowingTxLinkDAO {
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getTransactionByBorrowing(Account account) {
         List<Transaction> transactions = new ArrayList<>();
-
         String sql = "SELECT * FROM borrowing_tx_link WHERE account_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, account.getId());
-
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    long transactionId = rs.getLong("transaction_id");
-                    Transaction tx = transactionDAO.getById(transactionId);
+                    Transaction tx = transactionDAO.getById(rs.getLong("transaction_id"));
                     if (tx != null) {
                         transactions.add(tx);
                     }

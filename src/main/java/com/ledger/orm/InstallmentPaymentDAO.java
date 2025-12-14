@@ -52,7 +52,6 @@ public class InstallmentPaymentDAO {
     @SuppressWarnings("SqlResolve")
     public Installment getInstallmentByTransaction(Transaction transaction) {
         String sql = "SELECT installment_id FROM installment_payments WHERE transaction_id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, transaction.getId());
             try (ResultSet rs = stmt.executeQuery()) {

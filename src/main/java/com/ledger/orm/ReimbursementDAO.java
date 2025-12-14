@@ -90,7 +90,6 @@ public class ReimbursementDAO {
             stmt.setLong(5, claim.getFromAccount().getId());
             stmt.setLong(6, claim.getLedgerCategory().getId());
             stmt.setLong(7, claim.getOriginalTransaction().getId());
-
             int affected = stmt.executeUpdate();
             if (affected > 0) {
                 try (ResultSet keys = stmt.getGeneratedKeys()) {
@@ -108,14 +107,12 @@ public class ReimbursementDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean update(Reimbursement claim) {
-        String sql = "UPDATE reimbursement_plan SET amount = ?, is_ended = ?, remaining_amount = ?, ledger_category_id = ? WHERE id = ?";
+        String sql = "UPDATE reimbursement_plan SET amount = ?, is_ended = ?, remaining_amount = ? WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setBigDecimal(1, claim.getAmount());
             stmt.setBoolean(2, claim.isEnded());
             stmt.setBigDecimal(3, claim.getRemainingAmount());
-            stmt.setLong(4, claim.getLedgerCategory().getId());
-            stmt.setLong(5, claim.getId());
-
+            stmt.setLong(4, claim.getId());
             int affected = stmt.executeUpdate();
             return affected > 0;
         } catch (SQLException e) {
@@ -129,7 +126,6 @@ public class ReimbursementDAO {
         String sql = "DELETE FROM reimbursement_plan WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, claim.getId());
-
             int affected = stmt.executeUpdate();
             return affected > 0;
         } catch (SQLException e) {
@@ -137,6 +133,4 @@ public class ReimbursementDAO {
         }
         return false;
     }
-
-
 }
