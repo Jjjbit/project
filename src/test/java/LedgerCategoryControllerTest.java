@@ -44,7 +44,7 @@ public class LedgerCategoryControllerTest {
         ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
-        budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+        budgetDAO = new BudgetDAO(connection);
         ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
@@ -114,8 +114,8 @@ public class LedgerCategoryControllerTest {
         assertNotNull(category);
         assertNotNull(ledgerCategoryDAO.getById(category.getId()));
 
-        Budget monthlyBudget=budgetDAO.getBudgetByCategoryId(category.getId(), Budget.Period.MONTHLY);
-        Budget yearlyBudget=budgetDAO.getBudgetByCategoryId(category.getId(), Budget.Period.YEARLY);
+        Budget monthlyBudget=budgetDAO.getBudgetByCategory(category, Budget.Period.MONTHLY);
+        Budget yearlyBudget=budgetDAO.getBudgetByCategory(category, Budget.Period.YEARLY);
         assertNotNull(monthlyBudget);
         assertNotNull(yearlyBudget);
     }
@@ -135,8 +135,8 @@ public class LedgerCategoryControllerTest {
 
         assertEquals(parentCategory.getId(), subCategory.getParent().getId());
 
-        Budget monthlyBudget=budgetDAO.getBudgetByCategoryId(subCategory.getId(), Budget.Period.MONTHLY);
-        Budget yearlyBudget=budgetDAO.getBudgetByCategoryId(subCategory.getId(), Budget.Period.YEARLY);
+        Budget monthlyBudget=budgetDAO.getBudgetByCategory(subCategory, Budget.Period.MONTHLY);
+        Budget yearlyBudget=budgetDAO.getBudgetByCategory(subCategory, Budget.Period.YEARLY);
         assertNotNull(monthlyBudget);
         assertNotNull(yearlyBudget);
 
@@ -153,7 +153,7 @@ public class LedgerCategoryControllerTest {
                 .findFirst()
                 .orElse(null);
         assertNotNull(breakfast);
-        Budget budget=budgetDAO.getBudgetByCategoryId(breakfast.getId(), Budget.Period.MONTHLY);
+        Budget budget=budgetDAO.getBudgetByCategory(breakfast, Budget.Period.MONTHLY);
         assertNotNull(budget);
 
         boolean result=ledgerCategoryController.deleteCategory(breakfast, true, null);

@@ -46,7 +46,7 @@ public class AccountControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
-        BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+        BudgetDAO budgetDAO = new BudgetDAO(connection);
         ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);

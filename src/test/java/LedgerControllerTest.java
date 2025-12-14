@@ -47,7 +47,7 @@ public class LedgerControllerTest {
         ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
-        budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+        budgetDAO = new BudgetDAO(connection);
         ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
@@ -110,8 +110,8 @@ public class LedgerControllerTest {
         assertNotNull(ledgerDAO.getById(ledger.getId()));
         assertEquals(1, ledgerDAO.getLedgersByUserId(testUser.getId()).size());
 
-        Budget monthlyLedgerBudget = budgetDAO.getBudgetByLedgerId(ledger.getId(), Budget.Period.MONTHLY);
-        Budget yearlyLedgerBudget = budgetDAO.getBudgetByLedgerId(ledger.getId(), Budget.Period.YEARLY);
+        Budget monthlyLedgerBudget = budgetDAO.getBudgetByLedger(ledger, Budget.Period.MONTHLY);
+        Budget yearlyLedgerBudget = budgetDAO.getBudgetByLedger(ledger, Budget.Period.YEARLY);
         assertNotNull(monthlyLedgerBudget);
         assertNotNull(yearlyLedgerBudget);
 
@@ -131,8 +131,8 @@ public class LedgerControllerTest {
         System.out.println("Expense Categories:");
         for(LedgerCategory cat : expense){
             System.out.println(" Expense Category: " + cat.getName());
-            Budget monthlyBudget = budgetDAO.getBudgetByCategoryId(cat.getId(), Budget.Period.MONTHLY);
-            Budget yearlyBudget = budgetDAO.getBudgetByCategoryId(cat.getId(), Budget.Period.YEARLY);
+            Budget monthlyBudget = budgetDAO.getBudgetByCategory(cat, Budget.Period.MONTHLY);
+            Budget yearlyBudget = budgetDAO.getBudgetByCategory(cat, Budget.Period.YEARLY);
             assertNotNull(monthlyBudget);
             assertNotNull(yearlyBudget);
             System.out.println(" Monthly Budget: " + monthlyBudget.getAmount());
@@ -142,8 +142,8 @@ public class LedgerControllerTest {
                     .filter(c -> c.getParent() != null && c.getParent().getId() == cat.getId())
                     .toList()){
                 System.out.println("  Expense Subcategory: " + sub.getName());
-                Budget subMonthlyBudget = budgetDAO.getBudgetByCategoryId(sub.getId(), Budget.Period.MONTHLY);
-                Budget subYearlyBudget = budgetDAO.getBudgetByCategoryId(sub.getId(), Budget.Period.YEARLY);
+                Budget subMonthlyBudget = budgetDAO.getBudgetByCategory(sub, Budget.Period.MONTHLY);
+                Budget subYearlyBudget = budgetDAO.getBudgetByCategory(sub, Budget.Period.YEARLY);
                 assertNotNull(subMonthlyBudget);
                 assertNotNull(subYearlyBudget);
                 System.out.println("  Monthly Budget: " + subMonthlyBudget.getAmount());
@@ -154,16 +154,16 @@ public class LedgerControllerTest {
         System.out.println("Income Categories:");
         for(LedgerCategory cat : income){
             System.out.println(" Income Category: " + cat.getName());
-            Budget monthlyBudget = budgetDAO.getBudgetByCategoryId(cat.getId(), Budget.Period.MONTHLY);
-            Budget yearlyBudget = budgetDAO.getBudgetByCategoryId(cat.getId(), Budget.Period.YEARLY);
+            Budget monthlyBudget = budgetDAO.getBudgetByCategory(cat, Budget.Period.MONTHLY);
+            Budget yearlyBudget = budgetDAO.getBudgetByCategory(cat, Budget.Period.YEARLY);
             assertNull(monthlyBudget);
             assertNull(yearlyBudget);
             for(LedgerCategory sub: categories.stream()
                     .filter(c -> c.getParent() != null && c.getParent().getId() == cat.getId())
                     .toList()){
                 System.out.println("   Income Subcategory: " + sub.getName());
-                Budget subMonthlyBudget = budgetDAO.getBudgetByCategoryId(sub.getId(), Budget.Period.MONTHLY);
-                Budget subYearlyBudget = budgetDAO.getBudgetByCategoryId(sub.getId(), Budget.Period.YEARLY);
+                Budget subMonthlyBudget = budgetDAO.getBudgetByCategory(sub, Budget.Period.MONTHLY);
+                Budget subYearlyBudget = budgetDAO.getBudgetByCategory(sub, Budget.Period.YEARLY);
                 assertNull(subMonthlyBudget);
                 assertNull(subYearlyBudget);
             }
@@ -209,10 +209,6 @@ public class LedgerControllerTest {
                 .orElse(null);
         assertNotNull(salary);
 
-        List<Long> categoryIds = categories.stream()
-                .map(LedgerCategory::getId)
-                .toList();
-
         //create transactions
         Transaction tx1=transactionController.createExpense(ledger, account, food, null, LocalDate.now(), BigDecimal.valueOf(10.00));
         Transaction tx2=transactionController.createIncome(ledger, account, salary, null, LocalDate.now(), BigDecimal.valueOf(1000.00));
@@ -229,13 +225,13 @@ public class LedgerControllerTest {
         assertEquals(0, transactionDAO.getByAccountId(account.getId()).size()); //transactions should be deleted
 
         //delete budgets
-        assertNull(budgetDAO.getBudgetByLedgerId(ledger.getId(), Budget.Period.MONTHLY));
-        assertNull(budgetDAO.getBudgetByLedgerId(ledger.getId(), Budget.Period.YEARLY));
+        assertNull(budgetDAO.getBudgetByLedger(ledger, Budget.Period.MONTHLY));
+        assertNull(budgetDAO.getBudgetByLedger(ledger, Budget.Period.YEARLY));
 
-        for(Long catId : categoryIds){
-            assertNull(ledgerCategoryDAO.getById(catId));
-            assertNull(budgetDAO.getBudgetByCategoryId(catId, Budget.Period.MONTHLY));
-            assertNull(budgetDAO.getBudgetByCategoryId(catId, Budget.Period.YEARLY));
+        for(LedgerCategory category : categories){
+            assertNull(ledgerCategoryDAO.getById(category.getId()));
+            assertNull(budgetDAO.getBudgetByCategory(category, Budget.Period.MONTHLY));
+            assertNull(budgetDAO.getBudgetByCategory(category, Budget.Period.YEARLY));
         }
     }
 
@@ -252,8 +248,8 @@ public class LedgerControllerTest {
         assertEquals(copiedLedger.getName(), fetchedCopiedLedger.getName());
 
         assertEquals(2, ledgerDAO.getLedgersByUserId(testUser.getId()).size());
-        assertNotNull(budgetDAO.getBudgetByLedgerId(copiedLedger.getId(), Budget.Period.MONTHLY));
-        assertNotNull(budgetDAO.getBudgetByLedgerId(copiedLedger.getId(), Budget.Period.YEARLY));
+        assertNotNull(budgetDAO.getBudgetByLedger(copiedLedger, Budget.Period.MONTHLY));
+        assertNotNull(budgetDAO.getBudgetByLedger(copiedLedger, Budget.Period.YEARLY));
         assertEquals(18, ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId()).size());
 
         List<LedgerCategory> originalCategories = ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId());
@@ -273,21 +269,21 @@ public class LedgerControllerTest {
 
         for(LedgerCategory incomeCat : incomeCategories) {
             System.out.println("Income Category: " + incomeCat.getName());
-            assertNull(budgetDAO.getBudgetByCategoryId(incomeCat.getId(), Budget.Period.MONTHLY));
-            assertNull(budgetDAO.getBudgetByCategoryId(incomeCat.getId(), Budget.Period.YEARLY));
+            assertNull(budgetDAO.getBudgetByCategory(incomeCat, Budget.Period.MONTHLY));
+            assertNull(budgetDAO.getBudgetByCategory(incomeCat, Budget.Period.YEARLY));
             for(LedgerCategory subCat : copiedCategories.stream()
                     .filter(c -> c.getParent() != null && c.getParent().getId() == incomeCat.getId())
                     .toList()) {
                 System.out.println("  Subcategory: " + subCat.getName());
-                assertNull(budgetDAO.getBudgetByCategoryId(subCat.getId(), Budget.Period.MONTHLY));
-                assertNull(budgetDAO.getBudgetByCategoryId(subCat.getId(), Budget.Period.YEARLY));
+                assertNull(budgetDAO.getBudgetByCategory(subCat, Budget.Period.MONTHLY));
+                assertNull(budgetDAO.getBudgetByCategory(subCat, Budget.Period.YEARLY));
             }
         }
 
         for(LedgerCategory expenseCat : expenseCategories) {
             System.out.println("Expense Category: " + expenseCat.getName());
-            Budget monthlyBudget = budgetDAO.getBudgetByCategoryId(expenseCat.getId(), Budget.Period.MONTHLY);
-            Budget yearlyBudget = budgetDAO.getBudgetByCategoryId(expenseCat.getId(), Budget.Period.YEARLY);
+            Budget monthlyBudget = budgetDAO.getBudgetByCategory(expenseCat, Budget.Period.MONTHLY);
+            Budget yearlyBudget = budgetDAO.getBudgetByCategory(expenseCat, Budget.Period.YEARLY);
             assertNotNull(monthlyBudget);
             assertNotNull(yearlyBudget);
             System.out.println(" Monthly Budget: " + monthlyBudget.getAmount());
@@ -296,8 +292,8 @@ public class LedgerControllerTest {
                     .filter(c -> c.getParent() != null && c.getParent().getId() == expenseCat.getId())
                     .toList()) {
                 System.out.println("  Subcategory: " + subCat.getName());
-                Budget subMonthlyBudget = budgetDAO.getBudgetByCategoryId(subCat.getId(), Budget.Period.MONTHLY);
-                Budget subYearlyBudget = budgetDAO.getBudgetByCategoryId(subCat.getId(), Budget.Period.YEARLY);
+                Budget subMonthlyBudget = budgetDAO.getBudgetByCategory(subCat, Budget.Period.MONTHLY);
+                Budget subYearlyBudget = budgetDAO.getBudgetByCategory(subCat, Budget.Period.YEARLY);
                 assertNotNull(subMonthlyBudget);
                 assertNotNull(subYearlyBudget);
                 System.out.println("  Monthly Budget: " + subMonthlyBudget.getAmount());

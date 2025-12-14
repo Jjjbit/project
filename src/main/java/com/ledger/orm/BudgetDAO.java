@@ -1,24 +1,22 @@
 package com.ledger.orm;
 
 import com.ledger.domain.Budget;
+import com.ledger.domain.Ledger;
+import com.ledger.domain.LedgerCategory;
 
 import java.sql.*;
 
 public class BudgetDAO {
     private final Connection connection;
-    private final LedgerCategoryDAO ledgerCategoryDAO;
 
-    public BudgetDAO(Connection connection,
-                     LedgerCategoryDAO ledgerCategoryDAO) {
-        this.ledgerCategoryDAO = ledgerCategoryDAO;
+    public BudgetDAO(Connection connection) {
         this.connection = connection;
     }
 
     @SuppressWarnings("SqlResolve")
-    public Budget getById(Long budgetId) {
+    public Budget getById(long budgetId) {
         String sql = "SELECT id, amount, period, category_id, ledger_id, start_date, end_date " +
                 "FROM budgets WHERE id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, budgetId);
             try(ResultSet rs = stmt.executeQuery()) {
@@ -53,7 +51,6 @@ public class BudgetDAO {
             stmt.setLong(4, budget.getLedger().getId());
             stmt.setDate(5, Date.valueOf(budget.getStartDate()));
             stmt.setDate(6, Date.valueOf(budget.getEndDate()));
-
             int affected = stmt.executeUpdate();
             if (affected > 0) {
                 try (ResultSet keys = stmt.getGeneratedKeys()) {
@@ -86,13 +83,12 @@ public class BudgetDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public Budget getBudgetByCategoryId(Long categoryId, Budget.Period p) {
+    public Budget getBudgetByCategory(LedgerCategory category, Budget.Period p) {
         String sql = "SELECT id, amount, period, category_id, start_date, end_date " +
                 "FROM budgets " +
                 "WHERE category_id = ? AND period = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, categoryId);
+            stmt.setLong(1, category.getId());
             stmt.setString(2, p.name());
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -102,8 +98,7 @@ public class BudgetDAO {
                     budget.setPeriod(Budget.Period.valueOf(rs.getString("period")));
                     budget.setStartDate(rs.getDate("start_date").toLocalDate());
                     budget.setEndDate(rs.getDate("end_date").toLocalDate());
-
-                    budget.setCategory(ledgerCategoryDAO.getById(rs.getLong("category_id")));
+                    budget.setCategory(category);
                     return budget;
                 }
             }
@@ -114,12 +109,12 @@ public class BudgetDAO {
     }
 
     @SuppressWarnings("SqlResolve") //get budget for a ledger
-    public Budget getBudgetByLedgerId(Long ledgerId, Budget.Period p) {
+    public Budget getBudgetByLedger(Ledger ledger, Budget.Period p) {
         String sql = "SELECT id, amount, period, category_id, start_date, end_date " +
                 "FROM budgets " +
                 "WHERE category_id IS NULL AND ledger_id = ? AND period = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, ledgerId);
+            stmt.setLong(1, ledger.getId());
             stmt.setString(2, p.name());
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -129,9 +124,7 @@ public class BudgetDAO {
                     budget.setPeriod(Budget.Period.valueOf(rs.getString("period")));
                     budget.setStartDate(rs.getDate("start_date").toLocalDate());
                     budget.setEndDate(rs.getDate("end_date").toLocalDate());
-
-                    LedgerDAO ledgerDAO = new LedgerDAO(connection);
-                    budget.setLedger(ledgerDAO.getById(ledgerId));
+                    budget.setLedger(ledger);
                     return budget;
                 }
             }
@@ -140,7 +133,6 @@ public class BudgetDAO {
         }
         return null;
     }
-
 }
 
 

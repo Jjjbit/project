@@ -47,7 +47,7 @@ public class ReimbursementControllerTest {
         accountDAO = new AccountDAO(connection);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
-        BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+        BudgetDAO budgetDAO = new BudgetDAO(connection);
         reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
         reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);

@@ -30,7 +30,7 @@ public class Main {
             TransactionDAO transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
             InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
             CategoryDAO categoryDAO = new CategoryDAO(connection);
-            BudgetDAO budgetDAO = new BudgetDAO(connection, ledgerCategoryDAO);
+            BudgetDAO budgetDAO = new BudgetDAO(connection);
             ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
             ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
             DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);

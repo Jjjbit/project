@@ -54,8 +54,7 @@ public class LendingTxLinkDAO {
             stmt.setLong(1, account.getId());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    long transactionId = rs.getLong("transaction_id");
-                    Transaction tx = transactionDAO.getById(transactionId);
+                    Transaction tx = transactionDAO.getById(rs.getLong("transaction_id"));
                     if (tx != null) {
                         transactions.add(tx);
                     }
