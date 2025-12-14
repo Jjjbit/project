@@ -18,7 +18,7 @@ public class BudgetController {
     }
 
     public Budget getActiveBudgetByLedger(Ledger ledger, Budget.Period period) {
-        Budget budget = budgetDAO.getBudgetByLedgerId(ledger.getId(), period);
+        Budget budget = budgetDAO.getBudgetByLedger(ledger, period);
         if(budget != null){
             budget.refreshIfExpired();
             budgetDAO.update(budget);
@@ -27,7 +27,7 @@ public class BudgetController {
     }
 
     public Budget getActiveBudgetByCategory(LedgerCategory category, Budget.Period period) {
-        Budget budget = budgetDAO.getBudgetByCategoryId(category.getId(), period);
+        Budget budget = budgetDAO.getBudgetByCategory(category, period);
         if(budget != null){
             budget.refreshIfExpired();
             budgetDAO.update(budget);
@@ -75,7 +75,7 @@ public class BudgetController {
                     .toList();
             List<Budget> sourceBudgets = new ArrayList<>();
             for (LedgerCategory cat : expenseCategories) {
-                Budget catBudget = budgetDAO.getBudgetByCategoryId(cat.getId(), targetBudget.getPeriod());
+                Budget catBudget = budgetDAO.getBudgetByCategory(cat, targetBudget.getPeriod());
                 if (catBudget != null) {
                     refreshBudget(catBudget);
                     sourceBudgets.add(catBudget); //add to source budgets to merge
@@ -96,7 +96,7 @@ public class BudgetController {
                     .toList();
             List<Budget> sourceBudgets = new ArrayList<>();
             for (LedgerCategory subcat : subcategories) {
-                Budget subcatBudget = budgetDAO.getBudgetByCategoryId(subcat.getId(), targetBudget.getPeriod());
+                Budget subcatBudget = budgetDAO.getBudgetByCategory(subcat, targetBudget.getPeriod());
                 if (subcatBudget != null) {
                     refreshBudget(subcatBudget);
                     sourceBudgets.add(subcatBudget);
