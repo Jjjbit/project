@@ -57,7 +57,7 @@ public class ReimbursementTxLinkDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean isTransactionReimbursed(Transaction transaction) {
+    public boolean isReimbursedTransaction(Transaction transaction) {
         String sql = "SELECT 1 FROM reimbursement_tx_link WHERE reimbursement_transaction_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, transaction.getId());
@@ -85,5 +85,4 @@ public class ReimbursementTxLinkDAO {
         }
         return null;
     }
-
 }
