@@ -180,7 +180,7 @@ public class TransactionController {
                 }
                 toAccount = accountDAO.getAccountById(tx.getToAccount().getId());
 
-                if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
+                if(reimbursementTxLinkDAO.isReimbursedTransaction(tx)) {
                     Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
                     reimbursement.setRemainingAmount(
                             reimbursement.getRemainingAmount().add(tx.getAmount())
@@ -209,7 +209,7 @@ public class TransactionController {
                         );
                     }
                 }
-                if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
+                if(reimbursementTxLinkDAO.isReimbursedTransaction(tx)) {
                     Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
                     reimbursement.setEnded(false);
                     reimbursementDAO.update(reimbursement);
@@ -225,7 +225,7 @@ public class TransactionController {
                 if (tx.getFromAccount() != null) {
                     fromAccount= accountDAO.getAccountById(tx.getFromAccount().getId());
 
-                    if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
+                    if(reimbursementTxLinkDAO.isReimbursedTransaction(tx)) {
                         Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
 
                         if (tx.getId() == reimbursement.getOriginalTransaction().getId()) { //delete original transaction of reimbursement
@@ -283,7 +283,7 @@ public class TransactionController {
                                 ((CreditAccount) toAccount).getCurrentDebt().add(tx.getAmount())
                         );
                     }
-                    if(reimbursementTxLinkDAO.isTransactionReimbursed(tx)) {
+                    if(reimbursementTxLinkDAO.isReimbursedTransaction(tx)) {
                         Reimbursement reimbursement = reimbursementTxLinkDAO.getReimbursementByTransaction(tx);
                         reimbursement.setRemainingAmount(
                                 reimbursement.getRemainingAmount().add(tx.getAmount())
@@ -329,7 +329,7 @@ public class TransactionController {
         if (income == null) {
             return false;
         }
-        if(reimbursementTxLinkDAO.isTransactionReimbursed(income)) {
+        if(reimbursementTxLinkDAO.isReimbursedTransaction(income)) {
             return false;
         }
         if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -372,7 +372,7 @@ public class TransactionController {
         if (expense == null) {
             return false;
         }
-        if(reimbursementTxLinkDAO.isTransactionReimbursed(expense)) {
+        if(reimbursementTxLinkDAO.isReimbursedTransaction(expense)) {
             return false;
         }
         if(installmentPaymentDAO.isInstallmentPaymentTransaction(expense)) {
@@ -418,7 +418,7 @@ public class TransactionController {
         if (transfer == null) {
             return false;
         }
-        if(reimbursementTxLinkDAO.isTransactionReimbursed(transfer)) {
+        if(reimbursementTxLinkDAO.isReimbursedTransaction(transfer)) {
             return false;
         }
         if(debtPaymentDAO.isDebtPaymentTransaction(transfer)) {
