@@ -59,7 +59,7 @@ public class ReportController {
     public BigDecimal getTotalAssets(User user) {
         BigDecimal totalAssets = accountDAO.getAccountsByOwnerId(user.getId()).stream()
                 .filter(account -> account instanceof BasicAccount || account instanceof CreditAccount)
-                .filter(account -> account.getIncludedInNetAsset())
+                .filter(Account::getIncludedInNetAsset)
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalLending = getTotalLendingAmount(user);
@@ -69,12 +69,12 @@ public class ReportController {
     public BigDecimal getTotalLiabilities(User user) {
         BigDecimal totalCreditDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
                 .filter(account -> account instanceof CreditAccount)
-                .filter(account -> account.getIncludedInNetAsset())
+                .filter(Account::getIncludedInNetAsset)
                 .map(account -> ((CreditAccount) account).getCurrentDebt())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalUnpaidLoan = accountDAO.getAccountsByOwnerId(user.getId()).stream()
                 .filter(account -> account instanceof LoanAccount)
-                .filter(account -> account.getIncludedInNetAsset())
+                .filter(Account::getIncludedInNetAsset)
                 .map(account -> ((LoanAccount) account).getRemainingAmount()) //get this.remainingAmount
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalBorrowing = getTotalBorrowingAmount(user);
@@ -134,19 +134,4 @@ public class ReportController {
             return totalCategoryBudget.compareTo(budget.getAmount()) > 0; //>0: over budget
         }
     }
-//
-//    public BigDecimal getTotalPendingAmount(Ledger ledger) {
-//        return reimbursementDAO.getByLedger(ledger).stream()
-//                .filter(r -> !r.isEnded())
-//                .map(Reimbursement::getRemainingAmount)
-//                .reduce(BigDecimal.ZERO, BigDecimal::add);
-//    }
-//
-//    public BigDecimal getTotalReimbursedAmount(Ledger ledger) {
-//        return reimbursementDAO.getByLedger(ledger).stream()
-//                .filter(Reimbursement::isEnded)
-//                .map(r -> r.getAmount().subtract(r.getRemainingAmount()))
-//                .reduce(BigDecimal.ZERO, BigDecimal::add);
-//    }
-
 }
