@@ -26,37 +26,35 @@ public class AccountController {
         this.accountDAO = accountDAO;
     }
 
-    public List<Account> getVisibleAccounts(User user) {
-        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(account -> !account.getHidden())
-                .toList();
+    public List<Account> getAccounts(User user) {
+        return accountDAO.getAccountsByOwnerId(user.getId());
     }
     public List<Account> getSelectableAccounts(User user) {
-        return getVisibleAccounts(user).stream()
+        return getAccounts(user).stream()
                 .filter(Account::getSelectable)
                 .toList();
     }
-    public List<BorrowingAccount> getVisibleBorrowingAccounts(User user) {
-        return getVisibleAccounts(user).stream()
+    public List<BorrowingAccount> getBorrowingAccounts(User user) {
+        return getAccounts(user).stream()
                 .filter(account -> account instanceof BorrowingAccount)
                 .map(account -> (BorrowingAccount) account)
                 .toList();
     }
-    public List<LendingAccount> getVisibleLendingAccounts(User user) {
-        return getVisibleAccounts(user).stream()
+    public List<LendingAccount> getLendingAccounts(User user) {
+        return getAccounts(user).stream()
                 .filter(account -> account instanceof LendingAccount)
                 .map(account -> (LendingAccount) account)
                 .toList();
     }
     public List<CreditAccount> getCreditCardAccounts(User user) {
-        return getVisibleAccounts(user).stream()
+        return getAccounts(user).stream()
                 .filter(account -> account instanceof CreditAccount)
                 .filter(account -> account.getType() == AccountType.CREDIT_CARD)
                 .map(account -> (CreditAccount) account)
                 .toList();
     }
-    public List<LoanAccount> getVisibleLoanAccounts(User user) {
-        return getVisibleAccounts(user).stream()
+    public List<LoanAccount> getLoanAccounts(User user) {
+        return getAccounts(user).stream()
                 .filter(account -> account instanceof LoanAccount)
                 .map(account -> (LoanAccount) account)
                 .toList();
@@ -234,6 +232,20 @@ public class AccountController {
         List<Transaction> transactions = transactionDAO.getByAccountId(account.getId());
         if (deleteTransactions) {
             for (Transaction tx : transactions) {
+                if(tx instanceof Transfer){
+                    Account fromAccount = tx.getFromAccount();
+                    Account toAccount = tx.getToAccount();
+                    if(fromAccount != null && fromAccount.getId() != account.getId()){
+                        Account cashedFromAccount = accountDAO.getAccountById(fromAccount.getId());
+                        cashedFromAccount.credit(tx.getAmount());
+                        accountDAO.update(cashedFromAccount);
+                    }
+                    if(toAccount != null && toAccount.getId() != account.getId()){
+                        Account cashedToAccount = accountDAO.getAccountById(toAccount.getId());
+                        cashedToAccount.debit(tx.getAmount());
+                        accountDAO.update(cashedToAccount);
+                    }
+                }
                 transactionDAO.delete(tx);
             }
         }
@@ -241,10 +253,20 @@ public class AccountController {
     }
 
     //name, balance, includedInNetAsset, selectable are null means no change
-    public boolean editBasicAccount(BasicAccount account, String name, BigDecimal balance, String notes,
-                                    Boolean includedInNetAsset, Boolean selectable) {
-        if (name != null) account.setName(name);
-        if (balance != null) account.setBalance(balance);
+    public boolean editBasicAccount(BasicAccount account, String name, BigDecimal balance, String notes, Boolean includedInNetAsset,
+                                    Boolean selectable) {
+        if (name != null){
+            if(name.isEmpty()){
+                return false;
+            }
+            account.setName(name);
+        }
+        if (balance != null){
+            if(balance.compareTo(BigDecimal.ZERO) < 0){
+                return false;
+            }
+            account.setBalance(balance);
+        }
         account.setNotes(notes);
         if (includedInNetAsset != null) account.setIncludedInNetAsset(includedInNetAsset);
         if (selectable != null) account.setSelectable(selectable);
@@ -253,12 +275,27 @@ public class AccountController {
 
     public boolean editCreditAccount(CreditAccount account, String name, BigDecimal balance, String notes, Boolean includedInNetAsset,
                                      Boolean selectable, BigDecimal creditLimit, BigDecimal currentDebt, Integer billDate, Integer dueDate) {
-        if (name != null) account.setName(name);
-        if (balance != null) account.setBalance(balance);
+        if (name != null) {
+            if(name.isEmpty()){
+                return false;
+            }
+            account.setName(name);
+        }
+        if (balance != null) {
+            if(balance.compareTo(BigDecimal.ZERO) < 0){
+                return false;
+            }
+            account.setBalance(balance);
+        }
         account.setNotes(notes);
         if (includedInNetAsset != null) account.setIncludedInNetAsset(includedInNetAsset);
         if (selectable != null) account.setSelectable(selectable);
-        if (creditLimit != null) account.setCreditLimit(creditLimit);
+        if (creditLimit != null){
+            if(creditLimit.compareTo(BigDecimal.ZERO) <= 0){
+                return false;
+            }
+            account.setCreditLimit(creditLimit);
+        }
         if (currentDebt != null) account.setCurrentDebt(currentDebt);
         if (account.getCurrentDebt().compareTo(account.getCreditLimit()) > 0) {
             return false;
@@ -270,7 +307,12 @@ public class AccountController {
 
     public boolean editLoanAccount(LoanAccount account, String name, String notes, Boolean includedInNetAsset, Integer totalPeriods, Integer repaidPeriods,
                                    BigDecimal annualInterestRate, BigDecimal loanAmount, LocalDate repaymentDate, LoanAccount.RepaymentType repaymentType) {
-        if (name != null) account.setName(name);
+        if (name != null) {
+            if (name.isEmpty()) {
+                return false;
+            }
+            account.setName(name);
+        }
         account.setNotes(notes);
         if (includedInNetAsset != null) account.setIncludedInNetAsset(includedInNetAsset);
         if (totalPeriods != null){
@@ -286,7 +328,12 @@ public class AccountController {
             return false;
         }
         if (annualInterestRate != null) account.setAnnualInterestRate(annualInterestRate);
-        if (loanAmount != null) account.setLoanAmount(loanAmount);
+        if (loanAmount != null) {
+            if(loanAmount.compareTo(BigDecimal.ZERO) < 0){
+                return false;
+            }
+            account.setLoanAmount(loanAmount);
+        }
         if (repaymentDate != null) account.setRepaymentDate(repaymentDate);
         if (repaymentType != null) account.setRepaymentType(repaymentType);
         account.setRemainingAmount(account.calculateRemainingAmount());
@@ -296,8 +343,16 @@ public class AccountController {
 
     public boolean editBorrowingAccount(BorrowingAccount account, String name, BigDecimal amount, String notes,
                                         Boolean includedInNetAsset, Boolean selectable, Boolean isEnded) {
-        if (name != null) account.setName(name);
+        if (name != null){
+            if (name.isEmpty()){
+                return false;
+            }
+            account.setName(name);
+        }
         if (amount != null) {
+            if(amount.compareTo(BigDecimal.ZERO) < 0){
+                return false;
+            }
             BigDecimal oldAmount = account.getBorrowingAmount();
             account.setBorrowingAmount(amount);
             BigDecimal paidAmount = oldAmount.subtract(account.getRemainingAmount());
@@ -315,8 +370,16 @@ public class AccountController {
 
     public boolean editLendingAccount(LendingAccount account, String name, BigDecimal balance, String notes,
                                       Boolean includedInNetAsset, Boolean selectable, Boolean isEnded) {
-        if (name != null) account.setName(name);
+        if (name != null){
+            if (name.isEmpty()){
+                return false;
+            }
+            account.setName(name);
+        }
         if (balance != null){
+            if(balance.compareTo(BigDecimal.ZERO) < 0){
+                return false;
+            }
             account.setBalance(balance);
             account.checkAndUpdateStatus();
         }
@@ -327,16 +390,22 @@ public class AccountController {
         return accountDAO.update(account);
     }
 
-    public boolean hideAccount(Account account) {
-        account.hide();
-        return accountDAO.update(account);
-    }
+//    public boolean hideAccount(Account account) {
+//        account.hide();
+//        return accountDAO.update(account);
+//    }
 
     public boolean repayDebt(CreditAccount creditAccount, BigDecimal amount, Account fromAccount, Ledger ledger) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if(amount == null){
+            amount = creditAccount.getCurrentDebt();
+        }
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
             return false;
         }
         if (amount.compareTo(creditAccount.getCurrentDebt()) > 0) {
+            return false;
+        }
+        if(fromAccount != null && !fromAccount.getSelectable()){
             return false;
         }
         Transaction tx = new Transfer(LocalDate.now(), "Repay credit account debt", fromAccount, creditAccount,

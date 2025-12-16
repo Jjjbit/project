@@ -15,8 +15,8 @@ public class AccountDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean createBasicAccount(BasicAccount account) {
-        String sql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
-                "VALUES ('BasicAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
+                "VALUES ('BasicAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
         boolean autoCommit = true;
         try {
             autoCommit = connection.getAutoCommit();
@@ -28,9 +28,9 @@ public class AccountDAO {
                 stmt.setString(4, account.getCategory().name());
                 stmt.setLong(5, account.getOwner().getId());
                 stmt.setString(6, account.getNotes());
-                stmt.setBoolean(7, account.getHidden());
-                stmt.setBoolean(8, account.getIncludedInNetAsset());
-                stmt.setBoolean(9, account.getSelectable());
+                //stmt.setBoolean(7, account.getHidden());
+                stmt.setBoolean(7, account.getIncludedInNetAsset());
+                stmt.setBoolean(8, account.getSelectable());
 
                 int affectedRows = stmt.executeUpdate();
                 if (affectedRows == 0) {
@@ -72,8 +72,8 @@ public class AccountDAO {
             autoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             //insert into accounts table
-            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
-                    "VALUES ('CreditAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
+                    "VALUES ('CreditAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
 
             long accountId;
             try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
@@ -83,9 +83,9 @@ public class AccountDAO {
                 stmt.setString(4, account.getCategory().name());
                 stmt.setLong(5, account.getOwner().getId());
                 stmt.setString(6, account.getNotes());
-                stmt.setBoolean(7, account.getHidden());
-                stmt.setBoolean(8, account.getIncludedInNetAsset());
-                stmt.setBoolean(9, account.getSelectable());
+                //stmt.setBoolean(7, account.getHidden());
+                stmt.setBoolean(7, account.getIncludedInNetAsset());
+                stmt.setBoolean(8, account.getSelectable());
 
                 //execute account insert and return affected rows
                 int affectedRows = stmt.executeUpdate();
@@ -146,8 +146,8 @@ public class AccountDAO {
             autoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             //insert into accounts table
-            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
-                    "VALUES ('LoanAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
+                    "VALUES ('LoanAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
             long accountId;
             try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, account.getName());
@@ -156,9 +156,9 @@ public class AccountDAO {
                 stmt.setString(4, account.getCategory().name());
                 stmt.setLong(5, account.getOwner().getId());
                 stmt.setString(6, account.getNotes());
-                stmt.setBoolean(7, account.getHidden());
-                stmt.setBoolean(8, account.getIncludedInNetAsset());
-                stmt.setBoolean(9, account.getSelectable());
+                //stmt.setBoolean(7, account.getHidden());
+                stmt.setBoolean(7, account.getIncludedInNetAsset());
+                stmt.setBoolean(8, account.getSelectable());
                 int affectedRows = stmt.executeUpdate();
                 if (affectedRows == 0) {
                     connection.rollback();
@@ -220,8 +220,8 @@ public class AccountDAO {
             autoCommit = connection.getAutoCommit(); // Save original auto-commit state
             connection.setAutoCommit(false); // Disable auto-commit
             //insert into accounts table
-            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
-                    "VALUES ('BorrowingAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
+                    "VALUES ('BorrowingAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
 
             long accountId;
             try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
@@ -231,9 +231,8 @@ public class AccountDAO {
                 stmt.setString(4, account.getCategory().name());
                 stmt.setLong(5, account.getOwner().getId());
                 stmt.setString(6, account.getNotes());
-                stmt.setBoolean(7, account.getHidden());
-                stmt.setBoolean(8, account.getIncludedInNetAsset());
-                stmt.setBoolean(9, account.getSelectable());
+                stmt.setBoolean(7, account.getIncludedInNetAsset());
+                stmt.setBoolean(8, account.getSelectable());
 
                 int affectedRows = stmt.executeUpdate();
                 if (affectedRows == 0) {
@@ -291,8 +290,8 @@ public class AccountDAO {
             autoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             //insert into accounts table
-            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, is_hidden, included_in_net_asset, selectable) " +
-                    "VALUES ('LendingAccount', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
+                    "VALUES ('LendingAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
 
             long accountId;
             try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
@@ -302,9 +301,8 @@ public class AccountDAO {
                 stmt.setString(4, account.getCategory().name());
                 stmt.setLong(5, account.getOwner().getId());
                 stmt.setString(6, account.getNotes());
-                stmt.setBoolean(7, account.getHidden());
-                stmt.setBoolean(8, account.getIncludedInNetAsset());
-                stmt.setBoolean(9, account.getSelectable());
+                stmt.setBoolean(7, account.getIncludedInNetAsset());
+                stmt.setBoolean(8, account.getSelectable());
                 int affectedRows = stmt.executeUpdate();
                 if (affectedRows == 0) {
                     connection.rollback();
@@ -354,7 +352,7 @@ public class AccountDAO {
     @SuppressWarnings("SqlResolve")
     public Account getAccountById(long id) {
         String baseSql =  "SELECT DISTINCT a.id AS account_id, a.name, a.balance, a.account_type, a.account_category, " +
-                "a.notes, a.is_hidden, a.included_in_net_asset, a.selectable, a.user_id, a.dtype, " +
+                "a.notes, a.included_in_net_asset, a.selectable, a.user_id, a.dtype, " +
 
                 "ca.credit_limit, ca.current_debt, ca.bill_date, ca.due_date, " +
                 "la.total_periods, la.repaid_periods, la.annual_interest_rate, la.loan_amount, " +
@@ -437,7 +435,6 @@ public class AccountDAO {
         account.setType(AccountType.valueOf(rs.getString("account_type")));
         account.setCategory(AccountCategory.valueOf(rs.getString("account_category")));
         account.setNotes(rs.getString("notes"));
-        account.setHidden(rs.getBoolean("is_hidden"));
         account.setIncludedInNetAsset(rs.getBoolean("included_in_net_asset"));
         account.setSelectable(rs.getBoolean("selectable"));
         return account;
@@ -448,7 +445,7 @@ public class AccountDAO {
         List<Account> accounts = new ArrayList<>();
 
         String sql = " SELECT DISTINCT a.id AS account_id, a.name, a.balance, a.account_type, a.account_category, " +
-                "a.notes, a.is_hidden, a.included_in_net_asset, a.selectable, a.user_id, a.dtype," +
+                "a.notes, a.included_in_net_asset, a.selectable, a.user_id, a.dtype," +
 
                 "ca.credit_limit, ca.current_debt, ca.bill_date, ca.due_date, " +
                 "la.total_periods, la.repaid_periods, la.annual_interest_rate, la.loan_amount, " +
@@ -479,7 +476,7 @@ public class AccountDAO {
     @SuppressWarnings("SqlResolve")
     public boolean update(Account account) {
         String sql = "UPDATE accounts SET name = ?, balance = ?, account_type = ?, account_category = ?, notes = ?, " +
-                "included_in_net_asset = ?, selectable = ? , is_hidden = ?  WHERE id = ?";
+                "included_in_net_asset = ?, selectable = ?  WHERE id = ?";
 
         boolean originalAutoCommit = true;
         try {
@@ -493,8 +490,7 @@ public class AccountDAO {
                 stmt.setString(5, account.getNotes());
                 stmt.setBoolean(6, account.getIncludedInNetAsset());
                 stmt.setBoolean(7, account.getSelectable());
-                stmt.setBoolean(8, account.getHidden());
-                stmt.setLong(9, account.getId());
+                stmt.setLong(8, account.getId());
                 stmt.executeUpdate();
             }
             boolean childUpdated = updateSubclass(account);

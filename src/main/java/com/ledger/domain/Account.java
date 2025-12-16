@@ -11,7 +11,6 @@ public abstract class Account {
     protected AccountCategory category;
     protected User owner;
     protected String notes;
-    protected boolean hidden;
     protected boolean includedInNetAsset;
     protected boolean selectable;
 
@@ -40,9 +39,6 @@ public abstract class Account {
     }
     public void debit(BigDecimal amount){
         balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
-    }
-    public void hide() {
-        this.hidden = true;
     }
 
     public void setIncludedInNetAsset(boolean includedInNetAsset) {
@@ -86,17 +82,11 @@ public abstract class Account {
     public Boolean getSelectable() {
         return selectable;
     }
-    public Boolean getHidden() {
-        return hidden;
-    }
     public Boolean getIncludedInNetAsset() {
         return includedInNetAsset;
     }
     public void setCategory(AccountCategory category) {
         this.category = category;
-    }
-    public void setHidden(boolean hidden) {
-        this.hidden = hidden;
     }
     public void setType(AccountType type) {
         this.type = type;

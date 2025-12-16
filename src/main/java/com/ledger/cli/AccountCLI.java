@@ -86,7 +86,7 @@ public class AccountCLI {
     public void showAllAccounts() {
         System.out.println("\n=== Show All Accounts ===");
 
-        List<Account> accounts = accountController.getVisibleAccounts(userController.getCurrentUser()); //select visible BasicAccount, LoanAccount, CreditAccount
+        List<Account> accounts = accountController.getAccounts(userController.getCurrentUser()); //select visible BasicAccount, LoanAccount, CreditAccount
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -125,7 +125,7 @@ public class AccountCLI {
         System.out.println("\n=== Update Account ===");
 
         System.out.println("\nSelect the account to update:");
-        List<Account> accounts = accountController.getVisibleAccounts(userController.getCurrentUser());
+        List<Account> accounts = accountController.getAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -377,7 +377,7 @@ public class AccountCLI {
         //select account to delete
         System.out.println("\nSelect the account to delete:");
         Account accountToDelete;
-        List<Account> accounts = accountController.getVisibleAccounts(userController.getCurrentUser());
+        List<Account> accounts = accountController.getAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
@@ -423,46 +423,46 @@ public class AccountCLI {
         System.out.println("Account deleted successfully: " + accountToDelete.getName());
     }
 
-    public void hideAccount(){
-        System.out.println("\n=== Hide Account ===");
-
-        //select account to hide
-        System.out.println("\nSelect the account to hide:");
-        List<Account> accounts = accountController.getVisibleAccounts(userController.getCurrentUser());
-        if (accounts.isEmpty()) {
-            System.out.println("No accounts found.");
-            return;
-        }
-        for( int i=0; i< accounts.size(); i++) {
-            Account account = accounts.get(i);
-            System.out.println((i+1) + ". " + account.getName() + " (" + account.getType() +")");
-        }
-        System.out.println("0. Return");
-        System.out.print("Enter number: ");
-
-        String inputAccount = scanner.nextLine().trim();
-        int choice = Integer.parseInt(inputAccount);
-
-        if( choice ==0) {
-            System.out.println("Account hide cancelled.");
-            return;
-        }
-        if( choice <1 || choice > accounts.size()) {
-            System.out.println("Invalid choice!");
-            return;
-        }
-
-        Account accountToHide = accounts.get(choice -1);
-
-        boolean success = accountController.hideAccount(accountToHide);
-
-        if (!success) {
-            System.out.println("Failed to hide account: " + accountToHide.getName());
-            return;
-        }
-        System.out.println("Account hidden successfully: " + accountToHide.getName());
-
-    }
+//    public void hideAccount(){
+//        System.out.println("\n=== Hide Account ===");
+//
+//        //select account to hide
+//        System.out.println("\nSelect the account to hide:");
+//        List<Account> accounts = accountController.getAccounts(userController.getCurrentUser());
+//        if (accounts.isEmpty()) {
+//            System.out.println("No accounts found.");
+//            return;
+//        }
+//        for( int i=0; i< accounts.size(); i++) {
+//            Account account = accounts.get(i);
+//            System.out.println((i+1) + ". " + account.getName() + " (" + account.getType() +")");
+//        }
+//        System.out.println("0. Return");
+//        System.out.print("Enter number: ");
+//
+//        String inputAccount = scanner.nextLine().trim();
+//        int choice = Integer.parseInt(inputAccount);
+//
+//        if( choice ==0) {
+//            System.out.println("Account hide cancelled.");
+//            return;
+//        }
+//        if( choice <1 || choice > accounts.size()) {
+//            System.out.println("Invalid choice!");
+//            return;
+//        }
+//
+//        Account accountToHide = accounts.get(choice -1);
+//
+//        boolean success = accountController.hideAccount(accountToHide);
+//
+//        if (!success) {
+//            System.out.println("Failed to hide account: " + accountToHide.getName());
+//            return;
+//        }
+//        System.out.println("Account hidden successfully: " + accountToHide.getName());
+//
+//    }
 
     public void payDebt() {
         System.out.println("\n === Pay Debt ===");
@@ -526,7 +526,7 @@ public class AccountCLI {
         System.out.println("\n === Pay Loan ===");
 
         //select account to pay loan
-        List<LoanAccount> loanAccounts = accountController.getVisibleLoanAccounts(userController.getCurrentUser());
+        List<LoanAccount> loanAccounts = accountController.getLoanAccounts(userController.getCurrentUser());
         if(loanAccounts.isEmpty()){
             System.out.println("No loan accounts found.");
             return;
@@ -574,7 +574,7 @@ public class AccountCLI {
 
         //select borrowing to make payment
         System.out.println("Select the borrowing to make a payment to:");
-        List<BorrowingAccount> userBorrowings = accountController.getVisibleBorrowingAccounts(userController.getCurrentUser());
+        List<BorrowingAccount> userBorrowings = accountController.getBorrowingAccounts(userController.getCurrentUser());
 
         for(int i=0;i<userBorrowings.size();i++){
             BorrowingAccount borrowing=userBorrowings.get(i);
@@ -668,7 +668,7 @@ public class AccountCLI {
         System.out.println("\n === Receiving a lending payment ===");
 
         System.out.println("Select the lending to receive payment for:");
-        List<LendingAccount> userLendings = accountController.getVisibleLendingAccounts(userController.getCurrentUser());
+        List<LendingAccount> userLendings = accountController.getLendingAccounts(userController.getCurrentUser());
         System.out.println("0. Cancel");
         for(int i=0;i<userLendings.size();i++){
             LendingAccount lending=userLendings.get(i);
@@ -779,7 +779,7 @@ public class AccountCLI {
         System.out.println("\n=== Account Summary ===");
 
         //select Account
-        List<Account> accounts = accountController.getVisibleAccounts(userController.getCurrentUser());
+        List<Account> accounts = accountController.getAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
