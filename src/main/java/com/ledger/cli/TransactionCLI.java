@@ -26,7 +26,27 @@ public class TransactionCLI {
         this.transactionController = transactionController;
     }
 
-    public void addIncome() {
+    public void addTransaction(){
+        System.out.println("\n === Add Transaction ===");
+
+        System.out.println("Select transaction type to add:");
+        System.out.println("1. Income");
+        System.out.println("2. Expense");
+        System.out.println("3. Transfer");
+        System.out.print("Enter your choice (1-3): ");
+        String input = scanner.nextLine().trim();
+        int choice = Integer.parseInt(input);
+        switch (choice) {
+            case 1 -> addIncome();
+            case 2 -> addExpense();
+            case 3 -> addTransfer();
+            default -> {
+                System.out.println("Invalid choice. Please try again.");
+                addTransaction();
+            }
+        }
+    }
+    private void addIncome() {
         System.out.println("\n === Add Income Transaction ===");
 
         //select ledger
@@ -53,8 +73,7 @@ public class TransactionCLI {
         LocalDate date = inputDate();
 
         //create transaction
-        Income incomeTransaction = transactionController.createIncome(selectedLedger, selectedAccount,
-                selectedCategory, note, date, amount);
+        Income incomeTransaction = transactionController.createIncome(selectedLedger, selectedAccount, selectedCategory, note, date, amount);
         if(incomeTransaction==null){
             System.out.println("Failed to create income transaction.");
             return;
@@ -65,7 +84,7 @@ public class TransactionCLI {
                 + ", Note: " + (incomeTransaction.getNote() != null ? incomeTransaction.getNote() : "No note"));
     }
 
-    public void addExpense(){
+    private void addExpense(){
         System.out.println("\n === Add Expense Transaction ===");
 
         //select ledger
@@ -106,7 +125,7 @@ public class TransactionCLI {
                 + ", Note: " + (expenseTransaction.getNote() != null ? expenseTransaction.getNote() : "No note"));
     }
 
-    public void addTransfer(){
+    private void addTransfer(){
         System.out.println("\n === Add Transfer Transaction ===");
 
         //select ledger
