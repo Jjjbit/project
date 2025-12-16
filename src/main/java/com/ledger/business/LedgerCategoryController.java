@@ -113,16 +113,14 @@ public class LedgerCategoryController {
         return ledgerCategoryDAO.update(category); //update parent_id in database
     }
 
-    public boolean renameCategory(LedgerCategory category, String newName, Ledger ledger) {
+    public boolean renameCategory(LedgerCategory category, String newName) {
         if(category == null){
-            return false;
-        }
-        if(ledger == null){
             return false;
         }
         if(newName == null || newName.isEmpty()) {
             return false;
         }
+        Ledger ledger = category.getLedger();
 
         LedgerCategory existingCategory = ledgerCategoryDAO.getByNameAndLedger(newName, ledger);
         if(existingCategory != null && existingCategory.getId() != category.getId()) {

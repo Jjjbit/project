@@ -128,7 +128,7 @@ public class LedgerCategoryCLI {
         }
 
         //rename category
-        boolean success = ledgerCategoryController.renameCategory(categoryToRename, newName, selectedLedger);
+        boolean success = ledgerCategoryController.renameCategory(categoryToRename, newName);
         if (!success) {
             System.out.println("Failed to rename category. The new name may already exist or the input was invalid.");
             return;
