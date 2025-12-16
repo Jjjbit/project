@@ -45,11 +45,7 @@ public class LedgerCategoryControllerTest {
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         budgetDAO = new BudgetDAO(connection);
-        ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
-        ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
-        InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
-        InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
         LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
         BorrowingTxLinkDAO borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
         LendingTxLinkDAO lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
@@ -57,8 +53,7 @@ public class LedgerCategoryControllerTest {
         UserController userController = new UserController(userDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO,
-                reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, borrowingTxLinkDAO, loanTxLinkDAO, lendingTxLinkDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, debtPaymentDAO, borrowingTxLinkDAO, loanTxLinkDAO, lendingTxLinkDAO);
         AccountController accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO,
                 loanTxLinkDAO, borrowingTxLinkDAO, lendingTxLinkDAO);
 
@@ -180,7 +175,7 @@ public class LedgerCategoryControllerTest {
         assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
 
         List<LedgerCategory> categories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
-        assertEquals(17, categories.size()); //one category less in DB
+        assertEquals(16, categories.size());
 
         List<LedgerCategory> parents = categories.stream()
                 .filter(cat->cat.getParent() == null)
@@ -189,7 +184,7 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> incomeCategories=parents.stream()
                 .filter(cat->cat.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(3, incomeCategories.size());
+        assertEquals(2, incomeCategories.size());
 
         List<LedgerCategory> expenseCategories=parents.stream()
                 .filter(cat->cat.getType() == CategoryType.EXPENSE)
@@ -243,7 +238,7 @@ public class LedgerCategoryControllerTest {
         assertEquals(tx1.getId(), transactionDAO.getByLedgerId(testLedger.getId()).getFirst().getId());
 
         List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
-        assertEquals(17, categories.size()); //one category less in DB
+        assertEquals(16, categories.size()); //one category less in DB
 
         List<LedgerCategory> parents=categories.stream()
                 .filter(cat->cat.getParent() == null)
@@ -252,7 +247,7 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> incomeCategories=parents.stream()
                 .filter(cat->cat.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(3, incomeCategories.size());
+        assertEquals(2, incomeCategories.size());
         List<LedgerCategory> expenseCategories=parents.stream()
                 .filter(cat->cat.getType() == CategoryType.EXPENSE)
                 .toList();
@@ -302,7 +297,7 @@ public class LedgerCategoryControllerTest {
                 .orElse(null);
         assertNotNull(foodCategory);
 
-        boolean result = ledgerCategoryController.renameCategory(foodCategory, "Groceries", testLedger);
+        boolean result = ledgerCategoryController.renameCategory(foodCategory, "Groceries");
         assertTrue(result);
         assertEquals("Groceries", foodCategory.getName());
 
@@ -318,7 +313,7 @@ public class LedgerCategoryControllerTest {
                 .orElse(null);
         assertNotNull(foodCategory);
 
-        boolean result = ledgerCategoryController.renameCategory(foodCategory, "Salary", testLedger);
+        boolean result = ledgerCategoryController.renameCategory(foodCategory, "Salary");
         assertFalse(result);
 
         LedgerCategory updatedCategory=ledgerCategoryDAO.getById(foodCategory.getId());
@@ -326,23 +321,11 @@ public class LedgerCategoryControllerTest {
     }
 
     @Test
-    public void testRenameLedgerCategory_NullCategory() {
-        String newName = "New Category Name";
-        boolean result = ledgerCategoryController.renameCategory(null, newName, testLedger);
-        assertFalse(result);
-    }
-
-    @Test
-    public void testRenameLedgerCategory_InvalidName() {
-        LedgerCategory foodCategory = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(foodCategory);
-
-        String invalidName = "   "; // empty after trim
-        boolean result = ledgerCategoryController.renameCategory(foodCategory, invalidName, testLedger);
-        assertTrue(result);
+    public void testRenameLedgerCategory_Failure() {
+        assertFalse( ledgerCategoryController.renameCategory(null, "New Category Name"));
+        assertFalse(ledgerCategoryController.renameCategory(testCategories.getFirst(), null));
+        assertFalse(ledgerCategoryController.renameCategory(testCategories.getFirst(), ""));
+        assertFalse(ledgerCategoryController.renameCategory(testCategories.getFirst(), "Salary"));
     }
 
     //promote sub-category to top-level
@@ -381,7 +364,7 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> incomeCategories=topLevelCategories.stream()
                 .filter(cat->cat.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(4, incomeCategories.size());
+        assertEquals(3, incomeCategories.size());
 
         List<LedgerCategory> expenseCategories=topLevelCategories.stream()
                 .filter(cat->cat.getType() == CategoryType.EXPENSE)
@@ -442,7 +425,7 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> incomeCategories=rootCategories.stream()
                 .filter(cat->cat.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(3, incomeCategories.size());
+        assertEquals(2, incomeCategories.size());
 
         List<LedgerCategory> expenseCategories=rootCategories.stream()
                 .filter(cat->cat.getType() == CategoryType.EXPENSE)
@@ -611,7 +594,7 @@ public class LedgerCategoryControllerTest {
         List<LedgerCategory> incomeCategories = topLevelCategories.stream()
                 .filter(cat -> cat.getType() == CategoryType.INCOME)
                 .toList();
-        assertEquals(4, incomeCategories.size());
+        assertEquals(3, incomeCategories.size());
         List<LedgerCategory> expenseCategories = topLevelCategories.stream()
                 .filter(cat -> cat.getType() == CategoryType.EXPENSE)
                 .toList();

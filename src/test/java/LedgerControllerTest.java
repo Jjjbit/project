@@ -48,18 +48,14 @@ public class LedgerControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         budgetDAO = new BudgetDAO(connection);
-        ReimbursementDAO reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
-        ReimbursementTxLinkDAO reimbursementTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
-        InstallmentDAO installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
-        InstallmentPaymentDAO installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
         LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
         BorrowingTxLinkDAO borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
         LendingTxLinkDAO lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO, reimbursementTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, borrowingTxLinkDAO, loanTxLinkDAO, lendingTxLinkDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, debtPaymentDAO, borrowingTxLinkDAO, loanTxLinkDAO, lendingTxLinkDAO);
         AccountController accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO, loanTxLinkDAO, borrowingTxLinkDAO, lendingTxLinkDAO);
 
         userController.register("test user", "password123"); // create test user and insert into db
@@ -115,7 +111,7 @@ public class LedgerControllerTest {
         assertNotNull(monthlyLedgerBudget);
         assertNotNull(yearlyLedgerBudget);
 
-        assertEquals(18, ledgerCategoryDAO.getTreeByLedgerId(ledger.getId()).size());
+        assertEquals(17, ledgerCategoryDAO.getTreeByLedgerId(ledger.getId()).size());
         List<LedgerCategory> categories= ledgerCategoryDAO.getTreeByLedgerId(ledger.getId());
 
         //print details
@@ -250,7 +246,7 @@ public class LedgerControllerTest {
         assertEquals(2, ledgerDAO.getLedgersByUserId(testUser.getId()).size());
         assertNotNull(budgetDAO.getBudgetByLedger(copiedLedger, Budget.Period.MONTHLY));
         assertNotNull(budgetDAO.getBudgetByLedger(copiedLedger, Budget.Period.YEARLY));
-        assertEquals(18, ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId()).size());
+        assertEquals(17, ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId()).size());
 
         List<LedgerCategory> originalCategories = ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId());
         List<LedgerCategory> copiedCategories = ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId());

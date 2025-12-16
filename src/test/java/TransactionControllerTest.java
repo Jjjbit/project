@@ -28,10 +28,6 @@ public class TransactionControllerTest {
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
     private LedgerCategoryDAO ledgerCategoryDAO;
-    private InstallmentPaymentDAO installmentPaymentDAO;
-    private InstallmentDAO installmentDAO;
-    private ReimbursementTxLinkDAO transactionTxLinkDAO;
-    private ReimbursementDAO reimbursementDAO;
     private LoanTxLinkDAO loanTxLinkDAO;
     private BorrowingTxLinkDAO borrowingTxLinkDAO;
     private LendingTxLinkDAO lendingTxLinkDAO;
@@ -39,8 +35,6 @@ public class TransactionControllerTest {
     private TransactionController transactionController;
     private LedgerController ledgerController;
     private AccountController accountController;
-    private ReimbursementController reimbursementController;
-    private InstallmentController installmentController;
 
     @BeforeEach
     public void setUp() {
@@ -56,23 +50,15 @@ public class TransactionControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection);
-        reimbursementDAO = new ReimbursementDAO(connection, ledgerCategoryDAO, accountDAO, transactionDAO);
-        transactionTxLinkDAO = new ReimbursementTxLinkDAO(connection, transactionDAO, reimbursementDAO);
         DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
-        installmentDAO = new InstallmentDAO(connection, ledgerCategoryDAO);
-        installmentPaymentDAO = new InstallmentPaymentDAO(connection, transactionDAO, installmentDAO);
         loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
         borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
         lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, reimbursementDAO,
-                transactionTxLinkDAO, debtPaymentDAO, installmentPaymentDAO, installmentDAO, borrowingTxLinkDAO, loanTxLinkDAO, lendingTxLinkDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO, debtPaymentDAO, borrowingTxLinkDAO, loanTxLinkDAO, lendingTxLinkDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO, loanTxLinkDAO, borrowingTxLinkDAO, lendingTxLinkDAO);
-        reimbursementController = new ReimbursementController(transactionDAO,
-                reimbursementDAO, transactionTxLinkDAO, ledgerCategoryDAO, accountDAO);
-        installmentController = new InstallmentController(installmentDAO, transactionDAO, accountDAO, installmentPaymentDAO);
 
         userController.register("test user", "password123");
         testUser = userController.login("test user", "password123");
@@ -121,164 +107,6 @@ public class TransactionControllerTest {
     //test edit transfer of borrowing
     //test edit transfer of lending
 
-    //test edit income of reimbursement
-    @Test
-    public void testEdit_IncomeOfReimbursement(){
-        LedgerCategory food = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-
-        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount, testLedger, food);
-        assertNotNull(record);
-
-        reimbursementController.claim(record, BigDecimal.valueOf(550.00), true, testAccount, LocalDate.now());
-
-        List<Transaction> reimbursementClaims = transactionTxLinkDAO.getTransactionsByReimbursement(record);
-        Income income = (Income) reimbursementClaims.stream()
-                .filter(tx -> tx.getType() == TransactionType.INCOME)
-                .findFirst()
-                .orElse(null);
-        assertNotNull(income);
-
-        Account newAccount = accountController.createBasicAccount("New Account", BigDecimal.valueOf(500.00),
-                AccountType.CASH, AccountCategory.FUNDS, testUser, "New Account Notes",
-                true, true);
-
-        Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
-        List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedgerId(newLedger.getId());
-
-        LedgerCategory newCategory = newLedgerCategories.stream()
-                .filter(cat -> cat.getName().equals("Bonus"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(newCategory);
-
-        boolean result=transactionController.updateIncome(income, newAccount,
-                newCategory, "Updated Reimbursement Income", LocalDate.now(),
-                BigDecimal.valueOf(250.00), newLedger);
-        assertFalse(result);
-    }
-
-    //test edit expense of installment
-    //new from account is not a credit card
-    @Test
-    public void testEdit_ExpenseOfInstallment1(){
-        CreditAccount creditCardAccount = accountController.createCreditAccount("MasterCard Credit Card", null,
-                BigDecimal.valueOf(2000.00),   //balance
-                true, true, testUser,
-                AccountType.CREDIT_CARD,
-                BigDecimal.valueOf(3000.00), //credit limit
-                BigDecimal.valueOf(1000.00), //current debt
-                10, 20);
-
-        LedgerCategory electronics = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Electronics"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(electronics);
-
-        Installment installment = installmentController.createInstallment(creditCardAccount, "Laptop Purchase",
-                BigDecimal.valueOf(2000.00), 12, BigDecimal.ZERO, Installment.Strategy.EVENLY_SPLIT,
-                 LocalDate.now(), electronics, true, testLedger);
-        assertNotNull(installment);
-        assertEquals(1, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
-        //current debt 1000+(2000-166.67)=2833.33
-        //balance 2000- 166.67=1833.33
-        //remaining amount 2000- 166.67 =1833.33
-        assertEquals(0, creditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2833.33)));
-        assertEquals(0, creditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1833.33)));
-        assertEquals(0, installment.getRemainingAmount().compareTo(BigDecimal.valueOf(1833.33)));
-        assertEquals(1, installment.getPaidPeriods());
-
-        boolean result=transactionController.updateExpense(
-                (Expense) transactionDAO.getByAccountId(creditCardAccount.getId()).getFirst(),
-                testAccount, //new from account
-                electronics,
-                "Updated Laptop Purchase Installment",
-                LocalDate.now(),
-                BigDecimal.valueOf(1000.00),
-                testLedger);
-        assertFalse(result);
-    }
-
-    //new from account is a credit card
-    @Test
-    public void testEdit_ExpenseOfInstallment2(){
-        CreditAccount creditCardAccount = accountController.createCreditAccount("MasterCard Credit Card", null,
-                BigDecimal.valueOf(2000.00),   //balance
-                true, true, testUser,
-                AccountType.CREDIT_CARD,
-                BigDecimal.valueOf(3000.00), //credit limit
-                BigDecimal.valueOf(1000.00), //current debt
-                10, 20);
-
-        LedgerCategory electronics = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Electronics"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(electronics);
-
-        Installment installment = installmentController.createInstallment(creditCardAccount, "Laptop Purchase",
-                BigDecimal.valueOf(2000.00), 12, BigDecimal.ZERO, Installment.Strategy.EVENLY_SPLIT,
-                LocalDate.now(), electronics, true, testLedger);
-        assertNotNull(installment);
-        assertEquals(1, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
-        //current debt 1000+(2000-166.67)=2833.33
-        //balance 2000- 166.67=1833.33
-        //remaining amount 2000- 166.67 =1833.33
-        assertEquals(0, creditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2833.33)));
-        assertEquals(0, creditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1833.33)));
-        assertEquals(0, installment.getRemainingAmount().compareTo(BigDecimal.valueOf(1833.33)));
-        assertEquals(1, installment.getPaidPeriods());
-
-        CreditAccount newFromAccount = accountController.createCreditAccount("New Credit Card", null,
-                BigDecimal.valueOf(4000.00),   //balance
-                true, true, testUser,
-                AccountType.CREDIT_CARD,
-                BigDecimal.valueOf(4000.00), //credit limit
-                BigDecimal.valueOf(500.00), //current debt
-                5, 15);
-
-        boolean result=transactionController.updateExpense(
-                (Expense) transactionDAO.getByAccountId(creditCardAccount.getId()).getFirst(),
-                newFromAccount, //new from account
-                electronics,
-                "Updated Laptop Purchase Installment",
-                LocalDate.now(),
-                BigDecimal.valueOf(1000.00),
-                testLedger);
-        assertFalse(result);
-    }
-
-    //test edit transfer of reimbursement
-    @Test
-    public void testEdit_TransferOfReimbursement(){
-        LedgerCategory food = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-
-        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount, testLedger,
-                food);
-        assertNotNull(record);
-
-        reimbursementController.claim(record, BigDecimal.valueOf(500.00), true, testAccount, LocalDate.now());
-        //remaining amount 300
-
-        boolean result=transactionController.updateTransfer(
-                (Transfer) transactionTxLinkDAO.getTransactionsByReimbursement(record).getFirst(),
-                null,
-                testAccount,
-                "Updated Reimbursement Transfer",
-                LocalDate.now(),
-                BigDecimal.valueOf(600.00),
-                testLedger);
-        assertFalse(result);
-    }
-
     //test edit transfer of payment of debt
     @Test
     public void testEdit_TransferOfDebtPayment(){
@@ -301,13 +129,9 @@ public class TransactionControllerTest {
                 BigDecimal.valueOf(1500.00), AccountType.DEBIT_CARD, AccountCategory.FUNDS, testUser,
                 "New Basic Account Notes", true, true);
 
-        boolean result=transactionController.updateTransfer(
-                (Transfer) transactionDAO.getByAccountId(testAccount.getId()).getFirst(),
-                newFromAccount,
-                newToAccount,
-                "Updated Debt Payment Transfer",
-                LocalDate.now(),
-                BigDecimal.valueOf(600.00),
+        boolean result=transactionController.updateTransfer((Transfer) transactionDAO.getByAccountId(testAccount.getId()).getFirst(),
+                newFromAccount, newToAccount, "Updated Debt Payment Transfer",
+                LocalDate.now(), BigDecimal.valueOf(600.00),
                 testLedger);
         assertFalse(result); //should fail because new amount exceeds current debt
 
@@ -618,187 +442,6 @@ public class TransactionControllerTest {
 
         Account finalAccount = accountDAO.getAccountById(testAccount.getId());
         assertEquals(0, finalAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
-    }
-
-    //test delete a payment of installment of a credit card
-    @Test
-    public void testDelete_PaymentOfInstallment(){
-        CreditAccount creditCardAccount = accountController.createCreditAccount("MasterCard Credit Card", null,
-                BigDecimal.valueOf(2000.00),   //balance
-                true, true, testUser,
-                AccountType.CREDIT_CARD,
-                BigDecimal.valueOf(3000.00), //credit limit
-                BigDecimal.valueOf(1000.00), //current debt
-                10, 20);
-
-        LedgerCategory electronics = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Electronics"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(electronics);
-
-        Installment installment = installmentController.createInstallment(creditCardAccount, "Laptop Purchase",
-                BigDecimal.valueOf(2000.00), 12, BigDecimal.ZERO, Installment.Strategy.EVENLY_SPLIT,
-                 LocalDate.now(), electronics, true, testLedger);
-        assertNotNull(installment);
-        assertEquals(1, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
-        //current debt 1000+(2000-166.67)=2833.33
-        //balance 2000- 166.67=1833.33
-        //remaining amount 2000- 166.67 =1833.33
-        assertEquals(0, creditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2833.33)));
-        assertEquals(0, creditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1833.33)));
-        assertEquals(0, installment.getRemainingAmount().compareTo(BigDecimal.valueOf(1833.33)));
-
-        boolean payed = installmentController.payInstallment(installment, creditCardAccount);
-        assertTrue(payed);
-        //current debt 2833.33-166.67=2666.66
-        //balance 1833.33 - 166.67 = 1666.66
-        //remaining amount 1833.33 - 166.67 = 1666.66
-        assertEquals(0, installment.getRemainingAmount().compareTo(BigDecimal.valueOf(1666.66)));
-        assertEquals(0, creditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1666.66)));
-        assertEquals(0, creditCardAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2666.66)));
-        assertEquals(2, installment.getPaidPeriods());
-        assertEquals(2, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
-
-        List<Transaction> installmentPayments = installmentPaymentDAO.getTransactionsByInstallment(installment);
-
-        boolean deleted = transactionController.deleteTransaction(installmentPayments.get(1)); //delete the payment just made
-        assertTrue(deleted);
-        //current debt should be back to 2833.33
-        //balance back to 1833.33
-        //installment remaining amount back to 1833.33  and paid periods back to 1
-
-        assertEquals(1, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
-        assertEquals(1, installmentPaymentDAO.getTransactionsByInstallment(installment).size());
-
-        //verify credit card account updated
-        CreditAccount updatedToAccount = (CreditAccount) accountDAO.getAccountById(creditCardAccount.getId());
-        assertEquals(0, updatedToAccount.getCurrentDebt().compareTo(BigDecimal.valueOf(2833.33)));
-        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(1833.33)));
-
-        //verify installment updated
-        Installment updatedInstallment = installmentDAO.getById(installment.getId());
-        assertEquals(0, updatedInstallment.getRemainingAmount().compareTo(BigDecimal.valueOf(1833.33)));
-        assertEquals(1, updatedInstallment.getPaidPeriods());
-    }
-
-    //test delete original transaction of reimbursement
-    @Test
-    public void testDelete_OriginalTransactionOfReimbursement(){
-        LedgerCategory food = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-
-        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(800.00), testAccount, testLedger, food);
-        assertNotNull(record);
-
-        CreditAccount creditCardAccount = accountController.createCreditAccount("Visa Credit Card", null,
-                BigDecimal.valueOf(1000.00), true, true, testUser,
-                AccountType.CREDIT_CARD, BigDecimal.valueOf(5000.00), BigDecimal.valueOf(500.00),
-                15, 25);
-
-        reimbursementController.claim(record, BigDecimal.valueOf(850.00), true, creditCardAccount, LocalDate.now());
-
-        List<Transaction> reimbursementClaims = transactionTxLinkDAO.getTransactionsByReimbursement(record);
-        assertEquals(3, reimbursementClaims.size());
-
-        boolean deleted = transactionController.deleteTransaction(reimbursementClaims.getFirst()); //delete original transaction
-        assertTrue(deleted);
-        assertNull(reimbursementDAO.getById(record.getId()));
-
-        assertEquals(0, transactionTxLinkDAO.getTransactionsByReimbursement(record).size());
-        assertEquals(0, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
-        assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
-
-        Account updatedCreditCardAccount = accountDAO.getAccountById(creditCardAccount.getId());
-        assertEquals(0, updatedCreditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
-
-        Account updatedTestAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedTestAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
-    }
-
-    //test delete a record of reimbursement over claim
-    @Test
-    public void testDelete_ReimbursementOverClaimTransaction() {
-        LedgerCategory food = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-
-        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(800.00), testAccount, testLedger, food);
-        assertNotNull(record);
-
-        CreditAccount creditCardAccount = accountController.createCreditAccount("Visa Credit Card", null,
-                BigDecimal.valueOf(1000.00), true, true, testUser,
-                AccountType.CREDIT_CARD, BigDecimal.valueOf(5000.00), BigDecimal.valueOf(500.00),
-                15, 25);
-
-        reimbursementController.claim(record, BigDecimal.valueOf(850.00), true, creditCardAccount, LocalDate.now());
-
-        List<Transaction> reimbursementClaims = transactionTxLinkDAO.getTransactionsByReimbursement(record);
-        assertEquals(3, reimbursementClaims.size());
-
-        boolean deleted = transactionController.deleteTransaction(reimbursementClaims.get(1)); //delete the valid claim transaction
-        assertTrue(deleted);
-        assertEquals(2, transactionTxLinkDAO.getTransactionsByReimbursement(record).size());
-        assertEquals(1, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
-        assertEquals(2, transactionDAO.getByLedgerId(testLedger.getId()).size());
-
-        Reimbursement updatedRecord = reimbursementDAO.getById(record.getId());
-        assertEquals(0, updatedRecord.getRemainingAmount().compareTo(BigDecimal.valueOf(750.00)));
-        assertFalse(updatedRecord.isEnded());
-        Account updatedCreditCardAccount = accountDAO.getAccountById(creditCardAccount.getId());
-        assertEquals(0, updatedCreditCardAccount.getBalance().compareTo(BigDecimal.valueOf(1050.00)));
-
-
-        boolean deleted2 = transactionController.deleteTransaction(reimbursementClaims.get(2)); //delete the over claim transaction
-        assertTrue(deleted2);
-        assertEquals(1, transactionTxLinkDAO.getTransactionsByReimbursement(record).size());
-        assertEquals(0, transactionDAO.getByAccountId(creditCardAccount.getId()).size());
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
-        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
-
-        Reimbursement finalRecord = reimbursementDAO.getById(record.getId());
-        assertEquals(0, finalRecord.getRemainingAmount().compareTo(BigDecimal.valueOf(800.00)));
-        assertFalse(finalRecord.isEnded());
-
-        Account updatedCreditCardAccount2 = accountDAO.getAccountById(creditCardAccount.getId());
-        assertEquals(0, updatedCreditCardAccount2.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
-    }
-
-    //delete an expense of reimbursement
-    @Test
-    public void testDelete_ReimbursementExpense(){
-        LedgerCategory food = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-
-        Reimbursement record = reimbursementController.create(BigDecimal.valueOf(500.00), testAccount, testLedger, food);
-        assertNotNull(record);
-
-        reimbursementController.claim(record, BigDecimal.valueOf(200.00), true, testAccount, LocalDate.now());
-        //remaining amount 300
-        List<Transaction> reimbursementClaims = transactionTxLinkDAO.getTransactionsByReimbursement(record);
-        assertEquals(3, reimbursementClaims.size());
-
-        Transaction expense = reimbursementClaims.getLast(); //the expense transaction
-
-        boolean  deleted = transactionController.deleteTransaction(expense);
-        assertTrue(deleted);
-        assertEquals(2, transactionTxLinkDAO.getTransactionsByReimbursement(record).size());
-        assertEquals(2, transactionDAO.getByAccountId(testAccount.getId()).size());
-        assertEquals(2, transactionDAO.getByLedgerId(testLedger.getId()).size());
-        assertEquals(0, transactionDAO.getByCategoryId(food.getId()).size());
-
-        Reimbursement updatedRecord = reimbursementDAO.getById(record.getId());
-        assertEquals(0, updatedRecord.getRemainingAmount().compareTo(BigDecimal.valueOf(300.00)));
-        assertFalse(updatedRecord.isEnded());
     }
 
     //test delete a payment of debt of a credit card
