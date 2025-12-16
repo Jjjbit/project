@@ -443,7 +443,6 @@ public class AccountDAO {
     @SuppressWarnings("SqlResolve")
     public List<Account> getAccountsByOwnerId(long ownerId) {
         List<Account> accounts = new ArrayList<>();
-
         String sql = " SELECT DISTINCT a.id AS account_id, a.name, a.balance, a.account_type, a.account_category, " +
                 "a.notes, a.included_in_net_asset, a.selectable, a.user_id, a.dtype," +
 
@@ -458,7 +457,6 @@ public class AccountDAO {
                 "LEFT JOIN borrowing_account ba ON a.id = ba.id " +
                 "LEFT JOIN lending_account len ON a.id = len.id " +
                 "WHERE a.user_id = ?";
-
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, ownerId);
             try(ResultSet rs = stmt.executeQuery()) {
