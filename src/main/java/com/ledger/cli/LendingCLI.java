@@ -93,7 +93,7 @@ public class LendingCLI {
     public void showAllLendings() {
         System.out.println("\n === Listing all lendings ===");
 
-        List<LendingAccount> lendings = accountController.getVisibleLendingAccounts(userController.getCurrentUser());
+        List<LendingAccount> lendings = accountController.getLendingAccounts(userController.getCurrentUser());
         if (lendings.isEmpty()) {
             System.out.println("No active lendings found.");
             return;
@@ -113,7 +113,7 @@ public class LendingCLI {
         System.out.println("\n === Editing a lending ===");
 
         System.out.println("\nSelect the lending to edit:");
-        List<LendingAccount> userLendings = accountController.getVisibleLendingAccounts(userController.getCurrentUser());
+        List<LendingAccount> userLendings = accountController.getLendingAccounts(userController.getCurrentUser());
 
         for(int i=0;i<userLendings.size();i++){
             LendingAccount lending=userLendings.get(i);
@@ -218,7 +218,7 @@ public class LendingCLI {
         System.out.println("\n === Deleting a lending ===");
 
         System.out.println("Select the lending to delete:");
-        List<LendingAccount> userLendings = accountController.getVisibleLendingAccounts(userController.getCurrentUser());
+        List<LendingAccount> userLendings = accountController.getLendingAccounts(userController.getCurrentUser());
         System.out.println("0. Cancel");
         for(int i=0;i<userLendings.size();i++){
             LendingAccount lending=userLendings.get(i);
@@ -267,7 +267,7 @@ public class LendingCLI {
         System.out.println("\n === Receiving a lending payment ===");
 
         System.out.println("Select the lending to receive payment for:");
-        List<LendingAccount> userLendings = accountController.getVisibleLendingAccounts(userController.getCurrentUser());
+        List<LendingAccount> userLendings = accountController.getLendingAccounts(userController.getCurrentUser());
         System.out.println("0. Cancel");
         for(int i=0;i<userLendings.size();i++){
             LendingAccount lending=userLendings.get(i);
