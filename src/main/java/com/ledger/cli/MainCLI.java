@@ -6,32 +6,28 @@ public class MainCLI {
     private final AccountCLI accountCLI;
     private final LedgerCLI ledgerCLI;
     private final TransactionCLI transactionCLI;
-    private final InstallmentCLI installmentCLI;
     private final BudgetCLI budgetCLI;
     private final LedgerCategoryCLI ledgerCategoryCLI;
     private final BorrowingCLI borrowingCLI;
     private final LendingCLI lendingCLI;
-    private final ReimbursementCLI reimbursementCLI;
 
     private final Scanner scanner = new Scanner(System.in);
     private boolean running = true;
 
     public MainCLI(UserCLI userCLI, AccountCLI accountCLI, LedgerCLI ledgerCLI,
-                   TransactionCLI transactionCLI, InstallmentCLI installmentCLI,
+                   TransactionCLI transactionCLI,
                    BudgetCLI budgetCLI,
                    LedgerCategoryCLI ledgerCategoryCLI,
                    BorrowingCLI borrowingCLI,
-                   LendingCLI lendingCLI, ReimbursementCLI reimbursementCLI) {
+                   LendingCLI lendingCLI) {
         this.userCLI = userCLI;
         this.accountCLI =  accountCLI;
         this.ledgerCLI = ledgerCLI;
         this.transactionCLI = transactionCLI;
-        this.installmentCLI = installmentCLI;
         this.budgetCLI = budgetCLI;
         this.ledgerCategoryCLI = ledgerCategoryCLI;
         this.borrowingCLI = borrowingCLI;
         this.lendingCLI = lendingCLI;
-        this.reimbursementCLI = reimbursementCLI;
     }
 
     public void run() {
@@ -84,10 +80,8 @@ public class MainCLI {
         System.out.println("5. Lending Management");
         System.out.println("6. Borrowing Management");
         System.out.println("7. Category Management");
-        System.out.println("8. Installment Management");
-        System.out.println("9. Reimbursement Management");
-        System.out.println("10. User Profile");
-        System.out.println("11. Logout");
+        System.out.println("8. User Profile");
+        System.out.println("9. Logout");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -121,74 +115,74 @@ public class MainCLI {
                 // category management menu
                 showCategoryMenu();
                 break;
-            case "8":
-                // installment management menu
-                showInstallmentMenu();
-                break;
-            case "9":
-                // reimbursement management menu
-                showReimbursementMenu();
-                break;
-            case "10" :
+//            case "8":
+//                // installment management menu
+//                showInstallmentMenu();
+//                break;
+//            case "9":
+//                // reimbursement management menu
+//                showReimbursementMenu();
+//                break;
+            case "8" :
                 // user profile menu
                 showUserMenu();
                 break;
-            case "11":
+            case "9":
                 // logout
                 userCLI.logout();
                 showWelcomeMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-11.");
+                System.out.println("Invalid option! Please choose 1-9.");
                 showMainMenu();
         }
     }
 
-    private void showReimbursementMenu() {
-        System.out.println("\n=== Reimbursement Management ===");
-        System.out.println("1. Create Reimbursement");
-        System.out.println("2. Claim Reimbursement");
-        System.out.println("3. Delete Reimbursement");
-        System.out.println("4. Edit Pending Reimbursement");
-        System.out.println("5. Show All Pending Reimbursements");
-        System.out.println("6. Show All Claimed Reimbursements");
-        System.out.println("7. Show Reimbursement Details");
-        System.out.println("8. Back to Main Menu");
-        System.out.print("Choose an option: ");
-
-        String choice = scanner.nextLine().trim();
-
-        switch (choice) {
-            case "1":
-                reimbursementCLI.create();
-                break;
-            case "2":
-                reimbursementCLI.claim();
-                break;
-            case "3":
-                reimbursementCLI.delete();
-                break;
-            case "4":
-                reimbursementCLI.edit();
-                break;
-            case "5":
-                reimbursementCLI.showAllPendingReimbursements();
-                break;
-            case "6":
-                reimbursementCLI.showAllClaimedReimbursements();
-                break;
-            case "7":
-                reimbursementCLI.showReimbursementDetails();
-                break;
-            case "8":
-                // go back to main menu
-                showMainMenu();
-                break;
-            default:
-                System.out.println("Invalid option! Please choose 1-8.");
-                showReimbursementMenu();
-        }
-    }
+//    private void showReimbursementMenu() {
+//        System.out.println("\n=== Reimbursement Management ===");
+//        System.out.println("1. Create Reimbursement");
+//        System.out.println("2. Claim Reimbursement");
+//        System.out.println("3. Delete Reimbursement");
+//        System.out.println("4. Edit Pending Reimbursement");
+//        System.out.println("5. Show All Pending Reimbursements");
+//        System.out.println("6. Show All Claimed Reimbursements");
+//        System.out.println("7. Show Reimbursement Details");
+//        System.out.println("8. Back to Main Menu");
+//        System.out.print("Choose an option: ");
+//
+//        String choice = scanner.nextLine().trim();
+//
+//        switch (choice) {
+//            case "1":
+//                reimbursementCLI.create();
+//                break;
+//            case "2":
+//                reimbursementCLI.claim();
+//                break;
+//            case "3":
+//                reimbursementCLI.delete();
+//                break;
+//            case "4":
+//                reimbursementCLI.edit();
+//                break;
+//            case "5":
+//                reimbursementCLI.showAllPendingReimbursements();
+//                break;
+//            case "6":
+//                reimbursementCLI.showAllClaimedReimbursements();
+//                break;
+//            case "7":
+//                reimbursementCLI.showReimbursementDetails();
+//                break;
+//            case "8":
+//                // go back to main menu
+//                showMainMenu();
+//                break;
+//            default:
+//                System.out.println("Invalid option! Please choose 1-8.");
+//                showReimbursementMenu();
+//        }
+//    }
 
     private void showAccountMenu()  {
         System.out.println("\n=== Account Management ===");
@@ -220,9 +214,9 @@ public class MainCLI {
             case "4":
                 accountCLI.deleteAccount();
                 break;
-            case "5":
-                accountCLI.hideAccount();
-                break;
+//            case "5":
+//                accountCLI.hideAccount();
+//                break;
             case "6":
                 accountCLI.payDebt();
                 break;
@@ -248,59 +242,58 @@ public class MainCLI {
         }
     }
 
-    private void showInstallmentMenu() {
-        System.out.println("\n=== Installment Plan Management ===");
-        System.out.println("1. Create Installment Plan");
-        System.out.println("2. View Installment Plans");
-        System.out.println("3. Update Installment Plan");
-        System.out.println("4. Delete Installment Plan");
-        System.out.println("5. Pay one period");
-        System.out.println("6. Show Installment Plan Details");
-        System.out.println("7. Back to Account Menu");
-        System.out.print("Choose an option: ");
-
-        String choice = scanner.nextLine().trim();
-
-        switch (choice) {
-            case "1":
-                installmentCLI.createInstallment();
-                break;
-            case "2":
-                installmentCLI.viewInstallments();
-                break;
-            case "3":
-                installmentCLI.editInstallmentPlan();
-                break;
-            case "4":
-                installmentCLI.deleteInstallment();
-                break;
-            case "5":
-                installmentCLI.payInstallment();
-                break;
-            case "6":
-                installmentCLI.showInstallmentDetails();
-                break;
-            case "7":
-                // go back to account menu
-                showAccountMenu();
-                break;
-            default:
-                System.out.println("Invalid option! Please choose 1-7.");
-                showInstallmentMenu();
-        }
-    }
+//    private void showInstallmentMenu() {
+//        System.out.println("\n=== Installment Plan Management ===");
+//        System.out.println("1. Create Installment Plan");
+//        System.out.println("2. View Installment Plans");
+//        System.out.println("3. Update Installment Plan");
+//        System.out.println("4. Delete Installment Plan");
+//        System.out.println("5. Pay one period");
+//        System.out.println("6. Show Installment Plan Details");
+//        System.out.println("7. Back to Account Menu");
+//        System.out.print("Choose an option: ");
+//
+//        String choice = scanner.nextLine().trim();
+//
+//        switch (choice) {
+//            case "1":
+//                installmentCLI.createInstallment();
+//                break;
+//            case "2":
+//                installmentCLI.viewInstallments();
+//                break;
+//            case "3":
+//                installmentCLI.editInstallmentPlan();
+//                break;
+//            case "4":
+//                installmentCLI.deleteInstallment();
+//                break;
+//            case "5":
+//                installmentCLI.payInstallment();
+//                break;
+//            case "6":
+//                installmentCLI.showInstallmentDetails();
+//                break;
+//            case "7":
+//                // go back to account menu
+//                showAccountMenu();
+//                break;
+//            default:
+//                System.out.println("Invalid option! Please choose 1-7.");
+//                showInstallmentMenu();
+//        }
+//    }
 
     private void showLedgerMenu()  {
         System.out.println("\n=== Ledger Management ===");
         System.out.println("1. Create Ledger");
-        System.out.println("2. View Ledgers"); //show all ledgers
-        System.out.println("3. Update Ledger");
+        System.out.println("2. View All Ledgers"); //show all ledgers
+        System.out.println("3. Edit Ledger");
         System.out.println("4. Show Ledger's Summary");
         System.out.println("5. Copy Ledger");
         System.out.println("6. Delete Ledger");
         System.out.println("7. Show Categories Tree");
-        System.out.println("8. Transaction Management");
-        System.out.println("9. Back to Main Menu");
+        System.out.println("8. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -328,15 +321,11 @@ public class MainCLI {
                 ledgerCLI.showCategoryTree();
                 break;
             case "8":
-                // go to transaction management menu
-                showTransactionMenu();
-                break;
-            case "9":
                 // go back to main menu
                 showMainMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-9.");
+                System.out.println("Invalid option! Please choose 1-8.");
                 showLedgerMenu();
         }
     }
@@ -389,38 +378,30 @@ public class MainCLI {
 
     private void showTransactionMenu() {
         System.out.println("\n=== Transaction Management ===");
-        System.out.println("1. Add Income");
-        System.out.println("2. Add Expense");
-        System.out.println("3. Add Transfer");
-        System.out.println("4. Delete Transaction");
-        System.out.println("5. Edit Transaction");
-        System.out.println("6. Back to Main Menu");
+        System.out.println("1. Add Transaction");
+        System.out.println("2. Delete Transaction");
+        System.out.println("3. Edit Transaction");
+        System.out.println("4. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
 
         switch (choice) {
             case "1":
-                transactionCLI.addIncome();
+                transactionCLI.addTransaction();
                 break;
             case "2":
-                transactionCLI.addExpense();
-                break;
-            case "3":
-                transactionCLI.addTransfer();
-                break;
-            case "4":
                 transactionCLI.deleteTransaction();
                 break;
-            case "5":
+            case "3":
                 transactionCLI.editTransaction();
                 break;
-            case "6":
+            case "4":
                 // go back to main menu
                 showMainMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-6.");
+                System.out.println("Invalid option! Please choose 1-4.");
                 showTransactionMenu();
         }
     }
