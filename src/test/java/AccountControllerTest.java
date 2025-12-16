@@ -1,4 +1,7 @@
-import com.ledger.business.*;
+import com.ledger.business.AccountController;
+import com.ledger.business.LedgerController;
+import com.ledger.business.TransactionController;
+import com.ledger.business.UserController;
 import com.ledger.domain.*;
 import com.ledger.orm.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +32,7 @@ public class AccountControllerTest {
 
     private AccountDAO accountDAO;
     private TransactionDAO transactionDAO;
+    private DebtPaymentDAO debtPaymentDAO;
 
     @BeforeEach
     public void setUp() {
@@ -44,7 +48,7 @@ public class AccountControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection);
-        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
+        debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
         LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
         BorrowingTxLinkDAO borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
         LendingTxLinkDAO lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
@@ -348,23 +352,11 @@ public class AccountControllerTest {
     }
 
     @Test
-    public void testDeleteBasicAccount_NullTransaction() {
+    public void testDeleteBasicAccount_DeleteTransaction() {
         BasicAccount account = accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
 
-        boolean deleted = accountController.deleteAccount(account, true);
-        assertTrue(deleted);
-
-        Account deletedAccount = accountDAO.getAccountById(account.getId());
-        assertNull(deletedAccount);
-
-        List<Account> userAccounts = accountDAO.getAccountsByOwnerId(testUser.getId());
-        assertEquals(0, userAccounts.size());
-    }
-
-    @Test
-    public void testDeleteBasicAccount_DeleteTransaction() {
-        BasicAccount account = accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000),
+        BasicAccount anotherAccount = accountController.createBasicAccount("Another Account", BigDecimal.valueOf(500),
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
 
         //find categories for transactions
@@ -385,15 +377,15 @@ public class AccountControllerTest {
         assertNotNull(tx1);
         Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
         assertNotNull(tx2);
+        Transaction tx3 =transactionController.createTransfer(testLedger, account, anotherAccount, "Self Transfer", LocalDate.now(), BigDecimal.valueOf(100));
+        assertNotNull(tx3);
+        Transaction tx4=transactionController.createTransfer(testLedger, anotherAccount, account, "Self Transfer In", LocalDate.now(), BigDecimal.valueOf(200));
+        assertNotNull(tx4);
 
-        boolean result=accountController.deleteAccount(account, true);
-        assertTrue(result);
+        assertTrue(accountController.deleteAccount(account, true));
 
         Account deletedAccount = accountDAO.getAccountById(account.getId());
         assertNull(deletedAccount);
-
-        assertNull(transactionDAO.getById(tx1.getId()));
-        assertNull(transactionDAO.getById(tx2.getId()));
 
         List<Transaction> accountTransactions = transactionDAO.getByAccountId(account.getId());
         assertEquals(0, accountTransactions.size());
@@ -404,6 +396,11 @@ public class AccountControllerTest {
         assertEquals(0, transportTransactions.size());
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
         assertEquals(0, ledgerTransactions.size());
+        assertEquals(0, transactionDAO.getByAccountId(anotherAccount.getId()).size());
+
+        Account anotherSavedAccount = accountDAO.getAccountById(anotherAccount.getId());
+        assertNotNull(anotherSavedAccount);
+        assertEquals(0, anotherSavedAccount.getBalance().compareTo(BigDecimal.valueOf(500.00)));
     }
 
     @Test
@@ -412,6 +409,9 @@ public class AccountControllerTest {
                 AccountType.CASH, AccountCategory.FUNDS, testUser, null, true,
                 true);
 
+        BasicAccount anotherAccount = accountController.createBasicAccount("Another Account", BigDecimal.valueOf(500),
+                AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
+
         LedgerCategory salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
@@ -425,47 +425,32 @@ public class AccountControllerTest {
 
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
         Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
+        Transaction tx3 =transactionController.createTransfer(testLedger, account, anotherAccount, "Self Transfer", LocalDate.now(), BigDecimal.valueOf(100));
+        assertNotNull(tx3);
+        Transaction tx4=transactionController.createTransfer(testLedger, anotherAccount, account, "Self Transfer In", LocalDate.now(), BigDecimal.valueOf(200));
+        assertNotNull(tx4);
 
-        boolean result = accountController.deleteAccount(account, false);
-        assertTrue(result);
-
-        Account deletedAccount = accountDAO.getAccountById(account.getId());
-        assertNull(deletedAccount);
-
+        assertTrue(accountController.deleteAccount(account, false));
+        assertNull( accountDAO.getAccountById(account.getId()));
         assertNotNull(transactionDAO.getById(tx1.getId()));
         assertNotNull(transactionDAO.getById(tx2.getId()));
+        assertNotNull(transactionDAO.getById(tx3.getId()));
+        assertNotNull(transactionDAO.getById(tx4.getId()));
+        assertEquals(1, transactionDAO.getByCategoryId(salary.getId()).size());
+        assertEquals(1, transactionDAO.getByCategoryId(transport.getId()).size());
+        assertEquals(4, transactionDAO.getByLedgerId(testLedger.getId()).size());
+        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
+        assertEquals(2, transactionDAO.getByAccountId(anotherAccount.getId()).size());
 
-        List<Transaction> salaryTransactions = transactionDAO.getByCategoryId(salary.getId());
-        assertEquals(1, salaryTransactions.size());
-        List<Transaction> transportTransactions = transactionDAO.getByCategoryId(transport.getId());
-        assertEquals(1, transportTransactions.size());
-        List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
-        assertEquals(2, ledgerTransactions.size());
-        List<Transaction> accountTransactions = transactionDAO.getByAccountId(account.getId());
-        assertEquals(0, accountTransactions.size());
-    }
-
-    @Test
-    public void testDeleteCreditAccount_NoTransaction() {
-        CreditAccount account = accountController.createCreditAccount("Test Credit Account", null,
-                BigDecimal.valueOf(1500.00), //balance
-                true, true, testUser, AccountType.CREDIT_CARD,
-                BigDecimal.valueOf(3000.00), //credit limit
-                BigDecimal.valueOf(500.00), //current debt
-                null, null);
-
-        boolean result= accountController.deleteAccount(account, true);
-        assertTrue(result);
-
-        Account deletedAccount = accountDAO.getAccountById(account.getId());
-        assertNull(deletedAccount);
-
-        List<Account> accounts=accountDAO.getAccountsByOwnerId(testUser.getId());
-        assertEquals(0, accounts.size());
+        Account anotherSavedAccount = accountDAO.getAccountById(anotherAccount.getId());
+        assertEquals(0, anotherSavedAccount.getBalance().compareTo(BigDecimal.valueOf(400.00))); //500+100-200
     }
 
     @Test
     public void testDeleteCreditAccount_DeleteTransactions() {
+        BasicAccount fromAccount = accountController.createBasicAccount("Savings Account",
+                BigDecimal.valueOf(5000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
+                true, true);
         CreditAccount account = accountController.createCreditAccount("Test Credit Account", null,
                 BigDecimal.valueOf(1500.00), //balance
                 true, true, testUser, AccountType.CREDIT_CARD,
@@ -486,29 +471,27 @@ public class AccountControllerTest {
 
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
         Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
-
-        boolean result= accountController.deleteAccount(account, true);
-        assertTrue(result);
-
-        //deleted account and transactions from db
-        Account deletedAccount = accountDAO.getAccountById(account.getId());
-        assertNull(deletedAccount);
+        accountController.repayDebt(account, BigDecimal.valueOf(200.00), fromAccount, testLedger); //create a debt payment transaction
+        Transaction debtPaymentTx = debtPaymentDAO.getTransactionsByAccount(account).getFirst();
+        assertTrue(accountController.deleteAccount(account, true)); //delete account and linked transactions
+        assertNull(accountDAO.getAccountById(account.getId()));
         assertNull(transactionDAO.getById(tx1.getId()));
         assertNull(transactionDAO.getById(tx2.getId()));
+        assertNull(transactionDAO.getById(debtPaymentTx.getId()));
+        assertEquals(1, accountDAO.getAccountsByOwnerId(testUser.getId()).size());
+        assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
+        assertEquals(0, transactionDAO.getByCategoryId(salary.getId()).size());
+        assertEquals(0, transactionDAO.getByCategoryId(transport.getId()).size());
 
-        List<Account> accounts=accountDAO.getAccountsByOwnerId(testUser.getId());
-        assertEquals(0, accounts.size());
-
-        List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
-        assertEquals(0, ledgerTransactions.size());
-        List<Transaction> salaryTransactions = transactionDAO.getByCategoryId(salary.getId());
-        assertEquals(0, salaryTransactions.size());
-        List<Transaction> transportTransactions = transactionDAO.getByCategoryId(transport.getId());
-        assertEquals(0, transportTransactions.size());
+        Account savedFromAccount = accountDAO.getAccountById(fromAccount.getId());
+        assertEquals(0, savedFromAccount.getBalance().compareTo(BigDecimal.valueOf(5000.00)));
     }
 
     @Test
     public void testDeleteCreditAccount_KeepTransactions() {
+        BasicAccount fromAccount = accountController.createBasicAccount("Savings Account",
+                BigDecimal.valueOf(5000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
+                true, true);
         CreditAccount account = accountController.createCreditAccount("Test Credit Account", null,
                 BigDecimal.valueOf(1500.00), //balance
                 true, true, testUser, AccountType.CREDIT_CARD,
@@ -528,74 +511,27 @@ public class AccountControllerTest {
 
         Transaction tx1 = transactionController.createIncome(testLedger, account, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(1000));
         Transaction tx2= transactionController.createExpense(testLedger, account, transport, "Train Ticket", LocalDate.now(), BigDecimal.valueOf(5.60));
+        accountController.repayDebt(account, BigDecimal.valueOf(200.00), fromAccount, testLedger); //pay debt
+        Transaction debtPaymentTx = debtPaymentDAO.getTransactionsByAccount(account).getFirst(); //get the debt payment transaction
 
-        boolean result = accountController.deleteAccount(account, false);
-        assertTrue(result);
-
-        //deleted account but kept transactions in db
-        Account deletedAccount = accountDAO.getAccountById(account.getId());
-        assertNull(deletedAccount);
-        //did not delete transactions
+        assertTrue(accountController.deleteAccount(account, false));
+        assertNull(accountDAO.getAccountById(account.getId()));
         assertNotNull(transactionDAO.getById(tx1.getId()));
         assertNotNull(transactionDAO.getById(tx2.getId()));
+        assertNotNull(transactionDAO.getById(debtPaymentTx.getId()));
+        assertEquals(1, accountDAO.getAccountsByOwnerId(testUser.getId()).size());
+        assertEquals(3, transactionDAO.getByLedgerId(testLedger.getId()).size());
+        assertEquals(1, transactionDAO.getByCategoryId(salary.getId()).size());
+        assertEquals(1, transactionDAO.getByCategoryId(transport.getId()).size());
+        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
 
-        List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
-        assertEquals(2, ledgerTransactions.size());
-        List<Transaction> salaryTransactions = transactionDAO.getByCategoryId(salary.getId());
-        assertEquals(1, salaryTransactions.size());
-        List<Transaction> transportTransactions = transactionDAO.getByCategoryId(transport.getId());
-        assertEquals(1, transportTransactions.size());
-        List<Transaction> accountTransactions = transactionDAO.getByAccountId(account.getId());
-        assertEquals(0, accountTransactions.size()); //account is deleted
+        Account savedFromAccount = accountDAO.getAccountById(fromAccount.getId());
+        assertEquals(0, savedFromAccount.getBalance().compareTo(BigDecimal.valueOf(4800.00)));
+
     }
 
     @Test
-    public void testDeleteLoanAccount_Success_DeleteTransaction() {
-        LoanAccount account = accountController.createLoanAccount("Test Loan Account", null,
-                true, testUser, 36, 0,
-                BigDecimal.valueOf(5.0), //5% annual interest rate
-                BigDecimal.valueOf(10000.00), //loan amount
-                null, //no receiving account
-                LocalDate.now(), LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
-
-        Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial loan disbursement transaction
-
-        boolean result = accountController.deleteAccount(account, true);
-        assertTrue(result);
-
-        Account deletedAccount = accountDAO.getAccountById(account.getId());
-        assertNull(deletedAccount);
-
-        //deleted transaction from db
-        assertNull(transactionDAO.getById(tx.getId()));
-    }
-
-    @Test
-    public void testDeleteLoanAccount_Success_KeepTransaction() {
-        LoanAccount account = accountController.createLoanAccount("Test Loan Account", null,
-                true, testUser, 36, 0,
-                BigDecimal.valueOf(5.0), //5% annual interest rate
-                BigDecimal.valueOf(10000.00), //loan amount
-                null, //no receiving account
-                LocalDate.now(), LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
-
-        Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial loan disbursement transaction
-
-        accountController.repayLoan(account, null, testLedger); //make a repayment to have another transaction
-        Transaction tx2= transactionDAO.getByAccountId(account.getId()).getLast();
-
-        boolean result = accountController.deleteAccount(account, false);
-        assertTrue(result);
-
-        Account deletedAccount = accountDAO.getAccountById(account.getId());
-        assertNull(deletedAccount);
-
-        assertNotNull(transactionDAO.getById(tx.getId()));
-        assertNotNull(transactionDAO.getById(tx2.getId()));
-    }
-
-    @Test
-    public void testDeleteLoanAccount_ReceivingAccount_KeepTransaction() {
+    public void testDeleteLoanAccount_DeleteTransaction() {
         BasicAccount receivingAccount = accountController.createBasicAccount("Savings Account",
                 BigDecimal.valueOf(5000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
                 true, true);
@@ -608,12 +544,34 @@ public class AccountControllerTest {
 
         Transaction tx= transactionDAO.getByAccountId(loanAccount.getId()).getFirst(); //initial loan disbursement transaction
 
-        boolean result = accountController.deleteAccount(loanAccount, false);
-        assertTrue(result);
+        assertTrue(accountController.deleteAccount(loanAccount, true)); //delete account and linked transactions
+        assertNull(accountDAO.getAccountById(loanAccount.getId()));
+        assertNull(transactionDAO.getById(tx.getId()));
+        List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
+        assertEquals(0, ledgerTransactions.size());
+        List<Transaction> receivingAccountTransactions = transactionDAO.getByAccountId(receivingAccount.getId());
+        assertEquals(0, receivingAccountTransactions.size());
 
-        Account deletedAccount = accountDAO.getAccountById(loanAccount.getId());
-        assertNull(deletedAccount);
+        Account savedReceivingAccount = accountDAO.getAccountById(receivingAccount.getId());
+        assertEquals(0, savedReceivingAccount.getBalance().compareTo(BigDecimal.valueOf(5000.00))); //no change
+    }
 
+    @Test
+    public void testDeleteLoanAccount_KeepTransaction() {
+        BasicAccount receivingAccount = accountController.createBasicAccount("Savings Account",
+                BigDecimal.valueOf(5000), AccountType.CASH, AccountCategory.FUNDS, testUser, null,
+                true, true);
+
+        LoanAccount loanAccount = accountController.createLoanAccount("Home Loan", null,
+                true, testUser, 120, 0,
+                BigDecimal.valueOf(4), //4% annual interest rate
+                BigDecimal.valueOf(200000.00), //loan amount
+                receivingAccount, LocalDate.now(), LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger);
+
+        Transaction tx= transactionDAO.getByAccountId(loanAccount.getId()).getFirst(); //initial loan disbursement transaction
+
+        assertTrue(accountController.deleteAccount(loanAccount, false));
+        assertNull( accountDAO.getAccountById(loanAccount.getId()));
         assertNotNull(transactionDAO.getById(tx.getId()));
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
         assertEquals(1, ledgerTransactions.size());
@@ -623,19 +581,22 @@ public class AccountControllerTest {
         assertEquals(1, receivingAccountTransactions.size());
         Transaction txInReceiving=receivingAccountTransactions.getFirst();
         assertEquals(tx.getId(), txInReceiving.getId());
+
+        Account savedReceivingAccount = accountDAO.getAccountById(receivingAccount.getId());
+        assertEquals(0, savedReceivingAccount.getBalance().compareTo(BigDecimal.valueOf(205000.00))); //5000 + 200000
     }
 
     @Test
     public void testDeleteBorrowing_DeleteTransaction() {
+        BasicAccount receiveAccount = accountController.createBasicAccount("Eve's Account", BigDecimal.valueOf(1000),
+                AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Eve",
                 BigDecimal.valueOf(2000.00), //amount borrowed
-                null, true, true, null, LocalDate.now(), testLedger);
+                null, true, true, receiveAccount, LocalDate.now(), testLedger);
 
-        //Transaction tx=account.getTransactions().getFirst(); //initial borrowing transaction
         Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial borrowing transaction
 
-        boolean result = accountController.deleteAccount(account, true);
-        assertTrue(result);
+        assertTrue( accountController.deleteAccount(account, true));
 
         Account deletedAccount = accountDAO.getAccountById(account.getId());
         assertNull(deletedAccount);
@@ -643,15 +604,20 @@ public class AccountControllerTest {
         assertNull(transactionDAO.getById(tx.getId()));
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
         assertEquals(0, ledgerTransactions.size());
+
+        Account savedReceiveAccount = accountDAO.getAccountById(receiveAccount.getId());
+        assertEquals(0, savedReceiveAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //no change
     }
 
     @Test
-    public void testDeleteBorrowing_Success_KeepTransaction() {
+    public void testDeleteBorrowing_KeepTransaction() {
+        BasicAccount receiveAccount = accountController.createBasicAccount("Cash1", BigDecimal.valueOf(1000),
+                AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
+
         BorrowingAccount account = accountController.createBorrowingAccount(testUser, "Eve",
                 BigDecimal.valueOf(2000.00), //amount borrowed
-                null, true, true, null, LocalDate.now(), testLedger);
+                null, true, true, receiveAccount, LocalDate.now(), testLedger);
 
-        //Transaction tx=account.getTransactions().getFirst(); //initial borrowing transaction
         Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial borrowing transaction
 
         boolean result = accountController.deleteAccount(account, false);
@@ -663,13 +629,18 @@ public class AccountControllerTest {
         assertNotNull(transactionDAO.getById(tx.getId()));
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
         assertEquals(1, ledgerTransactions.size());
+
+        Account savedReceiveAccount = accountDAO.getAccountById(receiveAccount.getId());
+        assertEquals(0, savedReceiveAccount.getBalance().compareTo(BigDecimal.valueOf(3000.00))); //1000 + 2000
     }
 
     @Test
-    public void testDeleteLending_Success_DeleteTransaction() {
+    public void testDeleteLending_DeleteTransaction() {
+        BasicAccount fromAccount = accountController.createBasicAccount("Cash1", BigDecimal.valueOf(1000),
+                AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
         LendingAccount account = accountController.createLendingAccount(testUser, "Frank",
                 BigDecimal.valueOf(1000.00), //amount lent
-                null, true, true, null, LocalDate.now(), testLedger);
+                null, true, true, fromAccount, LocalDate.now(), testLedger);
 
         //Transaction tx=account.getTransactions().getFirst(); //initial lending transaction
         Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial lending transaction
@@ -683,13 +654,18 @@ public class AccountControllerTest {
         assertNull(transactionDAO.getById(tx.getId()));
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
         assertEquals(0, ledgerTransactions.size());
+
+        Account savedFromAccount = accountDAO.getAccountById(fromAccount.getId());
+        assertEquals(0, savedFromAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //no change
     }
 
     @Test
     public void testDeleteLending_KeepTransaction() {
+        BasicAccount fromAccount = accountController.createBasicAccount("Cash1", BigDecimal.valueOf(1000),
+                AccountType.CASH, AccountCategory.FUNDS, testUser, null, true, true);
         LendingAccount account = accountController.createLendingAccount(testUser, "Frank",
                 BigDecimal.valueOf(1000.00), //amount lent
-                null, true, true, null, LocalDate.now(), testLedger);
+                null, true, true, fromAccount, LocalDate.now(), testLedger);
 
         //Transaction tx=account.getTransactions().getFirst(); //initial lending transaction
         Transaction tx=transactionDAO.getByAccountId(account.getId()).getFirst(); //initial lending transaction
@@ -703,6 +679,9 @@ public class AccountControllerTest {
         assertNotNull(transactionDAO.getById(tx.getId()));
         List<Transaction> ledgerTransactions = transactionDAO.getByLedgerId(testLedger.getId());
         assertEquals(1, ledgerTransactions.size());
+
+        Account savedFromAccount = accountDAO.getAccountById(fromAccount.getId());
+        assertEquals(0, savedFromAccount.getBalance().compareTo(BigDecimal.valueOf(0.00))); //1000 - 1000
     }
 
     @Test

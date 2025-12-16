@@ -45,7 +45,7 @@ public class LedgerCategoryControllerTest {
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         budgetDAO = new BudgetDAO(connection);
-        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection);
+        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
         LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
         BorrowingTxLinkDAO borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
         LendingTxLinkDAO lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);

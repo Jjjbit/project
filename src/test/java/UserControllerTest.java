@@ -111,6 +111,7 @@ public class UserControllerTest {
     @Test
     public void testUpdatePassword_Success() {
         userController.register("user2", "oldpassword");
+        userController.login("user2", "oldpassword");
         assertTrue( userController.updatePassword("newpassword"));
         assertNotNull( userDAO.getUserByUsername("user2"));
     }
