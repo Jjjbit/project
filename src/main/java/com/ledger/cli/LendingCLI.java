@@ -251,9 +251,9 @@ public class LendingCLI {
         System.out.print("Do you want to delete all transactions associated with this lending account? (y/n): ");
         String deleteTransactionsChoice = scanner.nextLine().trim().toLowerCase();
 
-        boolean deleteTransactions = deleteTransactionsChoice.equals("y") || deleteTransactionsChoice.equals("yes");
+        //boolean deleteTransactions = deleteTransactionsChoice.equals("y") || deleteTransactionsChoice.equals("yes");
 
-        boolean success = accountController.deleteAccount(lendingToDelete, deleteTransactions);
+        boolean success = accountController.deleteAccount(lendingToDelete);
 
         if(!success) {
             System.out.println("Failed to delete lending account.");

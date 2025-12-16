@@ -244,9 +244,9 @@ public class BorrowingCLI {
         System.out.print("Are you sure you want to delete this borrowing and all its associated transactions? (y/n): ");
         String confirmInput = scanner.nextLine().trim().toLowerCase();
 
-        boolean deleteTransactions = confirmInput.equals("y") || confirmInput.equals("yes");
+        //boolean deleteTransactions = confirmInput.equals("y") || confirmInput.equals("yes");
 
-        boolean success = accountController.deleteAccount(borrowingToDelete, deleteTransactions);
+        boolean success = accountController.deleteAccount(borrowingToDelete);
 
         if (!success) {
             System.out.println("Failed to delete borrowing.");

@@ -228,27 +228,7 @@ public class AccountController {
         }
     }
 
-    public boolean deleteAccount(Account account, boolean deleteTransactions) {
-        List<Transaction> transactions = transactionDAO.getByAccountId(account.getId());
-        if (deleteTransactions) {
-            for (Transaction tx : transactions) {
-                if(tx instanceof Transfer){
-                    Account fromAccount = tx.getFromAccount();
-                    Account toAccount = tx.getToAccount();
-                    if(fromAccount != null && fromAccount.getId() != account.getId()){
-                        Account cashedFromAccount = accountDAO.getAccountById(fromAccount.getId());
-                        cashedFromAccount.credit(tx.getAmount());
-                        accountDAO.update(cashedFromAccount);
-                    }
-                    if(toAccount != null && toAccount.getId() != account.getId()){
-                        Account cashedToAccount = accountDAO.getAccountById(toAccount.getId());
-                        cashedToAccount.debit(tx.getAmount());
-                        accountDAO.update(cashedToAccount);
-                    }
-                }
-                transactionDAO.delete(tx);
-            }
-        }
+    public boolean deleteAccount(Account account) { //keep all transactions
         return accountDAO.deleteAccount(account);
     }
 
@@ -390,10 +370,6 @@ public class AccountController {
         return accountDAO.update(account);
     }
 
-//    public boolean hideAccount(Account account) {
-//        account.hide();
-//        return accountDAO.update(account);
-//    }
 
     public boolean repayDebt(CreditAccount creditAccount, BigDecimal amount, Account fromAccount, Ledger ledger) {
         if(amount == null){

@@ -402,19 +402,19 @@ public class AccountCLI {
         accountToDelete = accounts.get(choice -1);
 
         //select if delete transactions linked to this account
-        System.out.print("Also delete all transactions linked to this account? (y/n): ");
-        String input = scanner.nextLine().trim().toLowerCase();
-        boolean deleteTransactions;
-        if (input.equals("y") || input.equals("yes")) {
-            deleteTransactions = true;
-        } else if (input.equals("n") || input.equals("no")) {
-            deleteTransactions = false;
-        } else {
-            System.out.println("Please enter 'y' for yes or 'n' for no.");
-            return;
-        }
+//        System.out.print("Also delete all transactions linked to this account? (y/n): ");
+//        String input = scanner.nextLine().trim().toLowerCase();
+//        boolean deleteTransactions;
+//        if (input.equals("y") || input.equals("yes")) {
+//            deleteTransactions = true;
+//        } else if (input.equals("n") || input.equals("no")) {
+//            deleteTransactions = false;
+//        } else {
+//            System.out.println("Please enter 'y' for yes or 'n' for no.");
+//            return;
+//        }
 
-        boolean success = accountController.deleteAccount(accountToDelete, deleteTransactions);
+        boolean success = accountController.deleteAccount(accountToDelete);
 
         if (!success) {
             System.out.println("Failed to delete account: " + accountToDelete.getName());
