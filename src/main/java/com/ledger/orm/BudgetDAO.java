@@ -3,6 +3,7 @@ package com.ledger.orm;
 import com.ledger.domain.Budget;
 import com.ledger.domain.Ledger;
 import com.ledger.domain.LedgerCategory;
+import com.ledger.domain.Period;
 
 import java.sql.*;
 
@@ -24,7 +25,7 @@ public class BudgetDAO {
                     Budget budget = new Budget();
                     budget.setId(rs.getLong("id"));
                     budget.setAmount(rs.getBigDecimal("amount"));
-                    budget.setPeriod(Budget.Period.valueOf(rs.getString("period")));
+                    budget.setPeriod(Period.valueOf(rs.getString("period")));
                     budget.setStartDate(rs.getDate("start_date").toLocalDate());
                     budget.setEndDate(rs.getDate("end_date").toLocalDate());
                     return budget;
@@ -83,7 +84,7 @@ public class BudgetDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public Budget getBudgetByCategory(LedgerCategory category, Budget.Period p) {
+    public Budget getBudgetByCategory(LedgerCategory category, Period p) {
         String sql = "SELECT id, amount, period, category_id, start_date, end_date " +
                 "FROM budgets " +
                 "WHERE category_id = ? AND period = ?";
@@ -95,7 +96,7 @@ public class BudgetDAO {
                     Budget budget = new Budget();
                     budget.setId(rs.getLong("id"));
                     budget.setAmount(rs.getBigDecimal("amount"));
-                    budget.setPeriod(Budget.Period.valueOf(rs.getString("period")));
+                    budget.setPeriod(Period.valueOf(rs.getString("period")));
                     budget.setStartDate(rs.getDate("start_date").toLocalDate());
                     budget.setEndDate(rs.getDate("end_date").toLocalDate());
                     budget.setCategory(category);
@@ -109,7 +110,7 @@ public class BudgetDAO {
     }
 
     @SuppressWarnings("SqlResolve") //get budget for a ledger
-    public Budget getBudgetByLedger(Ledger ledger, Budget.Period p) {
+    public Budget getBudgetByLedger(Ledger ledger, Period p) {
         String sql = "SELECT id, amount, period, category_id, start_date, end_date " +
                 "FROM budgets " +
                 "WHERE category_id IS NULL AND ledger_id = ? AND period = ?";
@@ -121,7 +122,7 @@ public class BudgetDAO {
                     Budget budget = new Budget();
                     budget.setId(rs.getLong("id"));
                     budget.setAmount(rs.getBigDecimal("amount"));
-                    budget.setPeriod(Budget.Period.valueOf(rs.getString("period")));
+                    budget.setPeriod(Period.valueOf(rs.getString("period")));
                     budget.setStartDate(rs.getDate("start_date").toLocalDate());
                     budget.setEndDate(rs.getDate("end_date").toLocalDate());
                     budget.setLedger(ledger);

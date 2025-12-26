@@ -17,7 +17,7 @@ public class BudgetController {
         this.budgetDAO = budgetDAO;
     }
 
-    public Budget getActiveBudgetByLedger(Ledger ledger, Budget.Period period) {
+    public Budget getActiveBudgetByLedger(Ledger ledger, Period period) {
         Budget budget = budgetDAO.getBudgetByLedger(ledger, period);
         if(budget != null){
             budget.refreshIfExpired();
@@ -26,7 +26,7 @@ public class BudgetController {
         return budget;
     }
 
-    public Budget getActiveBudgetByCategory(LedgerCategory category, Budget.Period period) {
+    public Budget getActiveBudgetByCategory(LedgerCategory category, Period period) {
         Budget budget = budgetDAO.getBudgetByCategory(category, period);
         if(budget != null){
             budget.refreshIfExpired();

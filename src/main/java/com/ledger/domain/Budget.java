@@ -5,9 +5,6 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 public class Budget {
-    public enum Period {
-        MONTHLY, YEARLY
-    }
 
     private long id;
     private BigDecimal amount; // Budget amount

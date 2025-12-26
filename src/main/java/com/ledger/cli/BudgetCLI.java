@@ -1,10 +1,7 @@
 package com.ledger.cli;
 
 import com.ledger.business.*;
-import com.ledger.domain.Budget;
-import com.ledger.domain.CategoryType;
-import com.ledger.domain.Ledger;
-import com.ledger.domain.LedgerCategory;
+import com.ledger.domain.*;
 
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
@@ -40,7 +37,7 @@ public class BudgetCLI {
 
         //select period
         System.out.println("Select budget period: ");
-        Budget.Period period = selectBudgetPeriod();
+        Period period = selectBudgetPeriod();
 
         //show budgets of the period
         Map<Integer, Budget> budgetMap = new LinkedHashMap<>();
@@ -93,7 +90,7 @@ public class BudgetCLI {
 
         //select period
         System.out.println("Select budget period:");
-        Budget.Period period = selectBudgetPeriod();
+        Period period = selectBudgetPeriod();
 
         //show budgets
         Budget ledgerBudget = budgetController.getActiveBudgetByLedger(selectedLedger, period);
@@ -148,7 +145,7 @@ public class BudgetCLI {
 
         //select period
         System.out.println("Select budget period: ");
-        Budget.Period period = selectBudgetPeriod();
+        Period period = selectBudgetPeriod();
 
         //show budgets
         Map<Integer, Budget> budgetMap = new LinkedHashMap<>();
@@ -197,8 +194,8 @@ public class BudgetCLI {
     }
 
     //private helper methods
-    private Budget.Period selectBudgetPeriod() {
-        Budget.Period[] periods = Budget.Period.values();
+    private Period selectBudgetPeriod() {
+        Period[] periods = Period.values();
 
         for (int i = 0; i < periods.length; i++) {
             System.out.println((i + 1) + ". " + periods[i]);
@@ -242,7 +239,7 @@ public class BudgetCLI {
     }
 
     //for edit
-    private void printAllCategoryBudgets(List<LedgerCategory> categories, Budget.Period period,
+    private void printAllCategoryBudgets(List<LedgerCategory> categories, Period period,
                                          int[] counter, Map<Integer, Budget> budgetMap) {
 
         List<LedgerCategory> topCategories = categories.stream()
@@ -291,7 +288,7 @@ public class BudgetCLI {
     }
 
     //select only top-level category budgets. subcategories are printed but not selectable. for merge
-    private void printCategoryBudgets(List<LedgerCategory> categories, Budget.Period period,
+    private void printCategoryBudgets(List<LedgerCategory> categories, Period period,
                                       int[] counter, Map<Integer, Budget> budgetMap) {
         List<LedgerCategory> topCategories = categories.stream()
                 .filter(c -> c.getParent() == null)
