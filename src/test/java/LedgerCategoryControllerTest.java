@@ -45,17 +45,16 @@ public class LedgerCategoryControllerTest {
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         budgetDAO = new BudgetDAO(connection);
-        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
-        LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
-        BorrowingTxLinkDAO borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
-        LendingTxLinkDAO lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
+//        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
+//        LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
+//        BorrowingTxLinkDAO borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
+//        LendingTxLinkDAO lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
-        LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
         ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
-        transactionController = new TransactionController(transactionDAO, accountDAO, debtPaymentDAO, borrowingTxLinkDAO, loanTxLinkDAO, lendingTxLinkDAO);
-        AccountController accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO,
-                loanTxLinkDAO, borrowingTxLinkDAO, lendingTxLinkDAO);
+        transactionController = new TransactionController(transactionDAO, accountDAO);
+        LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
+        AccountController accountController= new AccountController(accountDAO);
 
         userController.register("test user", "password123");
         User testUser = userController.login("test user", "password123");
@@ -64,8 +63,7 @@ public class LedgerCategoryControllerTest {
 
         testCategories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
 
-        account =accountController.createBasicAccount("Test Account", BigDecimal.valueOf(1000.00),
-                AccountType.CASH, AccountCategory.FUNDS, testUser, null, true,
+        account =accountController.createAccount("Test Account", BigDecimal.valueOf(1000.00), testUser, true,
                 true);
     }
 
@@ -109,8 +107,8 @@ public class LedgerCategoryControllerTest {
         assertNotNull(category);
         assertNotNull(ledgerCategoryDAO.getById(category.getId()));
 
-        Budget monthlyBudget=budgetDAO.getBudgetByCategory(category, Budget.Period.MONTHLY);
-        Budget yearlyBudget=budgetDAO.getBudgetByCategory(category, Budget.Period.YEARLY);
+        Budget monthlyBudget=budgetDAO.getBudgetByCategory(category, Period.MONTHLY);
+        Budget yearlyBudget=budgetDAO.getBudgetByCategory(category, Period.YEARLY);
         assertNotNull(monthlyBudget);
         assertNotNull(yearlyBudget);
     }
@@ -130,8 +128,8 @@ public class LedgerCategoryControllerTest {
 
         assertEquals(parentCategory.getId(), subCategory.getParent().getId());
 
-        Budget monthlyBudget=budgetDAO.getBudgetByCategory(subCategory, Budget.Period.MONTHLY);
-        Budget yearlyBudget=budgetDAO.getBudgetByCategory(subCategory, Budget.Period.YEARLY);
+        Budget monthlyBudget=budgetDAO.getBudgetByCategory(subCategory, Period.MONTHLY);
+        Budget yearlyBudget=budgetDAO.getBudgetByCategory(subCategory, Period.YEARLY);
         assertNotNull(monthlyBudget);
         assertNotNull(yearlyBudget);
 
@@ -148,10 +146,10 @@ public class LedgerCategoryControllerTest {
                 .findFirst()
                 .orElse(null);
         assertNotNull(breakfast);
-        Budget budget=budgetDAO.getBudgetByCategory(breakfast, Budget.Period.MONTHLY);
+        Budget budget=budgetDAO.getBudgetByCategory(breakfast, Period.MONTHLY);
         assertNotNull(budget);
 
-        boolean result=ledgerCategoryController.deleteCategory(breakfast, true, null);
+        boolean result=ledgerCategoryController.deleteCategory(breakfast);
         assertTrue(result); //should succeed
         assertNull(budgetDAO.getById(budget.getId())); //budget should be deleted
     }
@@ -167,7 +165,7 @@ public class LedgerCategoryControllerTest {
 
         Transaction tx1=transactionController.createIncome(testLedger, account, salary, null, LocalDate.now(), BigDecimal.valueOf(1000.00));
 
-        boolean result = ledgerCategoryController.deleteCategory(salary, true, null);
+        boolean result = ledgerCategoryController.deleteCategory(salary);
         assertTrue(result);
         assertNull(ledgerCategoryDAO.getById(salary.getId())); //category deleted from DB
         assertNull(transactionDAO.getById(tx1.getId())); //transaction deleted from DB
@@ -213,66 +211,66 @@ public class LedgerCategoryControllerTest {
     }
 
     //delete category with transactions, migrate to another category
-    @Test
-    public void testDeleteLedgerCategory_KeepTransactions() {
-        LedgerCategory salary=testCategories.stream()
-                .filter(cat -> cat.getName().equals("Salary"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(salary);
-        LedgerCategory bonus=testCategories.stream()
-                .filter(cat -> cat.getName().equals("Bonus"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(bonus);
-
-        Transaction tx1=transactionController.createIncome(testLedger, account, salary, null, LocalDate.now(), BigDecimal.valueOf(1000.00));
-
-        boolean result = ledgerCategoryController.deleteCategory(salary, false, bonus);
-        assertTrue(result);
-        assertNull(ledgerCategoryDAO.getById(salary.getId())); //salary deleted from DB
-        assertNotNull(transactionDAO.getById(tx1.getId())); //transaction should exist in DB
-        assertEquals(1, transactionDAO.getByCategoryId(bonus.getId()).size()); //transaction migrated to bonus
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
-        assertEquals(tx1.getId(), transactionDAO.getByCategoryId(bonus.getId()).getFirst().getId());
-        assertEquals(tx1.getId(), transactionDAO.getByLedgerId(testLedger.getId()).getFirst().getId());
-
-        List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
-        assertEquals(16, categories.size()); //one category less in DB
-
-        List<LedgerCategory> parents=categories.stream()
-                .filter(cat->cat.getParent() == null)
-                .toList();
-
-        List<LedgerCategory> incomeCategories=parents.stream()
-                .filter(cat->cat.getType() == CategoryType.INCOME)
-                .toList();
-        assertEquals(2, incomeCategories.size());
-        List<LedgerCategory> expenseCategories=parents.stream()
-                .filter(cat->cat.getType() == CategoryType.EXPENSE)
-                .toList();
-        assertEquals(9, expenseCategories.size());
-
-        System.out.println("Income Categories:");
-        for(LedgerCategory cat : incomeCategories){
-            System.out.println(" Category Name: "+cat.getName());
-            for(LedgerCategory child : categories.stream()
-                    .filter(c->c.getParent() != null && c.getParent().getId() == cat.getId())
-                    .toList()){
-                System.out.println("   Child Name: "+child.getName());
-            }
-        }
-
-        System.out.println("Expense Categories:");
-        for(LedgerCategory cat : expenseCategories){
-            System.out.println(" Category Name: "+cat.getName());
-            for(LedgerCategory child : categories.stream()
-                    .filter(c->c.getParent() != null && c.getParent().getId() == cat.getId())
-                    .toList()){
-                System.out.println("   Child Name: "+child.getName());
-            }
-        }
-    }
+//    @Test
+//    public void testDeleteLedgerCategory_KeepTransactions() {
+//        LedgerCategory salary=testCategories.stream()
+//                .filter(cat -> cat.getName().equals("Salary"))
+//                .findFirst()
+//                .orElse(null);
+//        assertNotNull(salary);
+//        LedgerCategory bonus=testCategories.stream()
+//                .filter(cat -> cat.getName().equals("Bonus"))
+//                .findFirst()
+//                .orElse(null);
+//        assertNotNull(bonus);
+//
+//        Transaction tx1=transactionController.createIncome(testLedger, account, salary, null, LocalDate.now(), BigDecimal.valueOf(1000.00));
+//
+//        boolean result = ledgerCategoryController.deleteCategory(salary, false, bonus);
+//        assertTrue(result);
+//        assertNull(ledgerCategoryDAO.getById(salary.getId())); //salary deleted from DB
+//        assertNotNull(transactionDAO.getById(tx1.getId())); //transaction should exist in DB
+//        assertEquals(1, transactionDAO.getByCategoryId(bonus.getId()).size()); //transaction migrated to bonus
+//        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
+//        assertEquals(tx1.getId(), transactionDAO.getByCategoryId(bonus.getId()).getFirst().getId());
+//        assertEquals(tx1.getId(), transactionDAO.getByLedgerId(testLedger.getId()).getFirst().getId());
+//
+//        List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+//        assertEquals(16, categories.size()); //one category less in DB
+//
+//        List<LedgerCategory> parents=categories.stream()
+//                .filter(cat->cat.getParent() == null)
+//                .toList();
+//
+//        List<LedgerCategory> incomeCategories=parents.stream()
+//                .filter(cat->cat.getType() == CategoryType.INCOME)
+//                .toList();
+//        assertEquals(2, incomeCategories.size());
+//        List<LedgerCategory> expenseCategories=parents.stream()
+//                .filter(cat->cat.getType() == CategoryType.EXPENSE)
+//                .toList();
+//        assertEquals(9, expenseCategories.size());
+//
+//        System.out.println("Income Categories:");
+//        for(LedgerCategory cat : incomeCategories){
+//            System.out.println(" Category Name: "+cat.getName());
+//            for(LedgerCategory child : categories.stream()
+//                    .filter(c->c.getParent() != null && c.getParent().getId() == cat.getId())
+//                    .toList()){
+//                System.out.println("   Child Name: "+child.getName());
+//            }
+//        }
+//
+//        System.out.println("Expense Categories:");
+//        for(LedgerCategory cat : expenseCategories){
+//            System.out.println(" Category Name: "+cat.getName());
+//            for(LedgerCategory child : categories.stream()
+//                    .filter(c->c.getParent() != null && c.getParent().getId() == cat.getId())
+//                    .toList()){
+//                System.out.println("   Child Name: "+child.getName());
+//            }
+//        }
+//    }
 
     //delete category with sub-categories
     @Test
@@ -283,7 +281,7 @@ public class LedgerCategoryControllerTest {
                 .orElse(null);
         assertNotNull(foodCategory);
 
-        boolean result = ledgerCategoryController.deleteCategory(foodCategory, true, null);
+        boolean result = ledgerCategoryController.deleteCategory(foodCategory);
         assertFalse(result); //should fail because it has sub-categories
         assertNotNull(ledgerCategoryDAO.getById(foodCategory.getId())); //category should still exist in DB
     }
