@@ -3,33 +3,24 @@ package com.ledger.domain;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-public abstract class Account {
-    protected long id;
-    protected String name;
-    protected BigDecimal balance;
-    protected AccountType type;
-    protected AccountCategory category;
-    protected User owner;
-    protected String notes;
-    protected boolean includedInNetAsset;
-    protected boolean selectable;
+public class Account {
+    private long id;
+    private String name;
+    private BigDecimal balance;
+    private User owner;
+    private boolean includedInNetAsset;
+    private boolean selectable;
 
     public Account() {}
     public Account(
             String name,
             BigDecimal balance,
-            AccountType type,
-            AccountCategory category,
             User owner,
-            String notes,
             boolean includedInNetAsset,
             boolean selectable) {
         this.name = name;
         this.balance = balance != null ? balance : BigDecimal.ZERO;
-        this.type = type;
-        this.category = category;
         this.owner = owner;
-        this.notes = notes;
         this.includedInNetAsset = includedInNetAsset;
         this.selectable = selectable;
     }
@@ -53,16 +44,8 @@ public abstract class Account {
     public void setName(String name) {
         this.name = name;
     }
-    public void setNotes(String notes) {
-        this.notes = notes;
-    }
     public void setBalance(BigDecimal balance) {
         this.balance = balance;
-    }
-
-    public AccountType getType() { return type; }
-    public AccountCategory getCategory() {
-        return category;
     }
     public String getName() {
         return name;
@@ -76,19 +59,11 @@ public abstract class Account {
     public long getId() {
         return id;
     }
-    public String getNotes() {
-        return notes;
-    }
     public Boolean getSelectable() {
         return selectable;
     }
     public Boolean getIncludedInNetAsset() {
         return includedInNetAsset;
     }
-    public void setCategory(AccountCategory category) {
-        this.category = category;
-    }
-    public void setType(AccountType type) {
-        this.type = type;
-    }
+
 }

@@ -57,47 +57,46 @@ public class ReportController {
     }
 
     public BigDecimal getTotalAssets(User user) {
-        BigDecimal totalAssets = accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(account -> account instanceof BasicAccount || account instanceof CreditAccount)
+        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+//                .filter(account -> account instanceof BasicAccount || account instanceof CreditAccount)
                 .filter(Account::getIncludedInNetAsset)
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalLending = getTotalLendingAmount(user);
-        return totalAssets.add(totalLending);
+        //BigDecimal totalLending = getTotalLendingAmount(user);
     }
 
-    public BigDecimal getTotalLiabilities(User user) {
-        BigDecimal totalCreditDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(account -> account instanceof CreditAccount)
-                .filter(Account::getIncludedInNetAsset)
-                .map(account -> ((CreditAccount) account).getCurrentDebt())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalUnpaidLoan = accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(account -> account instanceof LoanAccount)
-                .filter(Account::getIncludedInNetAsset)
-                .map(account -> ((LoanAccount) account).getRemainingAmount()) //get this.remainingAmount
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalBorrowing = getTotalBorrowingAmount(user);
-        return totalCreditDebt.add(totalUnpaidLoan).add(totalBorrowing);
-    }
-
-    public BigDecimal getTotalBorrowingAmount(User user) {
-        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(account -> account instanceof BorrowingAccount)
-                .map(account -> (BorrowingAccount) account)
-                .filter(Account::getIncludedInNetAsset)
-                .map(BorrowingAccount::getRemainingAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    public BigDecimal getTotalLendingAmount(User user) {
-        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
-                .filter(account -> account instanceof LendingAccount)
-                .map(account -> (LendingAccount) account)
-                .filter(Account::getIncludedInNetAsset)
-                .map(LendingAccount::getBalance)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
+//    public BigDecimal getTotalLiabilities(User user) {
+//        BigDecimal totalCreditDebt = accountDAO.getAccountsByOwnerId(user.getId()).stream()
+//                .filter(account -> account instanceof CreditAccount)
+//                .filter(Account::getIncludedInNetAsset)
+//                .map(account -> ((CreditAccount) account).getCurrentDebt())
+//                .reduce(BigDecimal.ZERO, BigDecimal::add);
+//        BigDecimal totalUnpaidLoan = accountDAO.getAccountsByOwnerId(user.getId()).stream()
+//                .filter(account -> account instanceof LoanAccount)
+//                .filter(Account::getIncludedInNetAsset)
+//                .map(account -> ((LoanAccount) account).getRemainingAmount()) //get this.remainingAmount
+//                .reduce(BigDecimal.ZERO, BigDecimal::add);
+//        BigDecimal totalBorrowing = getTotalBorrowingAmount(user);
+//        return totalCreditDebt.add(totalUnpaidLoan).add(totalBorrowing);
+//    }
+//
+//    public BigDecimal getTotalBorrowingAmount(User user) {
+//        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+//                .filter(account -> account instanceof BorrowingAccount)
+//                .map(account -> (BorrowingAccount) account)
+//                .filter(Account::getIncludedInNetAsset)
+//                .map(BorrowingAccount::getRemainingAmount)
+//                .reduce(BigDecimal.ZERO, BigDecimal::add);
+//    }
+//
+//    public BigDecimal getTotalLendingAmount(User user) {
+//        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+//                .filter(account -> account instanceof LendingAccount)
+//                .map(account -> (LendingAccount) account)
+//                .filter(Account::getIncludedInNetAsset)
+//                .map(LendingAccount::getBalance)
+//                .reduce(BigDecimal.ZERO, BigDecimal::add);
+//    }
 
     public boolean isOverBudget(Budget budget) {
         budget.refreshIfExpired();

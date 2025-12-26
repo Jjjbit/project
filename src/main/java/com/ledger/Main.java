@@ -30,32 +30,26 @@ public class Main {
             TransactionDAO transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
             CategoryDAO categoryDAO = new CategoryDAO(connection);
             BudgetDAO budgetDAO = new BudgetDAO(connection);
-            DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
-            LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
-            BorrowingTxLinkDAO borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
-            LendingTxLinkDAO lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
 
             // create Business layer
             UserController userController = new UserController(userDAO);
-            AccountController accountController = new AccountController(accountDAO, transactionDAO, debtPaymentDAO, loanTxLinkDAO, borrowingTxLinkDAO, lendingTxLinkDAO);
+            AccountController accountController = new AccountController(accountDAO);
+            TransactionController transactionController = new TransactionController(transactionDAO, accountDAO);
             LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-            TransactionController transactionController = new TransactionController(transactionDAO, accountDAO, debtPaymentDAO, borrowingTxLinkDAO, loanTxLinkDAO, lendingTxLinkDAO);
             LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
             BudgetController budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO);
             ReportController reportController = new ReportController(transactionDAO, accountDAO, budgetDAO, ledgerCategoryDAO);
 
             //  create CLI layer
             UserCLI userCLI = new UserCLI(userController, reportController);
-            AccountCLI accountCLI = new AccountCLI(accountController, userController, reportController, transactionController, ledgerController);
+            AccountCLI accountCLI = new AccountCLI(accountController, userController, reportController, transactionController);
             LedgerCLI ledgerCLI = new LedgerCLI(userController, reportController, ledgerController, transactionController, ledgerCategoryController, budgetController);
             TransactionCLI transactionCLI = new TransactionCLI(transactionController, userController, accountController, ledgerController, ledgerCategoryController);
             BudgetCLI budgetCLI = new BudgetCLI(budgetController, reportController, userController, ledgerController, ledgerCategoryController);
-            BorrowingCLI borrowingCLI = new BorrowingCLI(accountController, userController, ledgerController);
-            LendingCLI lendingCLI = new LendingCLI(accountController, userController, ledgerController);
             LedgerCategoryCLI ledgerCategoryCLI = new LedgerCategoryCLI(ledgerCategoryController, userController, ledgerController);
 
             // create MainCLI
-            MainCLI mainCLI = new MainCLI(userCLI, accountCLI, ledgerCLI, transactionCLI, budgetCLI, ledgerCategoryCLI, borrowingCLI, lendingCLI);
+            MainCLI mainCLI = new MainCLI(userCLI, accountCLI, ledgerCLI, transactionCLI, budgetCLI, ledgerCategoryCLI);
 
             //run application
             mainCLI.run();

@@ -14,357 +14,371 @@ public class AccountDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean createBasicAccount(BasicAccount account) {
-        String sql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
-                "VALUES ('BasicAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
-        boolean autoCommit = true;
-        try {
-            autoCommit = connection.getAutoCommit();
-            connection.setAutoCommit(false);
-            try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, account.getName());
-                stmt.setBigDecimal(2, account.getBalance());
-                stmt.setString(3, account.getType().name());
-                stmt.setString(4, account.getCategory().name());
-                stmt.setLong(5, account.getOwner().getId());
-                stmt.setString(6, account.getNotes());
-                //stmt.setBoolean(7, account.getHidden());
-                stmt.setBoolean(7, account.getIncludedInNetAsset());
-                stmt.setBoolean(8, account.getSelectable());
+    public boolean createAccount(Account account) {
+        String sql = "INSERT INTO accounts (name, balance, user_id, included_in_net_asset, selectable) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        try(PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setString(1, account.getName());
+            stmt.setBigDecimal(2, account.getBalance());
+            stmt.setLong(3, account.getOwner().getId());
+            stmt.setBoolean(4, account.getIncludedInNetAsset());
+            stmt.setBoolean(5, account.getSelectable());
 
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    connection.rollback();
-                    return false;
-                }
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        account.setId(rs.getLong(1));
-                    } else {
-                        connection.rollback();
-                        return false;
-                    }
+            int affectedRows = stmt.executeUpdate();
+            if (affectedRows == 0) {
+                return false;
+            }
+            try (ResultSet rs = stmt.getGeneratedKeys()) {
+                if (rs.next()) {
+                    account.setId(rs.getLong(1));
+                    return true;
                 }
             }
-            connection.commit();
-            return true;
         } catch (SQLException e) {
-            try {
-                connection.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Rollback failed: " + ex.getMessage());
-            }
-            System.err.println("SQL Exception during createBasicAccount: " + e.getMessage());
-            return false;
-        } finally {
-            try {
-                connection.setAutoCommit(autoCommit);
-            } catch (SQLException e) {
-                System.err.println("Failed to restore auto commit: " + e.getMessage());
-            }
+            System.err.println("SQL Exception during createAccount: " + e.getMessage());
         }
+        return false;
     }
 
-    @SuppressWarnings("SqlResolve")
-    public boolean createCreditAccount(CreditAccount account) {
-        boolean autoCommit = true;
-        try {
-            autoCommit = connection.getAutoCommit();
-            connection.setAutoCommit(false);
-            //insert into accounts table
-            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
-                    "VALUES ('CreditAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
+//    @SuppressWarnings("SqlResolve")
+//    public boolean createBasicAccount(Account account) {
+//        String sql = "INSERT INTO accounts (dtype, name, balance, user_id, notes, included_in_net_asset, selectable) " +
+//                "VALUES ('BasicAccount', ?, ?, ?, ?, ?, ?)";
+//        boolean autoCommit = true;
+//        try {
+//            autoCommit = connection.getAutoCommit();
+//            connection.setAutoCommit(false);
+//            try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+//                stmt.setString(1, account.getName());
+//                stmt.setBigDecimal(2, account.getBalance());
+////                stmt.setString(3, account.getType().name());
+////                stmt.setString(4, account.getCategory().name());
+//                stmt.setLong(5, account.getOwner().getId());
+//                stmt.setString(6, account.getNotes());
+//                //stmt.setBoolean(7, account.getHidden());
+//                stmt.setBoolean(7, account.getIncludedInNetAsset());
+//                stmt.setBoolean(8, account.getSelectable());
+//
+//                int affectedRows = stmt.executeUpdate();
+//                if (affectedRows == 0) {
+//                    connection.rollback();
+//                    return false;
+//                }
+//                try (ResultSet rs = stmt.getGeneratedKeys()) {
+//                    if (rs.next()) {
+//                        account.setId(rs.getLong(1));
+//                    } else {
+//                        connection.rollback();
+//                        return false;
+//                    }
+//                }
+//            }
+//            connection.commit();
+//            return true;
+//        } catch (SQLException e) {
+//            try {
+//                connection.rollback();
+//            } catch (SQLException ex) {
+//                System.err.println("Rollback failed: " + ex.getMessage());
+//            }
+//            System.err.println("SQL Exception during createBasicAccount: " + e.getMessage());
+//            return false;
+//        } finally {
+//            try {
+//                connection.setAutoCommit(autoCommit);
+//            } catch (SQLException e) {
+//                System.err.println("Failed to restore auto commit: " + e.getMessage());
+//            }
+//        }
+//    }
 
-            long accountId;
-            try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, account.getName());
-                stmt.setBigDecimal(2, account.getBalance());
-                stmt.setString(3, account.getType().name());
-                stmt.setString(4, account.getCategory().name());
-                stmt.setLong(5, account.getOwner().getId());
-                stmt.setString(6, account.getNotes());
-                //stmt.setBoolean(7, account.getHidden());
-                stmt.setBoolean(7, account.getIncludedInNetAsset());
-                stmt.setBoolean(8, account.getSelectable());
-
-                //execute account insert and return affected rows
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    connection.rollback();
-                    return false;
-                }
-
-                //get generated account id
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        accountId = rs.getLong(1);
-                        account.setId(accountId);
-                    } else {
-                        connection.rollback();
-                        return false;
-                    }
-                }
-            }
-            //add to credit_account table
-            String creditSql = "INSERT INTO credit_account (id, credit_limit, current_debt, bill_date, due_date) VALUES (?, ?, ?, ?, ?)";
-            try (PreparedStatement stmt = connection.prepareStatement(creditSql)) {
-                stmt.setLong(1, accountId);
-                stmt.setBigDecimal(2, account.getCreditLimit());
-                stmt.setBigDecimal(3, account.getCurrentDebt());
-                stmt.setObject(4, account.getBillDay());
-                stmt.setObject(5, account.getDueDay());
-
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    connection.rollback();
-                    return false;
-                }
-            }
-            connection.commit();
-            return true;
-        } catch (SQLException e) {
-            try {
-                connection.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Rollback failed: " + ex.getMessage());
-            }
-            System.err.println("SQL Exception during createCreditAccount: " + e.getMessage());
-            return false;
-        } finally {
-            try {
-                connection.setAutoCommit(autoCommit);
-            } catch (SQLException e) {
-                System.err.println("Failed to restore auto commit: " + e.getMessage());
-            }
-        }
-    }
-
-    @SuppressWarnings("SqlResolve")
-    public boolean createLoanAccount(LoanAccount account) {
-        boolean autoCommit = true;
-        try {
-            autoCommit = connection.getAutoCommit();
-            connection.setAutoCommit(false);
-            //insert into accounts table
-            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
-                    "VALUES ('LoanAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
-            long accountId;
-            try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, account.getName());
-                stmt.setBigDecimal(2, account.getBalance());
-                stmt.setString(3, account.getType().name());
-                stmt.setString(4, account.getCategory().name());
-                stmt.setLong(5, account.getOwner().getId());
-                stmt.setString(6, account.getNotes());
-                //stmt.setBoolean(7, account.getHidden());
-                stmt.setBoolean(7, account.getIncludedInNetAsset());
-                stmt.setBoolean(8, account.getSelectable());
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    connection.rollback();
-                    return false;
-                }
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        accountId = rs.getLong(1);
-                        account.setId(accountId);
-                    } else {
-                        connection.rollback();
-                        return false;
-                    }
-                }
-            }
-            //insert into loan_account table
-            String loanSql = "INSERT INTO loan_account (id, total_periods, repaid_periods, annual_interest_rate, loan_amount, repayment_date, repayment_type, loan_remaining_amount, is_ended)" +
-                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            try (PreparedStatement stmt = connection.prepareStatement(loanSql)) {
-                stmt.setLong(1, accountId);
-                stmt.setInt(2, account.getTotalPeriods());
-                stmt.setInt(3, account.getRepaidPeriods());
-                stmt.setBigDecimal(4, account.getAnnualInterestRate());
-                stmt.setBigDecimal(5, account.getLoanAmount());
-                stmt.setDate(6, Date.valueOf(account.getRepaymentDay()));
-                stmt.setString(7, account.getRepaymentType().name());
-                stmt.setBigDecimal(8, account.getRemainingAmount());
-                stmt.setBoolean(9, account.getIsEnded());
-
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    connection.rollback();
-                    return false;
-                }
-            }
-            connection.commit();
-            return true;
-        } catch (SQLException e) {
-            try {
-                connection.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Rollback failed: " + ex.getMessage());
-            }
-            System.err.println("SQL Exception during createLoanAccount: " + e.getMessage());
-            return false;
-        } finally {
-            try {
-                connection.setAutoCommit(autoCommit);
-            } catch (SQLException e) {
-                System.err.println("Failed to restore auto commit: " + e.getMessage());
-            }
-        }
-    }
-
-    @SuppressWarnings("SqlResolve")
-    public boolean createBorrowingAccount(BorrowingAccount account) {
-        boolean autoCommit = true;
-        try {
-            autoCommit = connection.getAutoCommit(); // Save original auto-commit state
-            connection.setAutoCommit(false); // Disable auto-commit
-            //insert into accounts table
-            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
-                    "VALUES ('BorrowingAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
-
-            long accountId;
-            try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, account.getName());
-                stmt.setBigDecimal(2, account.getBalance());
-                stmt.setString(3, account.getType().name());
-                stmt.setString(4, account.getCategory().name());
-                stmt.setLong(5, account.getOwner().getId());
-                stmt.setString(6, account.getNotes());
-                stmt.setBoolean(7, account.getIncludedInNetAsset());
-                stmt.setBoolean(8, account.getSelectable());
-
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    connection.rollback();
-                    return false;
-                }
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        accountId = rs.getLong(1);
-                        account.setId(accountId);
-                    } else {
-                        connection.rollback();
-                        return false;
-                    }
-                }
-            }
-            //insert into borrowing_account table
-            String borrowingSql = "INSERT INTO borrowing_account (id, is_ended, borrowing_date, borrowing_amount, borrowing_remaining_amount) VALUES (?, ?, ?, ?, ?)";
-            try (PreparedStatement stmt = connection.prepareStatement(borrowingSql)) {
-                stmt.setLong(1, accountId);
-                stmt.setBoolean(2, account.getIsEnded());
-                stmt.setDate(3, Date.valueOf(account.getBorrowingDate()));
-                stmt.setBigDecimal(4, account.getBorrowingAmount());
-                stmt.setBigDecimal(5, account.getRemainingAmount());
-
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    connection.rollback();
-                    return false;
-                }
-            }
-            connection.commit(); //commit 2 inserts
-            return true;
-        } catch (SQLException e) {
-            try {
-                connection.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Rollback failed: " + ex.getMessage());
-            }
-            System.err.println("SQL Exception during createBorrowingAccount: " + e.getMessage());
-            return false;
-        } finally {
-            try {
-                connection.setAutoCommit(autoCommit); // Restore original auto-commit state
-            } catch (SQLException e) {
-                System.err.println("Failed to restore auto commit: " + e.getMessage());
-            }
-        }
-    }
-
-    @SuppressWarnings("SqlResolve")
-    public boolean createLendingAccount(LendingAccount account) {
-        boolean autoCommit = true;
-        try {
-            autoCommit = connection.getAutoCommit();
-            connection.setAutoCommit(false);
-            //insert into accounts table
-            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
-                    "VALUES ('LendingAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
-
-            long accountId;
-            try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, account.getName());
-                stmt.setBigDecimal(2, account.getBalance());
-                stmt.setString(3, account.getType().name());
-                stmt.setString(4, account.getCategory().name());
-                stmt.setLong(5, account.getOwner().getId());
-                stmt.setString(6, account.getNotes());
-                stmt.setBoolean(7, account.getIncludedInNetAsset());
-                stmt.setBoolean(8, account.getSelectable());
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    connection.rollback();
-                    return false;
-                }
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        accountId = rs.getLong(1);
-                        account.setId(accountId);
-                    } else {
-                        connection.rollback();
-                        return false;
-                    }
-                }
-            }
-            //insert into lending_account table
-            String lendingSql = "INSERT INTO lending_account (id, is_ended, lending_date) VALUES (?, ?, ?)";
-            try (PreparedStatement stmt = connection.prepareStatement(lendingSql)) {
-                stmt.setLong(1, accountId);
-                stmt.setBoolean(2, account.getIsEnded());
-                stmt.setDate(3, java.sql.Date.valueOf(account.getDate()));
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    connection.rollback();
-                    return false;
-                }
-            }
-            connection.commit();
-            return true;
-        } catch (SQLException e) {
-            try {
-                connection.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Rollback failed: " + ex.getMessage());
-            }
-            System.err.println("SQL Exception during createLendingAccount: " + e.getMessage());
-            return false;
-        } finally {
-            try {
-                connection.setAutoCommit(autoCommit);
-            } catch (SQLException e) {
-                System.err.println("Failed to restore auto commit: " + e.getMessage());
-            }
-        }
-    }
+//    @SuppressWarnings("SqlResolve")
+//    public boolean createCreditAccount(CreditAccount account) {
+//        boolean autoCommit = true;
+//        try {
+//            autoCommit = connection.getAutoCommit();
+//            connection.setAutoCommit(false);
+//            //insert into accounts table
+//            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
+//                    "VALUES ('CreditAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
+//
+//            long accountId;
+//            try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
+//                stmt.setString(1, account.getName());
+//                stmt.setBigDecimal(2, account.getBalance());
+//                stmt.setString(3, account.getType().name());
+//                stmt.setString(4, account.getCategory().name());
+//                stmt.setLong(5, account.getOwner().getId());
+//                stmt.setString(6, account.getNotes());
+//                //stmt.setBoolean(7, account.getHidden());
+//                stmt.setBoolean(7, account.getIncludedInNetAsset());
+//                stmt.setBoolean(8, account.getSelectable());
+//
+//                //execute account insert and return affected rows
+//                int affectedRows = stmt.executeUpdate();
+//                if (affectedRows == 0) {
+//                    connection.rollback();
+//                    return false;
+//                }
+//
+//                //get generated account id
+//                try (ResultSet rs = stmt.getGeneratedKeys()) {
+//                    if (rs.next()) {
+//                        accountId = rs.getLong(1);
+//                        account.setId(accountId);
+//                    } else {
+//                        connection.rollback();
+//                        return false;
+//                    }
+//                }
+//            }
+//            //add to credit_account table
+//            String creditSql = "INSERT INTO credit_account (id, credit_limit, current_debt, bill_date, due_date) VALUES (?, ?, ?, ?, ?)";
+//            try (PreparedStatement stmt = connection.prepareStatement(creditSql)) {
+//                stmt.setLong(1, accountId);
+//                stmt.setBigDecimal(2, account.getCreditLimit());
+//                stmt.setBigDecimal(3, account.getCurrentDebt());
+//                stmt.setObject(4, account.getBillDay());
+//                stmt.setObject(5, account.getDueDay());
+//
+//                int affectedRows = stmt.executeUpdate();
+//                if (affectedRows == 0) {
+//                    connection.rollback();
+//                    return false;
+//                }
+//            }
+//            connection.commit();
+//            return true;
+//        } catch (SQLException e) {
+//            try {
+//                connection.rollback();
+//            } catch (SQLException ex) {
+//                System.err.println("Rollback failed: " + ex.getMessage());
+//            }
+//            System.err.println("SQL Exception during createCreditAccount: " + e.getMessage());
+//            return false;
+//        } finally {
+//            try {
+//                connection.setAutoCommit(autoCommit);
+//            } catch (SQLException e) {
+//                System.err.println("Failed to restore auto commit: " + e.getMessage());
+//            }
+//        }
+//    }
+//
+//    @SuppressWarnings("SqlResolve")
+//    public boolean createLoanAccount(LoanAccount account) {
+//        boolean autoCommit = true;
+//        try {
+//            autoCommit = connection.getAutoCommit();
+//            connection.setAutoCommit(false);
+//            //insert into accounts table
+//            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
+//                    "VALUES ('LoanAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
+//            long accountId;
+//            try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
+//                stmt.setString(1, account.getName());
+//                stmt.setBigDecimal(2, account.getBalance());
+//                stmt.setString(3, account.getType().name());
+//                stmt.setString(4, account.getCategory().name());
+//                stmt.setLong(5, account.getOwner().getId());
+//                stmt.setString(6, account.getNotes());
+//                //stmt.setBoolean(7, account.getHidden());
+//                stmt.setBoolean(7, account.getIncludedInNetAsset());
+//                stmt.setBoolean(8, account.getSelectable());
+//                int affectedRows = stmt.executeUpdate();
+//                if (affectedRows == 0) {
+//                    connection.rollback();
+//                    return false;
+//                }
+//                try (ResultSet rs = stmt.getGeneratedKeys()) {
+//                    if (rs.next()) {
+//                        accountId = rs.getLong(1);
+//                        account.setId(accountId);
+//                    } else {
+//                        connection.rollback();
+//                        return false;
+//                    }
+//                }
+//            }
+//            //insert into loan_account table
+//            String loanSql = "INSERT INTO loan_account (id, total_periods, repaid_periods, annual_interest_rate, loan_amount, repayment_date, repayment_type, loan_remaining_amount, is_ended)" +
+//                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+//            try (PreparedStatement stmt = connection.prepareStatement(loanSql)) {
+//                stmt.setLong(1, accountId);
+//                stmt.setInt(2, account.getTotalPeriods());
+//                stmt.setInt(3, account.getRepaidPeriods());
+//                stmt.setBigDecimal(4, account.getAnnualInterestRate());
+//                stmt.setBigDecimal(5, account.getLoanAmount());
+//                stmt.setDate(6, Date.valueOf(account.getRepaymentDay()));
+//                stmt.setString(7, account.getRepaymentType().name());
+//                stmt.setBigDecimal(8, account.getRemainingAmount());
+//                stmt.setBoolean(9, account.getIsEnded());
+//
+//                int affectedRows = stmt.executeUpdate();
+//                if (affectedRows == 0) {
+//                    connection.rollback();
+//                    return false;
+//                }
+//            }
+//            connection.commit();
+//            return true;
+//        } catch (SQLException e) {
+//            try {
+//                connection.rollback();
+//            } catch (SQLException ex) {
+//                System.err.println("Rollback failed: " + ex.getMessage());
+//            }
+//            System.err.println("SQL Exception during createLoanAccount: " + e.getMessage());
+//            return false;
+//        } finally {
+//            try {
+//                connection.setAutoCommit(autoCommit);
+//            } catch (SQLException e) {
+//                System.err.println("Failed to restore auto commit: " + e.getMessage());
+//            }
+//        }
+//    }
+//
+//    @SuppressWarnings("SqlResolve")
+//    public boolean createBorrowingAccount(BorrowingAccount account) {
+//        boolean autoCommit = true;
+//        try {
+//            autoCommit = connection.getAutoCommit(); // Save original auto-commit state
+//            connection.setAutoCommit(false); // Disable auto-commit
+//            //insert into accounts table
+//            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
+//                    "VALUES ('BorrowingAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
+//
+//            long accountId;
+//            try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
+//                stmt.setString(1, account.getName());
+//                stmt.setBigDecimal(2, account.getBalance());
+//                stmt.setString(3, account.getType().name());
+//                stmt.setString(4, account.getCategory().name());
+//                stmt.setLong(5, account.getOwner().getId());
+//                stmt.setString(6, account.getNotes());
+//                stmt.setBoolean(7, account.getIncludedInNetAsset());
+//                stmt.setBoolean(8, account.getSelectable());
+//
+//                int affectedRows = stmt.executeUpdate();
+//                if (affectedRows == 0) {
+//                    connection.rollback();
+//                    return false;
+//                }
+//                try (ResultSet rs = stmt.getGeneratedKeys()) {
+//                    if (rs.next()) {
+//                        accountId = rs.getLong(1);
+//                        account.setId(accountId);
+//                    } else {
+//                        connection.rollback();
+//                        return false;
+//                    }
+//                }
+//            }
+//            //insert into borrowing_account table
+//            String borrowingSql = "INSERT INTO borrowing_account (id, is_ended, borrowing_date, borrowing_amount, borrowing_remaining_amount) VALUES (?, ?, ?, ?, ?)";
+//            try (PreparedStatement stmt = connection.prepareStatement(borrowingSql)) {
+//                stmt.setLong(1, accountId);
+//                stmt.setBoolean(2, account.getIsEnded());
+//                stmt.setDate(3, Date.valueOf(account.getBorrowingDate()));
+//                stmt.setBigDecimal(4, account.getBorrowingAmount());
+//                stmt.setBigDecimal(5, account.getRemainingAmount());
+//
+//                int affectedRows = stmt.executeUpdate();
+//                if (affectedRows == 0) {
+//                    connection.rollback();
+//                    return false;
+//                }
+//            }
+//            connection.commit(); //commit 2 inserts
+//            return true;
+//        } catch (SQLException e) {
+//            try {
+//                connection.rollback();
+//            } catch (SQLException ex) {
+//                System.err.println("Rollback failed: " + ex.getMessage());
+//            }
+//            System.err.println("SQL Exception during createBorrowingAccount: " + e.getMessage());
+//            return false;
+//        } finally {
+//            try {
+//                connection.setAutoCommit(autoCommit); // Restore original auto-commit state
+//            } catch (SQLException e) {
+//                System.err.println("Failed to restore auto commit: " + e.getMessage());
+//            }
+//        }
+//    }
+//
+//    @SuppressWarnings("SqlResolve")
+//    public boolean createLendingAccount(LendingAccount account) {
+//        boolean autoCommit = true;
+//        try {
+//            autoCommit = connection.getAutoCommit();
+//            connection.setAutoCommit(false);
+//            //insert into accounts table
+//            String accountSql = "INSERT INTO accounts (dtype, name, balance, account_type, account_category, user_id, notes, included_in_net_asset, selectable) " +
+//                    "VALUES ('LendingAccount', ?, ?, ?, ?, ?, ?, ?, ?)";
+//
+//            long accountId;
+//            try (PreparedStatement stmt = connection.prepareStatement(accountSql, Statement.RETURN_GENERATED_KEYS)) {
+//                stmt.setString(1, account.getName());
+//                stmt.setBigDecimal(2, account.getBalance());
+//                stmt.setString(3, account.getType().name());
+//                stmt.setString(4, account.getCategory().name());
+//                stmt.setLong(5, account.getOwner().getId());
+//                stmt.setString(6, account.getNotes());
+//                stmt.setBoolean(7, account.getIncludedInNetAsset());
+//                stmt.setBoolean(8, account.getSelectable());
+//                int affectedRows = stmt.executeUpdate();
+//                if (affectedRows == 0) {
+//                    connection.rollback();
+//                    return false;
+//                }
+//                try (ResultSet rs = stmt.getGeneratedKeys()) {
+//                    if (rs.next()) {
+//                        accountId = rs.getLong(1);
+//                        account.setId(accountId);
+//                    } else {
+//                        connection.rollback();
+//                        return false;
+//                    }
+//                }
+//            }
+//            //insert into lending_account table
+//            String lendingSql = "INSERT INTO lending_account (id, is_ended, lending_date) VALUES (?, ?, ?)";
+//            try (PreparedStatement stmt = connection.prepareStatement(lendingSql)) {
+//                stmt.setLong(1, accountId);
+//                stmt.setBoolean(2, account.getIsEnded());
+//                stmt.setDate(3, java.sql.Date.valueOf(account.getDate()));
+//                int affectedRows = stmt.executeUpdate();
+//                if (affectedRows == 0) {
+//                    connection.rollback();
+//                    return false;
+//                }
+//            }
+//            connection.commit();
+//            return true;
+//        } catch (SQLException e) {
+//            try {
+//                connection.rollback();
+//            } catch (SQLException ex) {
+//                System.err.println("Rollback failed: " + ex.getMessage());
+//            }
+//            System.err.println("SQL Exception during createLendingAccount: " + e.getMessage());
+//            return false;
+//        } finally {
+//            try {
+//                connection.setAutoCommit(autoCommit);
+//            } catch (SQLException e) {
+//                System.err.println("Failed to restore auto commit: " + e.getMessage());
+//            }
+//        }
+//    }
 
     @SuppressWarnings("SqlResolve")
     public Account getAccountById(long id) {
-        String baseSql =  "SELECT DISTINCT a.id AS account_id, a.name, a.balance, a.account_type, a.account_category, " +
-                "a.notes, a.included_in_net_asset, a.selectable, a.user_id, a.dtype, " +
-
-                "ca.credit_limit, ca.current_debt, ca.bill_date, ca.due_date, " +
-                "la.total_periods, la.repaid_periods, la.annual_interest_rate, la.loan_amount, " +
-                "la.repayment_date, la.repayment_type, la.loan_remaining_amount, la.is_ended, " +
-                "ba.is_ended as borrowing_ended, ba.borrowing_date, ba.borrowing_amount, ba.borrowing_remaining_amount, " +
-                "len.is_ended as lending_ended, len.lending_date " +
-                "FROM accounts a " +
-                "LEFT JOIN credit_account ca ON a.id = ca.id " +
-                "LEFT JOIN loan_account la ON a.id = la.id " +
-                "LEFT JOIN borrowing_account ba ON a.id = ba.id " +
-                "LEFT JOIN lending_account len ON a.id = len.id " +
-                "WHERE a.id = ?";
+        String baseSql =  "SELECT * FROM accounts WHERE id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(baseSql)) {
             stmt.setLong(1, id);
@@ -380,61 +394,57 @@ public class AccountDAO {
     }
 
     private Account mapResultSetToAccount(ResultSet rs) throws SQLException {
-        String dtype = rs.getString("dtype");
-        Account account;
-        switch (dtype) {
-            case "BasicAccount":
-                account = new BasicAccount();
-                break;
-            case "CreditAccount":
-                CreditAccount creditAccount = new CreditAccount();
-                creditAccount.setCreditLimit(rs.getBigDecimal("credit_limit"));
-                creditAccount.setCurrentDebt(rs.getBigDecimal("current_debt"));
-                creditAccount.setBillDay(rs.getInt("bill_date"));
-                creditAccount.setDueDay(rs.getInt("due_date"));
-                account = creditAccount;
-                break;
-            case "LoanAccount":
-                LoanAccount loanAccount = new LoanAccount();
-                loanAccount.setTotalPeriods(rs.getInt("total_periods"));
-                loanAccount.setRepaidPeriods(rs.getInt("repaid_periods"));
-                loanAccount.setAnnualInterestRate(rs.getBigDecimal("annual_interest_rate"));
-                loanAccount.setLoanAmount(rs.getBigDecimal("loan_amount"));
-                loanAccount.setRepaymentDate(rs.getDate("repayment_date") != null ?
-                        rs.getDate("repayment_date").toLocalDate() : null);
-                loanAccount.setRepaymentType(rs.getString("repayment_type") != null ?
-                        LoanAccount.RepaymentType.valueOf(rs.getString("repayment_type")) : null);
-                loanAccount.setRemainingAmount(rs.getBigDecimal("loan_remaining_amount"));
-                loanAccount.setEnded(rs.getBoolean("is_ended"));
-                account = loanAccount;
-                break;
-            case "BorrowingAccount":
-                BorrowingAccount borrowingAccount = new BorrowingAccount();
-                borrowingAccount.setIsEnded(rs.getBoolean("borrowing_ended"));
-                borrowingAccount.setBorrowingDate(rs.getDate("borrowing_date") != null ?
-                        rs.getDate("borrowing_date").toLocalDate() : null);
-                borrowingAccount.setBorrowingAmount(rs.getBigDecimal("borrowing_amount"));
-                borrowingAccount.setRemainingAmount(rs.getBigDecimal("borrowing_remaining_amount"));
-                account = borrowingAccount;
-                break;
-            case "LendingAccount":
-                LendingAccount lendingAccount = new LendingAccount();
-                lendingAccount.setIsEnded(rs.getBoolean("lending_ended"));
-                lendingAccount.setDate(rs.getDate("lending_date") != null ?
-                        rs.getDate("lending_date").toLocalDate() : null);
-                account = lendingAccount;
-                break;
-            default:
-                throw new SQLException("Unknown account type: " + dtype);
-        }
+        Account account= new Account();
+//        switch (dtype) {
+//            case "BasicAccount":
+//                account = new BasicAccount();
+//                break;
+//            case "CreditAccount":
+//                CreditAccount creditAccount = new CreditAccount();
+//                creditAccount.setCreditLimit(rs.getBigDecimal("credit_limit"));
+//                creditAccount.setCurrentDebt(rs.getBigDecimal("current_debt"));
+//                creditAccount.setBillDay(rs.getInt("bill_date"));
+//                creditAccount.setDueDay(rs.getInt("due_date"));
+//                account = creditAccount;
+//                break;
+//            case "LoanAccount":
+//                LoanAccount loanAccount = new LoanAccount();
+//                loanAccount.setTotalPeriods(rs.getInt("total_periods"));
+//                loanAccount.setRepaidPeriods(rs.getInt("repaid_periods"));
+//                loanAccount.setAnnualInterestRate(rs.getBigDecimal("annual_interest_rate"));
+//                loanAccount.setLoanAmount(rs.getBigDecimal("loan_amount"));
+//                loanAccount.setRepaymentDate(rs.getDate("repayment_date") != null ?
+//                        rs.getDate("repayment_date").toLocalDate() : null);
+//                loanAccount.setRepaymentType(rs.getString("repayment_type") != null ?
+//                        LoanAccount.RepaymentType.valueOf(rs.getString("repayment_type")) : null);
+//                loanAccount.setRemainingAmount(rs.getBigDecimal("loan_remaining_amount"));
+//                loanAccount.setEnded(rs.getBoolean("is_ended"));
+//                account = loanAccount;
+//                break;
+//            case "BorrowingAccount":
+//                BorrowingAccount borrowingAccount = new BorrowingAccount();
+//                borrowingAccount.setIsEnded(rs.getBoolean("borrowing_ended"));
+//                borrowingAccount.setBorrowingDate(rs.getDate("borrowing_date") != null ?
+//                        rs.getDate("borrowing_date").toLocalDate() : null);
+//                borrowingAccount.setBorrowingAmount(rs.getBigDecimal("borrowing_amount"));
+//                borrowingAccount.setRemainingAmount(rs.getBigDecimal("borrowing_remaining_amount"));
+//                account = borrowingAccount;
+//                break;
+//            case "LendingAccount":
+//                LendingAccount lendingAccount = new LendingAccount();
+//                lendingAccount.setIsEnded(rs.getBoolean("lending_ended"));
+//                lendingAccount.setDate(rs.getDate("lending_date") != null ?
+//                        rs.getDate("lending_date").toLocalDate() : null);
+//                account = lendingAccount;
+//                break;
+//            default:
+//                throw new SQLException("Unknown account type: " + dtype);
+//        }
 
         // Common fields
-        account.setId(rs.getLong("account_id"));
+        account.setId(rs.getLong("id"));
         account.setName(rs.getString("name"));
         account.setBalance(rs.getBigDecimal("balance"));
-        account.setType(AccountType.valueOf(rs.getString("account_type")));
-        account.setCategory(AccountCategory.valueOf(rs.getString("account_category")));
-        account.setNotes(rs.getString("notes"));
         account.setIncludedInNetAsset(rs.getBoolean("included_in_net_asset"));
         account.setSelectable(rs.getBoolean("selectable"));
         return account;
@@ -443,20 +453,7 @@ public class AccountDAO {
     @SuppressWarnings("SqlResolve")
     public List<Account> getAccountsByOwnerId(long ownerId) {
         List<Account> accounts = new ArrayList<>();
-        String sql = " SELECT DISTINCT a.id AS account_id, a.name, a.balance, a.account_type, a.account_category, " +
-                "a.notes, a.included_in_net_asset, a.selectable, a.user_id, a.dtype," +
-
-                "ca.credit_limit, ca.current_debt, ca.bill_date, ca.due_date, " +
-                "la.total_periods, la.repaid_periods, la.annual_interest_rate, la.loan_amount, " +
-                "la.repayment_date, la.repayment_type, la.loan_remaining_amount, la.is_ended, " +
-                "ba.is_ended as borrowing_ended, ba.borrowing_date, ba.borrowing_amount,  ba.borrowing_remaining_amount, " +
-                "len.is_ended as lending_ended, len.lending_date " +
-                "FROM accounts a " +
-                "LEFT JOIN credit_account ca ON a.id = ca.id " +
-                "LEFT JOIN loan_account la ON a.id = la.id " +
-                "LEFT JOIN borrowing_account ba ON a.id = ba.id " +
-                "LEFT JOIN lending_account len ON a.id = len.id " +
-                "WHERE a.user_id = ?";
+        String sql = " SELECT  * FROM accounts WHERE user_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, ownerId);
             try(ResultSet rs = stmt.executeQuery()) {
@@ -473,127 +470,138 @@ public class AccountDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean update(Account account) {
-        String sql = "UPDATE accounts SET name = ?, balance = ?, account_type = ?, account_category = ?, notes = ?, " +
-                "included_in_net_asset = ?, selectable = ?  WHERE id = ?";
-
-        boolean originalAutoCommit = true;
-        try {
-            originalAutoCommit = connection.getAutoCommit();
-            connection.setAutoCommit(false);
-            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-                stmt.setString(1, account.getName());
-                stmt.setBigDecimal(2, account.getBalance());
-                stmt.setString(3, account.getType() != null ? account.getType().name() : null);
-                stmt.setString(4, account.getCategory() != null ? account.getCategory().name() : null);
-                stmt.setString(5, account.getNotes());
-                stmt.setBoolean(6, account.getIncludedInNetAsset());
-                stmt.setBoolean(7, account.getSelectable());
-                stmt.setLong(8, account.getId());
-                stmt.executeUpdate();
-            }
-            boolean childUpdated = updateSubclass(account);
-            if (!childUpdated) {
-                connection.rollback();
-                connection.setAutoCommit(originalAutoCommit);
-                return false;
-            }
-            connection.commit();
-            connection.setAutoCommit(originalAutoCommit);
-            return true;
-        }catch (SQLException e){
-            try {
-                connection.rollback();
-                connection.setAutoCommit(originalAutoCommit);
-            } catch (SQLException ex) {
-                System.err.println("Rollback failed: " + ex.getMessage());
-            }
+        String sql = "UPDATE accounts SET name = ?, balance = ?, included_in_net_asset = ?, selectable = ?  WHERE id = ?";
+        try(PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, account.getName());
+            stmt.setBigDecimal(2, account.getBalance());
+            //stmt.setString(3, account.getNotes());
+            stmt.setBoolean(3, account.getIncludedInNetAsset());
+            stmt.setBoolean(4, account.getSelectable());
+            stmt.setLong(5, account.getId());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
             System.err.println("SQL Exception during update: " + e.getMessage());
+            return false;
         }
-        return false;
+
+//        boolean originalAutoCommit = true;
+//        try {
+//            originalAutoCommit = connection.getAutoCommit();
+//            connection.setAutoCommit(false);
+//            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+//                stmt.setString(1, account.getName());
+//                stmt.setBigDecimal(2, account.getBalance());
+//                stmt.setString(3, account.getType() != null ? account.getType().name() : null);
+//                stmt.setString(4, account.getCategory() != null ? account.getCategory().name() : null);
+//                stmt.setString(5, account.getNotes());
+//                stmt.setBoolean(6, account.getIncludedInNetAsset());
+//                stmt.setBoolean(7, account.getSelectable());
+//                stmt.setLong(8, account.getId());
+//                stmt.executeUpdate();
+//            }
+//            boolean childUpdated = updateSubclass(account);
+//            if (!childUpdated) {
+//                connection.rollback();
+//                connection.setAutoCommit(originalAutoCommit);
+//                return false;
+//            }
+//            connection.commit();
+//            connection.setAutoCommit(originalAutoCommit);
+//            return true;
+//        }catch (SQLException e){
+//            try {
+//                connection.rollback();
+//                connection.setAutoCommit(originalAutoCommit);
+//            } catch (SQLException ex) {
+//                System.err.println("Rollback failed: " + ex.getMessage());
+//            }
+//            System.err.println("SQL Exception during update: " + e.getMessage());
+//        }
+        //return false;
     }
 
-    @SuppressWarnings("SqlResolve")
-    private boolean updateSubclass(Account account) throws SQLException {
-        if (account instanceof CreditAccount credit) {
-            String sqlCredit = "UPDATE credit_account SET credit_limit = ?, current_debt = ?, bill_date = ?, due_date = ? WHERE id = ?";
-            try (PreparedStatement stmt = connection.prepareStatement(sqlCredit)) {
-                stmt.setBigDecimal(1, credit.getCreditLimit());
-                stmt.setBigDecimal(2, credit.getCurrentDebt());
-                if (credit.getBillDay() != null) {
-                    stmt.setInt(3, credit.getBillDay());
-                }else {
-                    stmt.setNull(3, Types.INTEGER);
-                }
-                if (credit.getDueDay() != null) {
-                    stmt.setInt(4, credit.getDueDay());
-                }else {
-                    stmt.setNull(4, Types.INTEGER);
-                }
-                stmt.setLong(5, credit.getId());
-                int rowsAffected = stmt.executeUpdate();
-                return rowsAffected > 0;
-            }
-        }
-        if (account instanceof LoanAccount loan) {
-            String sqlLoan = "UPDATE loan_account SET total_periods = ?, repaid_periods = ?, annual_interest_rate = ?, " +
-                    "loan_amount = ?, repayment_date = ?, repayment_type = ?, loan_remaining_amount = ?, is_ended = ? " +
-                    "WHERE id = ?";
-            try (PreparedStatement stmt = connection.prepareStatement(sqlLoan)) {
-                stmt.setInt(1, loan.getTotalPeriods());
-                stmt.setInt(2, loan.getRepaidPeriods());
-                stmt.setBigDecimal(3, loan.getAnnualInterestRate());
-                stmt.setBigDecimal(4, loan.getLoanAmount());
-                if (loan.getRepaymentDay() != null) {
-                    stmt.setDate(5, Date.valueOf(loan.getRepaymentDay()));
-                } else {
-                    stmt.setNull(5, Types.DATE);
-                }
-                if (loan.getRepaymentType() != null) {
-                    stmt.setString(6, loan.getRepaymentType().name());
-                }else {
-                    stmt.setNull(6, java.sql.Types.VARCHAR);
-                }
-                stmt.setBigDecimal(7, loan.getRemainingAmount());
-                stmt.setBoolean(8, loan.getIsEnded());
-                stmt.setLong(9, loan.getId());
-                int rowsAffected = stmt.executeUpdate();
-                return rowsAffected > 0;
-            }
-        }
-        if (account instanceof BorrowingAccount borrowing) {
-            String sqlBorrow = "UPDATE borrowing_account SET is_ended=?, borrowing_date=?, borrowing_amount=?, " +
-                    "borrowing_remaining_amount =? " +
-                    "WHERE id=?";
-            try (PreparedStatement stmt = connection.prepareStatement(sqlBorrow)) {
-                stmt.setBoolean(1, borrowing.getIsEnded());
-                if (borrowing.getBorrowingDate() != null) {
-                    stmt.setDate(2, Date.valueOf(borrowing.getBorrowingDate()));
-                }else {
-                    stmt.setNull(2, Types.DATE);
-                }
-                stmt.setBigDecimal(3, borrowing.getBorrowingAmount());
-                stmt.setBigDecimal(4, borrowing.getRemainingAmount());
-                stmt.setLong(5, borrowing.getId());
-                int rowsAffected = stmt.executeUpdate();
-                return rowsAffected > 0;
-            }
-        }
-        if (account instanceof LendingAccount lending) {
-            String sqlLend = "UPDATE lending_account SET is_ended=?, lending_date=? WHERE id=?";
-            try (PreparedStatement stmt = connection.prepareStatement(sqlLend)) {
-                stmt.setBoolean(1, lending.getIsEnded());
-                if (lending.getDate() != null) {
-                    stmt.setDate(2, java.sql.Date.valueOf(lending.getDate()));
-                }else {
-                    stmt.setNull(2, java.sql.Types.DATE);
-                }
-                stmt.setLong(3, lending.getId());
-                int rowsAffected = stmt.executeUpdate();
-                return rowsAffected > 0;
-            }
-        }
-        return true;
-    }
+//    @SuppressWarnings("SqlResolve")
+//    private boolean updateSubclass(Account account) throws SQLException {
+//        if (account instanceof CreditAccount credit) {
+//            String sqlCredit = "UPDATE credit_account SET credit_limit = ?, current_debt = ?, bill_date = ?, due_date = ? WHERE id = ?";
+//            try (PreparedStatement stmt = connection.prepareStatement(sqlCredit)) {
+//                stmt.setBigDecimal(1, credit.getCreditLimit());
+//                stmt.setBigDecimal(2, credit.getCurrentDebt());
+//                if (credit.getBillDay() != null) {
+//                    stmt.setInt(3, credit.getBillDay());
+//                }else {
+//                    stmt.setNull(3, Types.INTEGER);
+//                }
+//                if (credit.getDueDay() != null) {
+//                    stmt.setInt(4, credit.getDueDay());
+//                }else {
+//                    stmt.setNull(4, Types.INTEGER);
+//                }
+//                stmt.setLong(5, credit.getId());
+//                int rowsAffected = stmt.executeUpdate();
+//                return rowsAffected > 0;
+//            }
+//        }
+//        if (account instanceof LoanAccount loan) {
+//            String sqlLoan = "UPDATE loan_account SET total_periods = ?, repaid_periods = ?, annual_interest_rate = ?, " +
+//                    "loan_amount = ?, repayment_date = ?, repayment_type = ?, loan_remaining_amount = ?, is_ended = ? " +
+//                    "WHERE id = ?";
+//            try (PreparedStatement stmt = connection.prepareStatement(sqlLoan)) {
+//                stmt.setInt(1, loan.getTotalPeriods());
+//                stmt.setInt(2, loan.getRepaidPeriods());
+//                stmt.setBigDecimal(3, loan.getAnnualInterestRate());
+//                stmt.setBigDecimal(4, loan.getLoanAmount());
+//                if (loan.getRepaymentDay() != null) {
+//                    stmt.setDate(5, Date.valueOf(loan.getRepaymentDay()));
+//                } else {
+//                    stmt.setNull(5, Types.DATE);
+//                }
+//                if (loan.getRepaymentType() != null) {
+//                    stmt.setString(6, loan.getRepaymentType().name());
+//                }else {
+//                    stmt.setNull(6, java.sql.Types.VARCHAR);
+//                }
+//                stmt.setBigDecimal(7, loan.getRemainingAmount());
+//                stmt.setBoolean(8, loan.getIsEnded());
+//                stmt.setLong(9, loan.getId());
+//                int rowsAffected = stmt.executeUpdate();
+//                return rowsAffected > 0;
+//            }
+//        }
+//        if (account instanceof BorrowingAccount borrowing) {
+//            String sqlBorrow = "UPDATE borrowing_account SET is_ended=?, borrowing_date=?, borrowing_amount=?, " +
+//                    "borrowing_remaining_amount =? " +
+//                    "WHERE id=?";
+//            try (PreparedStatement stmt = connection.prepareStatement(sqlBorrow)) {
+//                stmt.setBoolean(1, borrowing.getIsEnded());
+//                if (borrowing.getBorrowingDate() != null) {
+//                    stmt.setDate(2, Date.valueOf(borrowing.getBorrowingDate()));
+//                }else {
+//                    stmt.setNull(2, Types.DATE);
+//                }
+//                stmt.setBigDecimal(3, borrowing.getBorrowingAmount());
+//                stmt.setBigDecimal(4, borrowing.getRemainingAmount());
+//                stmt.setLong(5, borrowing.getId());
+//                int rowsAffected = stmt.executeUpdate();
+//                return rowsAffected > 0;
+//            }
+//        }
+//        if (account instanceof LendingAccount lending) {
+//            String sqlLend = "UPDATE lending_account SET is_ended=?, lending_date=? WHERE id=?";
+//            try (PreparedStatement stmt = connection.prepareStatement(sqlLend)) {
+//                stmt.setBoolean(1, lending.getIsEnded());
+//                if (lending.getDate() != null) {
+//                    stmt.setDate(2, java.sql.Date.valueOf(lending.getDate()));
+//                }else {
+//                    stmt.setNull(2, java.sql.Types.DATE);
+//                }
+//                stmt.setLong(3, lending.getId());
+//                int rowsAffected = stmt.executeUpdate();
+//                return rowsAffected > 0;
+//            }
+//        }
+//        return true;
+//    }
 
     @SuppressWarnings("SqlResolve")
     public boolean deleteAccount(Account account) {
