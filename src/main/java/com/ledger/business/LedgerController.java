@@ -47,14 +47,14 @@ public class LedgerController {
             allCategories.addAll(copyCategoryTree(template, ledger));
         }
         //create Budget for ledger level for each Period
-        for (Budget.Period period : Budget.Period.values()) {
+        for (Period period : Period.values()) {
             Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, ledger);
             budgetDAO.insert(ledgerBudget);
         }
         //create Budget for each default category
         for (LedgerCategory cat : allCategories) {
             if (cat.getType() == CategoryType.EXPENSE) {
-                for (Budget.Period period : Budget.Period.values()) {
+                for (Period period : Period.values()) {
                     Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, ledger);
                     budgetDAO.insert(categoryBudget);
                 }
@@ -138,7 +138,7 @@ public class LedgerController {
         }
 
         //create Budget for ledger for each Period
-        for (Budget.Period period : Budget.Period.values()) {
+        for (Period period : Period.values()) {
             Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, copy);
             budgetDAO.insert(ledgerBudget);
         }
@@ -146,7 +146,7 @@ public class LedgerController {
         //create Budgets for each category
         for (LedgerCategory cat : categoryCopies) {
             if (cat.getType() == CategoryType.EXPENSE) {
-                for (Budget.Period period : Budget.Period.values()) {
+                for (Period period : Period.values()) {
                     Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, copy);
                     budgetDAO.insert(categoryBudget);
                 }

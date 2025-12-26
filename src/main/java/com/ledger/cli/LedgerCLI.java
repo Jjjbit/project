@@ -99,9 +99,9 @@ public class LedgerCLI {
         //get budget
         Budget budget;
         if(summaryType.equals("y") || summaryType.equals("yearly")){
-            budget = budgetController.getActiveBudgetByLedger(selectedLedger, Budget.Period.YEARLY);
+            budget = budgetController.getActiveBudgetByLedger(selectedLedger, Period.YEARLY);
         } else {
-            budget = budgetController.getActiveBudgetByLedger(selectedLedger, Budget.Period.MONTHLY);
+            budget = budgetController.getActiveBudgetByLedger(selectedLedger, Period.MONTHLY);
         }
 
         BigDecimal totalIncome = reportController.getTotalIncomeByLedger(selectedLedger, startDate, endDate);

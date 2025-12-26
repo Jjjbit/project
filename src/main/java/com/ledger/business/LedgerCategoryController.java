@@ -43,7 +43,7 @@ public class LedgerCategoryController {
         ledgerCategoryDAO.insert(category);
 
         //create budget for ledgerCategory
-        for(Budget.Period period : Budget.Period.values()){
+        for(Period period : Period.values()){
             Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
             budgetDAO.insert(budget);
         }
@@ -69,7 +69,7 @@ public class LedgerCategoryController {
         ledgerCategoryDAO.insert(category);
 
         //create budget for ledgerCategory
-        for(Budget.Period period : Budget.Period.values()){
+        for(Period period : Period.values()){
             Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
             budgetDAO.insert(budget);
         }
@@ -130,7 +130,7 @@ public class LedgerCategoryController {
         return ledgerCategoryDAO.update(category);
     }
 
-    public boolean deleteCategory(LedgerCategory category, boolean deleteTransaction, LedgerCategory migrateCategory) {
+    public boolean deleteCategory(LedgerCategory category) {
         if(category == null){
             return false;
         }
@@ -139,25 +139,25 @@ public class LedgerCategoryController {
         }
         List<Transaction> txs = transactionDAO.getByCategoryId(category.getId()); //get transactions from db
 
-        if(deleteTransaction){//delete transactions
-            for(Transaction tx : txs){
-                transactionDAO.delete(tx);
-            }
-        }else{ //migrate transactions
-            if(migrateCategory == null){
-                return false;
-            }
-            if(migrateCategory.getId() == category.getId()){
-                return false;
-            }
-            if(migrateCategory.getType() != category.getType()){
-                return false;
-            }
-            for(Transaction tx : txs){
-                tx.setCategory(migrateCategory);
-                transactionDAO.update(tx);
-            }
-        }
+        //if(deleteTransaction){//delete transactions
+//            for(Transaction tx : txs){
+//                transactionDAO.delete(tx);
+//            }
+//        } else { //migrate transactions
+//            if (migrateCategory == null) {
+//                return false;
+//            }
+//            if (migrateCategory.getId() == category.getId()) {
+//                return false;
+//            }
+//            if (migrateCategory.getType() != category.getType()) {
+//                return false;
+//            }
+//            for (Transaction tx : txs) {
+//                tx.setCategory(migrateCategory);
+//                transactionDAO.update(tx);
+//            }
+//        }
         return ledgerCategoryDAO.delete(category);
     }
 
