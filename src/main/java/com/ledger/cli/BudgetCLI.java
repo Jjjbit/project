@@ -43,25 +43,25 @@ public class BudgetCLI {
         Map<Integer, Budget> budgetMap = new LinkedHashMap<>();
         int[] counter = {1};
 
-        System.out.println("\n=== Available Budgets by Category ===");
-        List<LedgerCategory> expenseCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
-                .filter(c -> c.getType() == CategoryType.EXPENSE)
-                .toList();
-
-        printCategoryBudgets(expenseCategories, period, counter, budgetMap);
-
         Budget uncategorizedBudget = budgetController.getActiveBudgetByLedger(selectedLedger, period);
         if(uncategorizedBudget==null){
             System.out.println("No ledger budget found for the selected period.");
             return;
         }
-        System.out.println("\n=== Uncategorized Budgets ===");
+        System.out.println("\n=== Total Budget ===");
         System.out.printf("%d. Amount: %s, Period: %s%s\n",
                 counter[0],
                 uncategorizedBudget.getAmount(),
                 uncategorizedBudget.getPeriod(),
                 reportController.isOverBudget(uncategorizedBudget) ? " [OVER BUDGET]" : " (within budget)");
         budgetMap.put(counter[0]++, uncategorizedBudget);
+
+        System.out.print("\n=== Available Budgets by Category ===");
+        List<LedgerCategory> expenseCategories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger).stream()
+                .filter(c -> c.getType() == CategoryType.EXPENSE)
+                .toList();
+
+        printCategoryBudgets(expenseCategories, period, counter, budgetMap);
 
        //select target budget
         System.out.print("\nSelect a target budget number to merge into: ");
@@ -105,7 +105,7 @@ public class BudgetCLI {
                 (reportController.isOverBudget(ledgerBudget) ? ", [OVER BUDGET]" : ", within budget"));
 
 
-        List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> categories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger);
         List<LedgerCategory> topCategories = categories.stream()
                 .filter(c -> c.getType() == CategoryType.EXPENSE)
                 .filter(c -> c.getParent() == null)
@@ -151,25 +151,25 @@ public class BudgetCLI {
         Map<Integer, Budget> budgetMap = new LinkedHashMap<>();
         int[] counter = {1};
 
-        System.out.println("\n=== Available Budgets by Category ===");
-        List<LedgerCategory> expenseCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
-                .filter(c -> c.getType() == CategoryType.EXPENSE)
-                .toList();
-        printAllCategoryBudgets(expenseCategories, period, counter, budgetMap);
-
-        System.out.println("\n=== Uncategorized Budget ===");
+        System.out.println("\n=== Total Budget ===");
         Budget ledgerBudget = budgetController.getActiveBudgetByLedger(selectedLedger, period);
         if(ledgerBudget==null){
             System.out.println("No ledger budget found for the selected period.");
             return;
         }
 
-        System.out.printf("%d." + "Ledger: " + selectedLedger.getName() +  " -Amount: %s, Period: %s%s\n",
+        System.out.printf("%d." + "Ledger: " + selectedLedger.getName() +  " - Amount: %s, Period: %s%s\n",
                 counter[0],
                 ledgerBudget.getAmount(),
                 ledgerBudget.getPeriod(),
                 reportController.isOverBudget(ledgerBudget) ? ", [OVER BUDGET]" : " (within budget)");
         budgetMap.put(counter[0]++, ledgerBudget);
+
+        System.out.println("\n=== Available Budgets by Category ===");
+        List<LedgerCategory> expenseCategories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger).stream()
+                .filter(c -> c.getType() == CategoryType.EXPENSE)
+                .toList();
+        printAllCategoryBudgets(expenseCategories, period, counter, budgetMap);
 
         //select budget
         System.out.print("Select a budget by number: ");
@@ -256,7 +256,7 @@ public class BudgetCLI {
 
             //print category budget with number
             String status = reportController.isOverBudget(budget) ? " [OVER BUDGET]" : " (within budget)";
-            String line = counter[0] + ". "+ "Category: "+ category.getName() + " -Amount: " + budget.getAmount()
+            String line = counter[0] + ". "+ "Category: "+ category.getName() + " - Amount: " + budget.getAmount()
                     + ", Period: " + budget.getPeriod() + status;
             System.out.println(line);
 
@@ -305,9 +305,9 @@ public class BudgetCLI {
 
             // print top-level category budget with number
             String status = reportController.isOverBudget(budget) ? " [OVER BUDGET]" : " (within budget)";
-            String line = counter[0] + ". " + " Category: " + category.getName() + ", Amount: " + budget.getAmount()
+            String line = counter[0] + ". Category: " + category.getName() + ", Amount: " + budget.getAmount()
                     + ", Period: " + budget.getPeriod() + status;
-            System.out.println(line);
+            System.out.print(line);
 
             //only top-level category budgets are selectable
             budgetMap.put(counter[0], budget);
@@ -330,7 +330,7 @@ public class BudgetCLI {
                 String subStatus = reportController.isOverBudget(subcategoryBudget) ? " [OVER BUDGET]" : " (within budget)";
                 String subLine = "   SubCategory: " + subcategory.getName() + ", Amount: " + subcategoryBudget.getAmount()
                         + ", Period: " + subcategoryBudget.getPeriod() + subStatus;
-                System.out.println(subLine);
+                System.out.print("\n" + subLine);
             }
 
         }
