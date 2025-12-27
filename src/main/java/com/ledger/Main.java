@@ -18,7 +18,8 @@ public class Main {
     public static void main(String[] args) {
         try {
             // connect to database
-            Connection connection = ConnectionManager.getConnection();
+            ConnectionManager connectionManager= ConnectionManager.getInstance();
+            Connection connection = connectionManager.getConnection();
             runSchemaScript(connection);
             runDataScriptIfEmpty(connection);
 
