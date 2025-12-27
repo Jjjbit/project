@@ -76,8 +76,8 @@ public abstract class Transaction {
     public void setCategory(LedgerCategory category) {
         this.category = category;
     }
-    public void setFromAccount(Account account) {
-        this.fromAccount = account;
+    public void setFromAccount(Account fromAccount) {
+        this.fromAccount = fromAccount;
     }
     public void setToAccount(Account toAccount) {
         this.toAccount = toAccount;
