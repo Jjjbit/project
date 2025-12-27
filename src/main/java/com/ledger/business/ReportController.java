@@ -59,7 +59,7 @@ public class ReportController {
     public BigDecimal getTotalAssets(User user) {
         return accountDAO.getAccountsByOwnerId(user.getId()).stream()
 //                .filter(account -> account instanceof BasicAccount || account instanceof CreditAccount)
-                .filter(Account::getIncludedInNetAsset)
+                .filter(Account::getIncludedInAsset)
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         //BigDecimal totalLending = getTotalLendingAmount(user);
