@@ -35,7 +35,7 @@ public class LedgerCLI {
         System.out.print("Enter ledger name: ");
         String name = inputName();
 
-        Ledger ledger=ledgerController.createLedger(name, userController.getCurrentUser());
+        Ledger ledger=ledgerController.createLedger(name);
         if(ledger==null){
             System.out.println("Failed to create ledger. Please try again.");
             return;
@@ -179,7 +179,7 @@ public class LedgerCLI {
             newName= selectedLedger.getName();
         }
 
-        boolean updated = ledgerController.renameLedger(selectedLedger, newName, userController.getCurrentUser());
+        boolean updated = ledgerController.renameLedger(selectedLedger, newName);
         if(!updated) {
             System.out.println("Failed to update ledger.");
             return;
@@ -187,23 +187,23 @@ public class LedgerCLI {
         System.out.println("Ledger updated successfully.  New ledger name: " + selectedLedger.getName());
     }
 
-    public void copyLedger(){
-        System.out.println("\n === Copying a ledger ===");
-
-        //select ledger
-        System.out.println("Select a ledger to copy:");
-        Ledger selectedLedger = selectLedger();
-        if(selectedLedger == null) {
-            return;
-        }
-
-        Ledger copiedLedger = ledgerController.copyLedger(selectedLedger, userController.getCurrentUser());
-        if(copiedLedger != null) {
-            System.out.println("Ledger copied successfully. New ledger name: " + copiedLedger.getName());
-        } else {
-            System.out.println("Failed to copy ledger.");
-        }
-    }
+//    public void copyLedger(){
+//        System.out.println("\n === Copying a ledger ===");
+//
+//        //select ledger
+//        System.out.println("Select a ledger to copy:");
+//        Ledger selectedLedger = selectLedger();
+//        if(selectedLedger == null) {
+//            return;
+//        }
+//
+//        Ledger copiedLedger = ledgerController.copyLedger(selectedLedger, userController.getCurrentUser());
+//        if(copiedLedger != null) {
+//            System.out.println("Ledger copied successfully. New ledger name: " + copiedLedger.getName());
+//        } else {
+//            System.out.println("Failed to copy ledger.");
+//        }
+//    }
 
     public void deleteLedger() {
         System.out.println("\n === Deleting a ledger ===");
@@ -243,7 +243,7 @@ public class LedgerCLI {
             return;
         }
 
-        List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> categories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger);
         if(categories.isEmpty()) {
             System.out.println("No categories found.");
             return;

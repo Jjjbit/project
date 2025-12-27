@@ -54,7 +54,7 @@ public class AccountCLI {
 //        System.out.print("Enter note (optional, press Enter to skip): ");
 //        String note = inputNote();
 
-        Account account = accountController.createAccount(name, balance, userController.getCurrentUser(), includedInNetWorth, selectable);
+        Account account = accountController.createAccount(name, balance, includedInNetWorth, selectable);
 //        if (AccountCategory.CREDIT.equals(category)) {
 //            if (type == AccountType.LOAN) {
 //                account = createLoanAccount(name, includedInNetWorth, note);
@@ -83,14 +83,14 @@ public class AccountCLI {
     public void showAllAccounts() {
         System.out.println("\n=== Show All Accounts ===");
 
-        List<Account> accounts = accountController.getAccounts(userController.getCurrentUser()); //select visible BasicAccount, LoanAccount, CreditAccount
+        List<Account> accounts = accountController.getAccounts(userController.getCurrentUser());
         if (accounts.isEmpty()) {
             System.out.println("No accounts found.");
             return;
         }
 
         for (Account account : accounts) {
-            System.out.print("- " + account.getName() + " |  Balance: " + account.getBalance() + " | Included in Net Worth: " + (account.getIncludedInNetAsset() ? "Yes" : "No") + " | Selectable: " + (account.getSelectable() ? "Yes" : "No"));
+            System.out.print("- " + account.getName() + " |  Balance: " + account.getBalance() + " | Included in Net Worth: " + (account.getIncludedInAsset() ? "Yes" : "No") + " | Selectable: " + (account.getSelectable() ? "Yes" : "No"));
 //            System.out.print("Category: "+ account.getCategory() + " | Type: " + account.getType() + " | Included in Net Worth: " + (account.getIncludedInNetAsset() ? "Yes" : "No") + " | Selectable: " + (account.getSelectable() ? "Yes" : "No"));
 //            if(account instanceof BasicAccount){
 //                System.out.print(" | Balance: " + account.getBalance());
@@ -153,7 +153,7 @@ public class AccountCLI {
         }
 
         //select included in net worth
-        String includeInNetWorthProm = accountToUpdate.getIncludedInNetAsset() ? "Current: included in net worth. " : "Current: not included in net worth. ";
+        String includeInNetWorthProm = accountToUpdate.getIncludedInAsset() ? "Current: included in net worth. " : "Current: not included in net worth. ";
         System.out.print(includeInNetWorthProm + "(press Enter to skip). Include in net worth? (y/n): ");
         String input = scanner.nextLine().trim().toLowerCase();
         Boolean newIncludedInNetWorth = null;

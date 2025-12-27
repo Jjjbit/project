@@ -1,12 +1,13 @@
 package com.ledger.business;
 
-import com.ledger.domain.PasswordUtils;
+import com.ledger.util.PasswordUtils;
 import com.ledger.domain.User;
 import com.ledger.orm.UserDAO;
+import com.ledger.session.UserSession;
 
 public class UserController {
     private final UserDAO userDAO;
-    private User currentUser;
+    //private static User currentUser;
 
     public UserController(UserDAO userDAO) {
         this.userDAO = userDAO;
@@ -15,20 +16,24 @@ public class UserController {
     public User login(String username, String password) {
         User user = userDAO.getUserByUsername(username);
         if (user != null && PasswordUtils.verify(password, user.getPassword())) {
-            currentUser = user;
+            UserSession.login(user);
+            //currentUser = user;
             return user;
         }
         return null;
     }
 
     public boolean register(String username, String password) {
-        if (password.isEmpty()) {
+        if(username == null || password == null) {
             return false;
         }
-        if(username.isEmpty()) {
+        if (password.isEmpty() || username.isEmpty()) {
             return false;
         }
-        if(password.length() < 6) {
+        if(password.length() < 6 || password.length() > 50) {
+            return false;
+        }
+        if(username.length() > 50) {
             return false;
         }
         if (userDAO.getUserByUsername(username) == null) {
@@ -39,10 +44,17 @@ public class UserController {
     }
 
      public boolean updateUsername(String newUsername) {
-        if(currentUser == null ){
+//        if(currentUser == null ){
+//            return false;
+//        }
+        if(!UserSession.isLoggedIn()){
             return false;
         }
+        User currentUser = UserSession.getCurrentUser();
         if(newUsername.isEmpty()) {
+            return false;
+        }
+        if(newUsername.length() > 50) {
             return false;
         }
         if (userDAO.getUserByUsername(newUsername) != null) {
@@ -53,13 +65,17 @@ public class UserController {
      }
 
     public boolean updatePassword(String newPassword) {
-        if(currentUser == null ){
+//        if(currentUser == null ){
+//            return false;
+//        }
+        if(!UserSession.isLoggedIn()){
             return false;
         }
+        User currentUser = UserSession.getCurrentUser();
         if(newPassword.isEmpty()) {
             return false;
         }
-        if(newPassword.length() < 6) {
+        if(newPassword.length() < 6 || newPassword.length() > 50) {
             return false;
         }
         String hashedPassword = PasswordUtils.hash(newPassword);
@@ -68,11 +84,11 @@ public class UserController {
     }
 
     public User getCurrentUser(){
-        return currentUser;
+        return UserSession.getCurrentUser();
     }
 
     public void logout() {
-        currentUser = null;
+        UserSession.logout();
     }
 
 }
