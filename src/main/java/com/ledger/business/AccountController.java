@@ -2,23 +2,16 @@ package com.ledger.business;
 
 import com.ledger.domain.Account;
 import com.ledger.domain.User;
-import com.ledger.orm.*;
+import com.ledger.orm.AccountDAO;
+import com.ledger.session.UserSession;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 public class AccountController {
     private final AccountDAO accountDAO;
-//    private final DebtPaymentDAO  debtPaymentDAO;
-//    private final LoanTxLinkDAO loanTxLinkDAO;
-//    private final BorrowingTxLinkDAO borrowingTxLinkDAO;
-//    private final LendingTxLinkDAO lendingTxLinkDAO;
 
     public AccountController(AccountDAO accountDAO) {
-//        this.lendingTxLinkDAO = lendingTxLinkDAO;
-//        this.borrowingTxLinkDAO = borrowingTxLinkDAO;
-//        this.loanTxLinkDAO = loanTxLinkDAO;
-//        this.debtPaymentDAO = debtPaymentDAO;
         this.accountDAO = accountDAO;
     }
 
@@ -30,40 +23,19 @@ public class AccountController {
                 .filter(Account::getSelectable)
                 .toList();
     }
-//    public List<BorrowingAccount> getBorrowingAccounts(User user) {
-//        return getAccounts(user).stream()
-//                .filter(account -> account instanceof BorrowingAccount)
-//                .map(account -> (BorrowingAccount) account)
-//                .toList();
-//    }
-//    public List<LendingAccount> getLendingAccounts(User user) {
-//        return getAccounts(user).stream()
-//                .filter(account -> account instanceof LendingAccount)
-//                .map(account -> (LendingAccount) account)
-//                .toList();
-//    }
-//    public List<CreditAccount> getCreditCardAccounts(User user) {
-//        return getAccounts(user).stream()
-//                .filter(account -> account instanceof CreditAccount)
-//                .filter(account -> account.getType() == AccountType.CREDIT_CARD)
-//                .map(account -> (CreditAccount) account)
-//                .toList();
-//    }
-//    public List<LoanAccount> getLoanAccounts(User user) {
-//        return getAccounts(user).stream()
-//                .filter(account -> account instanceof LoanAccount)
-//                .map(account -> (LoanAccount) account)
-//                .toList();
-//    }
 
-    public Account createAccount(String name, BigDecimal balance, User owner, boolean includedInNetWorth, boolean selectable) {
-        if (name == null || name.isEmpty()) {
+    public Account createAccount(String name, BigDecimal balance, boolean includedInAsset, boolean selectable) {
+        if(!UserSession.isLoggedIn()){
+            return null;
+        }
+        if (name == null || name.isEmpty() || name.length() > 50) {
             return null;
         }
         if (balance == null || balance.compareTo(BigDecimal.ZERO) < 0) {
             balance = BigDecimal.ZERO;
         }
-        Account account = new Account(name, balance, owner, includedInNetWorth, selectable);
+        User owner = UserSession.getCurrentUser();
+        Account account = new Account(name, balance, owner, includedInAsset, selectable);
         boolean result = accountDAO.createAccount(account);
         if(result){
             return account;
@@ -221,10 +193,9 @@ public class AccountController {
     }
 
     //name, balance, includedInNetAsset, selectable are null means no change
-    public boolean editAccount(Account account, String newName, BigDecimal newBalance, Boolean newIncludedInNetAsset,
-                               Boolean newSelectable) {
+    public boolean editAccount(Account account, String newName, BigDecimal newBalance, Boolean newIncludedInAsset, Boolean newSelectable) {
         if (newName != null){
-            if(newName.isEmpty()){
+            if(newName.isEmpty() || newName.length() > 50){
                 return false;
             }
             account.setName(newName);
@@ -235,7 +206,7 @@ public class AccountController {
             }
             account.setBalance(newBalance);
         }
-        if (newIncludedInNetAsset != null) account.setIncludedInNetAsset(newIncludedInNetAsset);
+        if (newIncludedInAsset != null) account.setIncludedInAsset(newIncludedInAsset);
         if (newSelectable != null) account.setSelectable(newSelectable);
         return accountDAO.update(account);
     }

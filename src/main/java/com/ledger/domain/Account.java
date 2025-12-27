@@ -8,7 +8,7 @@ public class Account {
     private String name;
     private BigDecimal balance;
     private User owner;
-    private boolean includedInNetAsset;
+    private boolean includedInAsset;
     private boolean selectable;
 
     public Account() {}
@@ -16,12 +16,12 @@ public class Account {
             String name,
             BigDecimal balance,
             User owner,
-            boolean includedInNetAsset,
+            boolean includedInAsset,
             boolean selectable) {
         this.name = name;
         this.balance = balance != null ? balance : BigDecimal.ZERO;
         this.owner = owner;
-        this.includedInNetAsset = includedInNetAsset;
+        this.includedInAsset = includedInAsset;
         this.selectable = selectable;
     }
 
@@ -32,8 +32,8 @@ public class Account {
         balance = balance.subtract(amount).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public void setIncludedInNetAsset(boolean includedInNetAsset) {
-        this.includedInNetAsset =includedInNetAsset;
+    public void setIncludedInAsset(boolean includedInAsset) {
+        this.includedInAsset = includedInAsset;
     }
     public void setSelectable(boolean selectable) {
         this.selectable = selectable;
@@ -59,11 +59,11 @@ public class Account {
     public long getId() {
         return id;
     }
-    public Boolean getSelectable() {
+    public boolean getSelectable() {
         return selectable;
     }
-    public Boolean getIncludedInNetAsset() {
-        return includedInNetAsset;
+    public boolean getIncludedInAsset() {
+        return includedInAsset;
     }
 
 }
