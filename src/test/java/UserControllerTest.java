@@ -22,7 +22,8 @@ public class UserControllerTest {
 
     @BeforeEach
     public void setUp() {
-        connection = ConnectionManager.getConnection();
+        ConnectionManager connectionManager= ConnectionManager.getInstance();
+        connection=connectionManager.getConnection();
         readResetScript();
         runSchemaScript();
         readDataScript();

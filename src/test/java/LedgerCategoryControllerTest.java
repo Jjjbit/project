@@ -33,7 +33,8 @@ public class LedgerCategoryControllerTest {
 
     @BeforeEach
     public void setUp() {
-        connection = ConnectionManager.getConnection();
+        ConnectionManager connectionManager= ConnectionManager.getInstance();
+        connection=connectionManager.getConnection();
         readResetScript();
         runSchemaScript();
         readDataScript();
@@ -59,11 +60,11 @@ public class LedgerCategoryControllerTest {
         userController.register("test user", "password123");
         User testUser = userController.login("test user", "password123");
 
-        testLedger=ledgerController.createLedger("Test Ledger", testUser);
+        testLedger=ledgerController.createLedger("Test Ledger");
 
         testCategories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
 
-        account =accountController.createAccount("Test Account", BigDecimal.valueOf(1000.00), testUser, true,
+        account =accountController.createAccount("Test Account", BigDecimal.valueOf(1000.00), true,
                 true);
     }
 
@@ -295,7 +296,7 @@ public class LedgerCategoryControllerTest {
                 .orElse(null);
         assertNotNull(foodCategory);
 
-        boolean result = ledgerCategoryController.renameCategory(foodCategory, "Groceries");
+        boolean result = ledgerCategoryController.rename(foodCategory, "Groceries");
         assertTrue(result);
         assertEquals("Groceries", foodCategory.getName());
 
@@ -311,7 +312,7 @@ public class LedgerCategoryControllerTest {
                 .orElse(null);
         assertNotNull(foodCategory);
 
-        boolean result = ledgerCategoryController.renameCategory(foodCategory, "Salary");
+        boolean result = ledgerCategoryController.rename(foodCategory, "Salary");
         assertFalse(result);
 
         LedgerCategory updatedCategory=ledgerCategoryDAO.getById(foodCategory.getId());
@@ -320,10 +321,10 @@ public class LedgerCategoryControllerTest {
 
     @Test
     public void testRenameLedgerCategory_Failure() {
-        assertFalse( ledgerCategoryController.renameCategory(null, "New Category Name"));
-        assertFalse(ledgerCategoryController.renameCategory(testCategories.getFirst(), null));
-        assertFalse(ledgerCategoryController.renameCategory(testCategories.getFirst(), ""));
-        assertFalse(ledgerCategoryController.renameCategory(testCategories.getFirst(), "Salary"));
+        assertFalse( ledgerCategoryController.rename(null, "New Category Name"));
+        assertFalse(ledgerCategoryController.rename(testCategories.getFirst(), null));
+        assertFalse(ledgerCategoryController.rename(testCategories.getFirst(), ""));
+        assertFalse(ledgerCategoryController.rename(testCategories.getFirst(), "Salary"));
     }
 
     //promote sub-category to top-level
@@ -708,7 +709,7 @@ public class LedgerCategoryControllerTest {
     //test LedgerCategory tree structure
     @Test
     public void testLedgerCategoryTreeStructure() {
-        List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(testLedger);
+        List<LedgerCategory> categories = ledgerCategoryController.getCategoryTreeByLedger(testLedger);
         assertEquals(17, categories.size());
 
         List<LedgerCategory> rootCategories = categories.stream()

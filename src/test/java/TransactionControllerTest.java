@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TransactionControllerTest {
     private Connection connection;
 
-    private User testUser;
     private Ledger testLedger;
     private Account testAccount;
     private List<LedgerCategory> testCategories;
@@ -35,7 +34,8 @@ public class TransactionControllerTest {
 
     @BeforeEach
     public void setUp() {
-        connection = ConnectionManager.getConnection();
+        ConnectionManager connectionManager= ConnectionManager.getInstance();
+        connection=connectionManager.getConnection();
         readResetScript();
         runSchemaScript();
         readDataScript();
@@ -47,10 +47,6 @@ public class TransactionControllerTest {
         transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         BudgetDAO budgetDAO = new BudgetDAO(connection);
-//        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
-//        loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
-//        borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
-//        lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
@@ -58,13 +54,13 @@ public class TransactionControllerTest {
         accountController = new AccountController(accountDAO);
 
         userController.register("test user", "password123");
-        testUser = userController.login("test user", "password123");
+//        User testUser = userController.login("test user", "password123");
 
-        testLedger = ledgerController.createLedger("Test Ledger", testUser);
+        testLedger = ledgerController.createLedger("Test Ledger");
 
         testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
 
-        testAccount = accountController.createAccount("Test Account", BigDecimal.valueOf(1000.00), testUser, true, true);
+        testAccount = accountController.createAccount("Test Account", BigDecimal.valueOf(1000.00), true, true);
     }
 
     private void runSchemaScript() {
@@ -542,7 +538,7 @@ public class TransactionControllerTest {
     @Test
     public void testCreateTransfer_Success() {
         Account toAccount = accountController.createAccount("Savings Account",
-                BigDecimal.valueOf(500.00), testUser,true, true);
+                BigDecimal.valueOf(500.00),true, true);
 
         Transaction transfer=transactionController.createTransfer(testLedger, testAccount, toAccount,
                 "Transfer to Savings", LocalDate.of(2024,6,20),
@@ -622,7 +618,7 @@ public class TransactionControllerTest {
 
     @Test
     public void testDeleteTransfer_Success() {
-        Account toAccount = accountController.createAccount("Savings Account", BigDecimal.valueOf(500.00), testUser, true, true);
+        Account toAccount = accountController.createAccount("Savings Account", BigDecimal.valueOf(500.00), true, true);
 
         Transaction transfer=transactionController.createTransfer(testLedger, testAccount, toAccount,"Transfer to Savings",
                 LocalDate.of(2024,6,20), BigDecimal.valueOf(200.00));
@@ -656,9 +652,9 @@ public class TransactionControllerTest {
         Income income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary",
                 LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00));
 
-        Account newAccount = accountController.createAccount("New Account", BigDecimal.valueOf(2000.00), testUser, true, true);
+        Account newAccount = accountController.createAccount("New Account", BigDecimal.valueOf(2000.00), true, true);
 
-        Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
+        Ledger newLedger = ledgerController.createLedger("New Ledger");
         List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedgerId(newLedger.getId());
 
         LedgerCategory newCategory = newLedgerCategories.stream()
@@ -737,10 +733,10 @@ public class TransactionControllerTest {
                 "Grocery Shopping", LocalDate.of(2024,6,25),
                 BigDecimal.valueOf(150.00));
 
-        Account newAccount = accountController.createAccount("New Account", BigDecimal.valueOf(500.00), testUser,
+        Account newAccount = accountController.createAccount("New Account", BigDecimal.valueOf(500.00),
                 true, true);
 
-        Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
+        Ledger newLedger = ledgerController.createLedger("New Ledger");
         List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedgerId(newLedger.getId());
 
         LedgerCategory newCategory = newLedgerCategories.stream()
@@ -811,13 +807,13 @@ public class TransactionControllerTest {
     @Test
     public void testEditTransfer_Success() {
         Account toAccount = accountController.createAccount("Savings Account",
-                BigDecimal.valueOf(500.00), testUser,true, true);
+                BigDecimal.valueOf(500.00), true, true);
 
         Transfer transfer = transactionController.createTransfer(testLedger, testAccount,
                 toAccount, "Transfer to Savings", LocalDate.of(2024, 6, 20),
                 BigDecimal.valueOf(200.00));
 
-        Ledger newLedger = ledgerController.createLedger("New Ledger", testUser);
+        Ledger newLedger = ledgerController.createLedger("New Ledger");
 
         boolean result = transactionController.updateTransfer(transfer, toAccount, testAccount,
                 "Updated Transfer", LocalDate.of(2024, 6, 21),
@@ -846,7 +842,7 @@ public class TransactionControllerTest {
     @Test
     public void testUpdateTransfer_SetNewFromAccount(){
         Account fromAccount = accountController.createAccount("Savings Account",
-                BigDecimal.valueOf(500.00), testUser, true, true);
+                BigDecimal.valueOf(500.00), true, true);
         Transfer transfer = transactionController.createTransfer(testLedger, null,
                 testAccount, "Transfer to Savings", LocalDate.of(2024, 6, 20),
                 BigDecimal.valueOf(200.00));

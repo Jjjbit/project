@@ -29,7 +29,8 @@ public class AccountControllerTest {
 
     @BeforeEach
     public void setUp() {
-        connection=ConnectionManager.getConnection();
+        ConnectionManager connectionManager= ConnectionManager.getInstance();
+        connection=connectionManager.getConnection();
         readResetScript();
         runSchemaScript();
         readDataScript();
@@ -89,15 +90,14 @@ public class AccountControllerTest {
 
     @Test
     public void testCreateAccount() {
-        Account account = accountController.createAccount("Alice's Savings",
-                BigDecimal.valueOf(5000), testUser, true, true);
+        Account account = accountController.createAccount("Alice's Savings", BigDecimal.valueOf(5000), true, true);
         assertNotNull(account);
 
         Account savedAccount = accountDAO.getAccountById(account.getId());
         assertNotNull(savedAccount);
         assertEquals(0, savedAccount.getBalance().compareTo(BigDecimal.valueOf(5000.00)));
         assertTrue(savedAccount.getSelectable());
-        assertTrue(savedAccount.getIncludedInNetAsset());
+        assertTrue(savedAccount.getIncludedInAsset());
 
         List<Account> userAccounts = accountDAO.getAccountsByOwnerId(testUser.getId());
         assertEquals(1, userAccounts.size());
@@ -106,10 +106,10 @@ public class AccountControllerTest {
 
     @Test
     public void testCreateBasicAccount_Failure() {
-        Account account = accountController.createAccount(null, BigDecimal.valueOf(1000), testUser, true, true);
+        Account account = accountController.createAccount(null, BigDecimal.valueOf(1000), true, true);
         assertNull(account);
 
-        account = accountController.createAccount("", BigDecimal.valueOf(1000), testUser, true, true);
+        account = accountController.createAccount("", BigDecimal.valueOf(1000), true, true);
         assertNull(account);
     }
 //    @Test
@@ -820,7 +820,7 @@ public class AccountControllerTest {
 
     @Test
     public void testEditAccount_Success() {
-        Account account = accountController.createAccount("Old Account Name", BigDecimal.valueOf(1200), testUser, true, true);
+        Account account = accountController.createAccount("Old Account Name", BigDecimal.valueOf(1200), true, true);
 
         boolean result= accountController.editAccount(account, "New Account Name", BigDecimal.valueOf(1500), false, false);
         assertTrue(result);
@@ -830,7 +830,7 @@ public class AccountControllerTest {
         assertEquals("New Account Name", editedAccount.getName());
         assertEquals(0, editedAccount.getBalance().compareTo(BigDecimal.valueOf(1500)));
         //assertEquals("Updated Notes", editedAccount.getNotes());
-        assertFalse(editedAccount.getIncludedInNetAsset());
+        assertFalse(editedAccount.getIncludedInAsset());
         assertFalse(editedAccount.getSelectable());
     }
 
@@ -983,10 +983,11 @@ public class AccountControllerTest {
     @Test
     public void testGetAccounts() {
         Account testAccount = accountController.createAccount("Test Account",
-                BigDecimal.valueOf(1000),testUser, true, true); //visible
+                BigDecimal.valueOf(1000), true, true); //visible
         assertNotNull(testAccount);
         Account testAccount2 = accountController.createAccount("Test Account 2",
-                BigDecimal.valueOf(2000),testUser, true, false); //not selectable
+                BigDecimal.valueOf(2000), true, false); //not selectable
+        assertNotNull(testAccount2);
 
         assertEquals(1, accountController.getSelectableAccounts(testUser).size());
         assertEquals(2, accountController.getAccounts(testUser).size());

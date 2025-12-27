@@ -33,7 +33,8 @@ public class ReportControllerTest {
 
     @BeforeEach
     public void setUp(){
-        connection= ConnectionManager.getConnection();
+        ConnectionManager connectionManager= ConnectionManager.getInstance();
+        connection=connectionManager.getConnection();
         readResetScript();
         runSchemaScript();
         readDataScript();
@@ -56,9 +57,9 @@ public class ReportControllerTest {
 
         userController.register("test user", "password123");
         testUser = userController.login("test user", "password123");
-        testLedger = ledgerController.createLedger("Test Ledger", testUser);
+        testLedger = ledgerController.createLedger("Test Ledger");
         testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
-        testAccount = accountController.createAccount("Test Account", BigDecimal.valueOf(1000.00), testUser, true, true);
+        testAccount = accountController.createAccount("Test Account", BigDecimal.valueOf(1000.00), true, true);
     }
 
     private void runSchemaScript() {

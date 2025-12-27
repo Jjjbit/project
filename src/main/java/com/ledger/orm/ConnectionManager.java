@@ -4,13 +4,23 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-public class ConnectionManager {
+public final class ConnectionManager {
     private static Connection connection;
-    private static final String URL = "jdbc:postgresql://localhost:5432/ledger_db";
-    private static final String USER = "postgres";
-    private static final String PASSWORD = "5858";
+    private static final String url = "jdbc:postgresql://localhost:5432/ledger_db";
+    private static final String user = "postgres";
+    private static final String password = "5858";
+    private static ConnectionManager instance;
 
-    public static Connection getConnection()  {
+    private ConnectionManager(){}
+
+    public static ConnectionManager getInstance() {
+        if (instance == null) {
+            instance = new ConnectionManager();
+        }
+        return instance;
+    }
+
+    public Connection getConnection()  {
         boolean shouldReconnect = false;
         if (connection == null) { //does not exist yet connection
             shouldReconnect = true;
@@ -28,13 +38,11 @@ public class ConnectionManager {
         if (shouldReconnect) {
             try {
                 // try to establish a new connection
-                connection = DriverManager.getConnection(URL, USER, PASSWORD);
+                connection = DriverManager.getConnection(url, user, password);
             } catch (SQLException e) {
                 System.err.println("Error connecting to database: " + e.getMessage());
             }
         }
         return connection;
     }
-
-
 }

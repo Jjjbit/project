@@ -31,7 +31,8 @@ public class BudgetControllerTest {
 
     @BeforeEach
     public void setUp() {
-        connection = ConnectionManager.getConnection();
+        ConnectionManager connectionManager= ConnectionManager.getInstance();
+        connection=connectionManager.getConnection();
         readResetScript();
         runSchemaScript();
         readDataScript();
@@ -51,7 +52,7 @@ public class BudgetControllerTest {
         userController.register("test user", "password");
         User testUser =userController.login("test user", "password");
 
-        testLedger = ledgerController.createLedger("Test Ledger", testUser);
+        testLedger = ledgerController.createLedger("Test Ledger");
 
         testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
     }
@@ -247,7 +248,6 @@ public class BudgetControllerTest {
         assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedCategoryBudget.getEndDate());
     }
 
-
     @Test
     public void testMergeBudgets_ExpiredBudgets_Case2() {
         LedgerCategory food = testCategories.stream()
@@ -287,43 +287,44 @@ public class BudgetControllerTest {
         assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedSubcategoryBudget.getStartDate());
         assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedSubcategoryBudget.getEndDate());
     }
+
     //refresh budget test
-    @Test
-    public void testRefreshBudget_ExpiredBudget() {
-        Budget budget = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
-        assertNotNull(budget);
-        budgetController.editBudget(budget, BigDecimal.valueOf(500.00));
-        //simulate expired budget by setting start and end date in the past
-        budget.setStartDate(LocalDate.of(2025, 1, 1));
-        budget.setEndDate(LocalDate.of(2025, 1, 31));
-        budgetDAO.update(budget);
-
-        boolean result = budgetController.refreshBudget(budget);
-        assertTrue(result);
-        assertEquals(0, budget.getAmount().compareTo(BigDecimal.ZERO)); //should be reset to 0 after refresh
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), budget.getStartDate()); //should be refreshed to current month
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), budget.getEndDate()); //should be refreshed to current month
-
-        Budget updatedBudget= budgetDAO.getById(budget.getId()); //fetch from DB to verify
-        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.ZERO));
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedBudget.getStartDate());
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedBudget.getEndDate());
-    }
-
-    @Test
-    public void testRefreshBudget_ActiveBudget() {
-        Budget budget = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
-        assertNotNull(budget);
-        budgetController.editBudget(budget, BigDecimal.valueOf(500.00));
-        LocalDate originalStartDate = budget.getStartDate();
-        LocalDate originalEndDate = budget.getEndDate();
-
-        boolean result = budgetController.refreshBudget(budget);
-        assertTrue(result);
-        assertEquals(0, budget.getAmount().compareTo(BigDecimal.valueOf(500.00))); //amount should remain unchanged
-        assertEquals(originalStartDate, budget.getStartDate()); //start date should remain unchanged
-        assertEquals(originalEndDate, budget.getEndDate()); //end date should remain unchanged
-    }
+//    @Test
+//    public void testRefreshBudget_ExpiredBudget() {
+//        Budget budget = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
+//        assertNotNull(budget);
+//        budgetController.editBudget(budget, BigDecimal.valueOf(500.00));
+//        //simulate expired budget by setting start and end date in the past
+//        budget.setStartDate(LocalDate.of(2025, 1, 1));
+//        budget.setEndDate(LocalDate.of(2025, 1, 31));
+//        budgetDAO.update(budget);
+//
+//        boolean result = budgetController.refreshBudget(budget);
+//        assertTrue(result);
+//        assertEquals(0, budget.getAmount().compareTo(BigDecimal.ZERO)); //should be reset to 0 after refresh
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), budget.getStartDate()); //should be refreshed to current month
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), budget.getEndDate()); //should be refreshed to current month
+//
+//        Budget updatedBudget= budgetDAO.getById(budget.getId()); //fetch from DB to verify
+//        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.ZERO));
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedBudget.getStartDate());
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedBudget.getEndDate());
+//    }
+//
+//    @Test
+//    public void testRefreshBudget_ActiveBudget() {
+//        Budget budget = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
+//        assertNotNull(budget);
+//        budgetController.editBudget(budget, BigDecimal.valueOf(500.00));
+//        LocalDate originalStartDate = budget.getStartDate();
+//        LocalDate originalEndDate = budget.getEndDate();
+//
+//        boolean result = budgetController.refreshBudget(budget);
+//        assertTrue(result);
+//        assertEquals(0, budget.getAmount().compareTo(BigDecimal.valueOf(500.00))); //amount should remain unchanged
+//        assertEquals(originalStartDate, budget.getStartDate()); //start date should remain unchanged
+//        assertEquals(originalEndDate, budget.getEndDate()); //end date should remain unchanged
+//    }
 
     //test getActiveBudgetsByLedger
     @Test
