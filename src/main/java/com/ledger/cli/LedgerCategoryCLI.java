@@ -24,9 +24,26 @@ public class LedgerCategoryCLI {
         this.ledgerCategoryController = ledgerCategoryController;
     }
 
-    public void addCategory() {
-        System.out.println("\n === Adding a new category of first level ===");
+    public void createCategory(){
+        System.out.println("\n === create Category ===");
 
+        System.out.println("Select an option:");
+        System.out.println("1. Add a new category of first level");
+        System.out.println("2. Add a new sub-category");
+        System.out.print("Enter choice (1 or 2): ");
+        String input = scanner.nextLine().trim();
+        if (input.equals("1")) {
+            addCategory();
+        } else if (input.equals("2")) {
+            addSubCategory();
+        } else {
+            System.out.println("Invalid choice.");
+            createCategory();
+        }
+    }
+
+    private void addCategory() {
+        System.out.println("\n === Adding a new category of first level ===");
 
         //select ledger
         System.out.println("\nSelect a ledger to add the category to:");
@@ -35,14 +52,13 @@ public class LedgerCategoryCLI {
             System.out.println("No ledger selected.");
             return;
         }
+        //enter category type
+        System.out.println("Enter the type of the new category: ");
+        String categoryTypeInput = selectCategoryType();
 
         //enter category name
         System.out.print("Enter the name of the new category: ");
         String categoryName = inputName();
-
-        //enter category type
-        System.out.println("Enter the type of the new category: ");
-        String categoryTypeInput = selectCategoryType();
 
         //create category
         LedgerCategory category = ledgerCategoryController.createCategory(categoryName, selectedLedger,
@@ -56,7 +72,7 @@ public class LedgerCategoryCLI {
         printCategoryTree(selectedLedger);
     }
 
-    public void addSubCategory() {
+    private void addSubCategory() {
         System.out.println("\n === Adding a new sub-category ===");
 
         //select ledger
@@ -74,7 +90,7 @@ public class LedgerCategoryCLI {
                 CategoryType.INCOME : CategoryType.EXPENSE;
 
         //select parent category
-        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> allCategories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger);
         List<LedgerCategory> parentCategories = allCategories.stream()
                 .filter(cat -> cat.getType() == (categoryType) && cat.getParent() == null)
                 .filter(cat -> !cat.getName().equals("Claim Income"))
@@ -98,7 +114,6 @@ public class LedgerCategoryCLI {
         System.out.println("Sub-category '" + subCategory.getName() + "' added successfully under category '"
                 + parentCategory.getName() + "' in ledger '" + selectedLedger.getName() + "'.");
         printCategoryTree(selectedLedger);
-
     }
 
     public void renameCategory() {
@@ -113,7 +128,7 @@ public class LedgerCategoryCLI {
         }
 
         //select category
-        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> allCategories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger);
         System.out.println("\nSelect a category to rename:");
         LedgerCategory categoryToRename = selectCategoryWithTree(allCategories);
         if(categoryToRename == null){
@@ -128,7 +143,7 @@ public class LedgerCategoryCLI {
         }
 
         //rename category
-        boolean success = ledgerCategoryController.renameCategory(categoryToRename, newName);
+        boolean success = ledgerCategoryController.rename(categoryToRename, newName);
         if (!success) {
             System.out.println("Failed to rename category. The new name may already exist or the input was invalid.");
             return;
@@ -149,7 +164,7 @@ public class LedgerCategoryCLI {
         }
 
         //select category
-        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> allCategories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger);
         System.out.println("Select a category to delete:");
         LedgerCategory categoryToDelete = selectCategoryWithTree(allCategories);
         if(categoryToDelete == null){
@@ -157,28 +172,28 @@ public class LedgerCategoryCLI {
         }
 
         //select if delete transactions
-        System.out.print("Are you sure you want to delete this category and all its associated transactions '" + categoryToDelete.getName() + "'? (y/n): ");
-        String confirmation = scanner.nextLine().trim();
-        if (confirmation.equalsIgnoreCase("yes") || confirmation.equalsIgnoreCase("y")) {
+//        System.out.print("Are you sure you want to delete this category and all its associated transactions '" + categoryToDelete.getName() + "'? (y/n): ");
+//        String confirmation = scanner.nextLine().trim();
+//        if (confirmation.equalsIgnoreCase("yes") || confirmation.equalsIgnoreCase("y")) {
             //delete category and delete transactions
-            boolean success = ledgerCategoryController.deleteCategory(categoryToDelete, true, null);
-            if (!success) {
-                System.out.println("Failed to delete category.");
-                return;
-            }
-        }else {
-            //delete category and migrate transactions
-            List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
-                    .filter(cat -> cat.getId() != categoryToDelete.getId() && cat.getType() == categoryToDelete.getType())
-                    .toList();
-            System.out.println("Select a category to migrate transactions to:");
-            LedgerCategory migrateCategory = selectCategoryWithTree(categories);
-            boolean success = ledgerCategoryController.deleteCategory(categoryToDelete, false, migrateCategory);
-            if (!success) {
-                System.out.println("Failed to delete category.");
-                return;
-            }
+        boolean success = ledgerCategoryController.deleteCategory(categoryToDelete);
+        if (!success) {
+            System.out.println("Failed to delete category.");
+            return;
         }
+//        }else {
+//            //delete category and migrate transactions
+//            List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
+//                    .filter(cat -> cat.getId() != categoryToDelete.getId() && cat.getType() == categoryToDelete.getType())
+//                    .toList();
+//            System.out.println("Select a category to migrate transactions to:");
+//            LedgerCategory migrateCategory = selectCategoryWithTree(categories);
+//            boolean success = ledgerCategoryController.deleteCategory(categoryToDelete);
+//            if (!success) {
+//                System.out.println("Failed to delete category.");
+//                return;
+//            }
+//        }
         System.out.println("Category '" + categoryToDelete.getName() + "' deleted successfully.");
         printCategoryTree(selectedLedger);
     }
@@ -193,18 +208,10 @@ public class LedgerCategoryCLI {
             return;
         }
 
-        //select category type
-        System.out.println("Enter the type of the sub-category to promote: ");
-        String categoryTypeInput = selectCategoryType();
-        CategoryType categoryType = categoryTypeInput.equalsIgnoreCase("INCOME") ?
-                CategoryType.INCOME : CategoryType.EXPENSE;
-
         //select sub-category
-        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
-                .filter(cat -> cat.getType() == categoryType && cat.getParent() != null)
-                .toList();
+        List<LedgerCategory> allCategories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger);
         System.out.println("Select a sub-category to promote:");
-        LedgerCategory subCategoryToPromote = selectCategory(allCategories);
+        LedgerCategory subCategoryToPromote = selectCategoryWithTree(allCategories);
         if(subCategoryToPromote == null){
             return;
         }
@@ -224,7 +231,6 @@ public class LedgerCategoryCLI {
     public void demoteCategory() {
         System.out.println("\n === Demoting a category ===");
 
-
         //select ledger
         System.out.println("\nSelect a ledger:");
         Ledger selectedLedger = selectLedger(userController.getCurrentUser());
@@ -234,16 +240,14 @@ public class LedgerCategoryCLI {
         }
 
         //select category type
-        System.out.println("Enter the type of the category to demote: ");
-        String categoryTypeInput = selectCategoryType();
-        CategoryType categoryType = categoryTypeInput.equalsIgnoreCase("INCOME") ?
-                CategoryType.INCOME : CategoryType.EXPENSE;
+//        System.out.println("Enter the type of the category to demote: ");
+//        String categoryTypeInput = selectCategoryType();
+//        CategoryType categoryType = categoryTypeInput.equalsIgnoreCase("INCOME") ?
+//                CategoryType.INCOME : CategoryType.EXPENSE;
 
         //select category
-        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
-                .filter(cat -> cat.getType() == categoryType
-                        && cat.getParent() == null)
-                .filter(cat -> !cat.getName().equals("Claim Income"))
+        List<LedgerCategory> allCategories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger).stream()
+                .filter(cat -> cat.getParent() == null)
                 .toList();
         System.out.println("Select a first-level category to demote:");
         LedgerCategory categoryToDemote = selectCategory(allCategories);
@@ -253,7 +257,8 @@ public class LedgerCategoryCLI {
 
         //select new parent category
         List<LedgerCategory> potentialParents = allCategories.stream()
-                .filter(cat -> cat.getId() != categoryToDemote.getId())
+                .filter(cat -> cat.getId() != categoryToDemote.getId() && cat.getType() == categoryToDemote.getType()
+                        && cat.getParent() == null)
                 .toList();
         System.out.println("Select a new parent category for the category to demote:");
         LedgerCategory newParentCategory = selectCategory(potentialParents);
@@ -285,21 +290,22 @@ public class LedgerCategoryCLI {
         }
 
         //select sub-category
-        List<LedgerCategory> allCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
-        List<LedgerCategory> subCategories = allCategories.stream()
-                .filter(cat -> cat.getParent() != null)
-                .toList();
-        LedgerCategory subCategoryToChange = selectCategory(subCategories);
+        List<LedgerCategory> allCategories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger);
+        System.out.println("Select a sub-category to change its parent:");
+        LedgerCategory subCategoryToChange = selectCategoryWithTree(allCategories);
         if(subCategoryToChange == null){
+            return;
+        }
+        if(subCategoryToChange.getParent() == null){
+            System.out.println("Selected category is not a sub-category.");
             return;
         }
 
         //select new parent category
         List<LedgerCategory> potentialParents = allCategories.stream()
-                .filter(cat -> cat.getId() != subCategoryToChange.getId()
+                .filter(cat -> cat.getId() != subCategoryToChange.getParent().getId()
                         && cat.getType() == subCategoryToChange.getType()
                         && cat.getParent() == null)
-                .filter(cat -> !cat.getName().equals("Claim Income"))
                 .toList();
         LedgerCategory newParentCategory = selectCategory(potentialParents);
         if(newParentCategory == null){
@@ -330,7 +336,7 @@ public class LedgerCategoryCLI {
         return name;
     }
     private void printCategoryTree(Ledger selectedLedger) {
-        List<LedgerCategory> updatedCategories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger);
+        List<LedgerCategory> updatedCategories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger);
 
         List<LedgerCategory> expenseRoots = updatedCategories.stream()
                 .filter(cat -> cat.getParent() == null && cat.getType() == CategoryType.EXPENSE)
