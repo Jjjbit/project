@@ -4,7 +4,7 @@ public class Category { // General category not tied to a specific ledger. globa
     private long id;
     private String name;
     private Category parent;
-    protected CategoryType type;
+    private CategoryType type;
 
     // --- Getter/Setter ---
     public long getId() { return id; }
