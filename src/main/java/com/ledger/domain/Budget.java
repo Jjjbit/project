@@ -8,7 +8,7 @@ public class Budget {
 
     private long id;
     private BigDecimal amount; // Budget amount
-    private Period period; // e.g., "monthly", "yearly"
+    private Period period; //monthly, yearly
     private LedgerCategory category; // Category or subcategory
     private LocalDate startDate;
     private LocalDate endDate;
@@ -23,19 +23,18 @@ public class Budget {
         this.startDate = calculateStartDateForPeriod(LocalDate.now(), this.period);
         this.endDate = calculateEndDateForPeriod(this.startDate, this.period);
     }
-    public static LocalDate calculateStartDateForPeriod(LocalDate today, Period budgetPeriod) {
-        return switch (budgetPeriod) {
+    private LocalDate calculateStartDateForPeriod(LocalDate today, Period period) {
+        return switch (period) {
             case YEARLY -> LocalDate.of(today.getYear(), 1, 1);
             case MONTHLY -> LocalDate.of(today.getYear(), today.getMonth(), 1);
         };
     }
-    public static LocalDate calculateEndDateForPeriod(LocalDate startDate, Period period) {
+    private LocalDate calculateEndDateForPeriod(LocalDate startDate, Period period) {
         return switch (period) {
             case YEARLY -> LocalDate.of(startDate.getYear(), 12, 31);
             case MONTHLY -> YearMonth.from(startDate).atEndOfMonth();
         };
     }
-
 
     public Ledger getLedger() {
         return ledger;
