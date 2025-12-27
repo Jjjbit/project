@@ -1,8 +1,9 @@
-package com.ledger.domain;
+package com.ledger.util;
 
 import org.mindrot.jbcrypt.BCrypt;
 
-public class PasswordUtils {
+public final class PasswordUtils {
+    private PasswordUtils() {} // Prevent instantiation
     public static String hash(String plainPassword) {
         return BCrypt.hashpw(plainPassword, BCrypt.gensalt());
     }
