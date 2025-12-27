@@ -23,7 +23,7 @@ public class TransactionDAO {
 
     @SuppressWarnings("SqlResolve")
     public <T extends Transaction> boolean insert(T transaction) {
-        String transactionSql = "INSERT INTO transactions (transaction_date, amount, note, from_account_id, to_account_id, ledger_id, category_id, dtype) " +
+        String transactionSql = "INSERT INTO transactions (transaction_date, amount, note, from_account_id, to_account_id, ledger_id, category_id, type) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(transactionSql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setObject(1, transaction.getDate());
@@ -81,7 +81,7 @@ public class TransactionDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean update(Transaction transaction) {
-        String sql = "UPDATE transactions SET transaction_date = ?, amount = ?, note = ?, from_account_id = ?, to_account_id = ?, ledger_id = ?, category_id = ?, dtype = ?  " +
+        String sql = "UPDATE transactions SET transaction_date = ?, amount = ?, note = ?, from_account_id = ?, to_account_id = ?, ledger_id = ?, category_id = ? " +
                 "WHERE id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setObject(1, transaction.getDate());
@@ -111,9 +111,7 @@ public class TransactionDAO {
             } else {
                 stmt.setNull(7, Types.BIGINT);
             }
-            //update type
-            stmt.setString(8, transaction.getType().name());
-            stmt.setLong(9, transaction.getId());
+            stmt.setLong(8, transaction.getId());
             return stmt.executeUpdate() > 0;
         }catch (SQLException e){
             System.err.println("SQL Exception during transaction update: " + e.getMessage());
@@ -241,9 +239,9 @@ public class TransactionDAO {
 
     private Transaction mapResultSetToTransaction(ResultSet rs) throws SQLException {
         Transaction transaction;
-        String dtype = rs.getString("dtype").toUpperCase();
-        // based on dtype, create appropriate subclass instance
-        switch (dtype) {
+        String type = rs.getString("type").toUpperCase();
+        // based on type, create appropriate subclass instance
+        switch (type) {
             case "TRANSFER":
                 transaction = new Transfer();
                 break;
@@ -254,7 +252,7 @@ public class TransactionDAO {
                 transaction = new Income();
                 break;
             default:
-                System.err.println("Unknown transaction type: " + dtype);
+                System.err.println("Unknown transaction type: " + type);
                 return null;
         }
         // set common fields
@@ -262,7 +260,7 @@ public class TransactionDAO {
         transaction.setDate(rs.getObject("transaction_date", LocalDate.class));
         transaction.setAmount(rs.getBigDecimal("amount"));
         transaction.setNote(rs.getString("note"));
-        transaction.setType(TransactionType.valueOf(rs.getString("dtype")));
+        transaction.setType(TransactionType.valueOf(rs.getString("type")));
         //set fromAccount
         if( rs.getLong("from_account_id") != 0) {
             transaction.setFromAccount(accountDAO.getAccountById(rs.getLong("from_account_id")));
