@@ -2,6 +2,7 @@ package com.ledger.business;
 
 import com.ledger.domain.*;
 import com.ledger.orm.*;
+import com.ledger.session.UserSession;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -29,13 +30,14 @@ public class LedgerController {
         return ledgerDAO.getLedgersByUserId(user.getId());
     }
 
-    public Ledger createLedger(String name, User owner) {
-        if(name == null || name.isEmpty()) {
+    public Ledger createLedger(String name) {
+        if(name == null || name.isEmpty() || name.length() > 50) {
             return null;
         }
-        if(owner == null){
+        if(!UserSession.isLoggedIn()){
             return null;
         }
+        User owner = UserSession.getCurrentUser();
         if (ledgerDAO.getByNameAndOwnerId(name, owner.getId()) != null) {
             return null;
         }
@@ -89,7 +91,6 @@ public class LedgerController {
         if(ledger == null){
             return false;
         }
-
         List<Transaction> transactionsToDelete = transactionDAO.getByLedgerId(ledger.getId());
         for (Transaction tx : transactionsToDelete) {
             Account to = tx.getToAccount();
@@ -123,66 +124,70 @@ public class LedgerController {
         return ledgerDAO.delete(ledger);
     }
 
-    public Ledger copyLedger(Ledger original, User user) {
-        if(original == null){
-            return null;
-        }
-        String newName = original.getName() + " Copy";
-        Ledger copy = new Ledger(newName, user);
-        ledgerDAO.insert(copy); // insert to db
+//    public Ledger copyLedger(Ledger original, User user) {
+//        if(original == null){
+//            return null;
+//        }
+//        String newName = original.getName() + " Copy";
+//        Ledger copy = new Ledger(newName, user);
+//        ledgerDAO.insert(copy); // insert to db
+//
+//        List<LedgerCategory> parents = new ArrayList<>(ledgerCategoryDAO.getCategoriesNullParent(original.getId()));
+//        List<LedgerCategory> categoryCopies = new ArrayList<>();
+//        for (LedgerCategory originalCat : parents) {
+//            categoryCopies.addAll(copyLedgerCategoryTree(originalCat, copy));
+//        }
+//
+//        //create Budget for ledger for each Period
+//        for (Period period : Period.values()) {
+//            Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, copy);
+//            budgetDAO.insert(ledgerBudget);
+//        }
+//
+//        //create Budgets for each category
+//        for (LedgerCategory cat : categoryCopies) {
+//            if (cat.getType() == CategoryType.EXPENSE) {
+//                for (Period period : Period.values()) {
+//                    Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, copy);
+//                    budgetDAO.insert(categoryBudget);
+//                }
+//            }
+//        }
+//        return copy;
+//    }
+//
+//    private List<LedgerCategory> copyLedgerCategoryTree(LedgerCategory oldCategory, Ledger newLedger) {
+//        List<LedgerCategory> result = new ArrayList<>();
+//
+//        LedgerCategory copy = new LedgerCategory();
+//        copy.setName(oldCategory.getName());
+//        copy.setType(oldCategory.getType());
+//        copy.setLedger(newLedger);
+//        result.add(copy);
+//        ledgerCategoryDAO.insert(copy);
+//
+//        for(LedgerCategory child : ledgerCategoryDAO.getCategoriesByParentId(oldCategory.getId())) {
+//            List<LedgerCategory> childCategories = copyLedgerCategoryTree(child, newLedger);
+//            for (LedgerCategory childCategory : childCategories) {
+//                childCategory.setParent(copy);
+//                ledgerCategoryDAO.update(childCategory);
+//            }
+//            result.addAll(childCategories);
+//        }
+//        return result;
+//    }
 
-        List<LedgerCategory> parents = new ArrayList<>(ledgerCategoryDAO.getCategoriesNullParent(original.getId()));
-        List<LedgerCategory> categoryCopies = new ArrayList<>();
-        for (LedgerCategory originalCat : parents) {
-            categoryCopies.addAll(copyLedgerCategoryTree(originalCat, copy));
-        }
-
-        //create Budget for ledger for each Period
-        for (Period period : Period.values()) {
-            Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, copy);
-            budgetDAO.insert(ledgerBudget);
-        }
-
-        //create Budgets for each category
-        for (LedgerCategory cat : categoryCopies) {
-            if (cat.getType() == CategoryType.EXPENSE) {
-                for (Period period : Period.values()) {
-                    Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, copy);
-                    budgetDAO.insert(categoryBudget);
-                }
-            }
-        }
-        return copy;
-    }
-
-    private List<LedgerCategory> copyLedgerCategoryTree(LedgerCategory oldCategory, Ledger newLedger) {
-        List<LedgerCategory> result = new ArrayList<>();
-
-        LedgerCategory copy = new LedgerCategory();
-        copy.setName(oldCategory.getName());
-        copy.setType(oldCategory.getType());
-        copy.setLedger(newLedger);
-        result.add(copy);
-        ledgerCategoryDAO.insert(copy);
-
-        for(LedgerCategory child : ledgerCategoryDAO.getCategoriesByParentId(oldCategory.getId())) {
-            List<LedgerCategory> childCategories = copyLedgerCategoryTree(child, newLedger);
-            for (LedgerCategory childCategory : childCategories) {
-                childCategory.setParent(copy);
-                ledgerCategoryDAO.update(childCategory);
-            }
-            result.addAll(childCategories);
-        }
-        return result;
-    }
-
-    public boolean renameLedger(Ledger ledger, String newName, User user) {
+    public boolean renameLedger(Ledger ledger, String newName) {
         if(ledger == null){
             return false;
         }
         if(newName == null || newName.isEmpty()) {
             return false;
         }
+        if(!UserSession.isLoggedIn()){
+            return false;
+        }
+        User user = UserSession.getCurrentUser();
         Ledger existingLedger = ledgerDAO.getByNameAndOwnerId(newName, user.getId());
         if (existingLedger != null && existingLedger.getId() != ledger.getId()) {
             return false;
