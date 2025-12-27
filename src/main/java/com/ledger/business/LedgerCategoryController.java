@@ -20,7 +20,7 @@ public class LedgerCategoryController {
         this.ledgerCategoryDAO = ledgerCategoryDAO;
     }
 
-    public List<LedgerCategory> getLedgerCategoryTreeByLedger(Ledger ledger) {
+    public List<LedgerCategory> getCategoryTreeByLedger(Ledger ledger) {
         return ledgerCategoryDAO.getTreeByLedgerId(ledger.getId()).stream()
                 .filter(category -> !category.getName().equals("Claim Income"))
                 .toList();
@@ -30,7 +30,7 @@ public class LedgerCategoryController {
         if(ledger == null){
             return null;
         }
-        if(name == null || name.isEmpty()) {
+        if(name == null || name.isEmpty() || name.length() > 50) {
             return null;
         }
         if(type == null){
@@ -57,7 +57,7 @@ public class LedgerCategoryController {
         if(parentCategory.getParent()!=null){
             return null;
         }
-        if(name == null || name.isEmpty()) {
+        if(name == null || name.isEmpty() || name.length() > 50) {
             return null;
         }
         if (ledgerCategoryDAO.getByNameAndLedger(name, ledger) != null) {
@@ -87,17 +87,17 @@ public class LedgerCategoryController {
         return ledgerCategoryDAO.update(subCategory); //update parent_id in database
     }
 
-    public boolean demoteCategory(LedgerCategory category, LedgerCategory newParent) {
+    public boolean demoteCategory(LedgerCategory category, LedgerCategory parent) {
         if (category == null) {
             return false;
         }
-        if (newParent == null) {
+        if (parent == null) {
             return false;
         }
-        if (newParent.getParent() != null) {
+        if (parent.getParent() != null) {
             return false;
         }
-        if (category.getId() == newParent.getId()) {
+        if (category.getId() == parent.getId()) {
             return false;
         }
         if (category.getParent() != null) {
@@ -106,14 +106,14 @@ public class LedgerCategoryController {
         if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId()).isEmpty()){
             return false;
         }
-        if (category.getType() != newParent.getType()) {
+        if (category.getType() != parent.getType()) {
             return false;
         }
-        category.setParent(newParent);
+        category.setParent(parent);
         return ledgerCategoryDAO.update(category); //update parent_id in database
     }
 
-    public boolean renameCategory(LedgerCategory category, String newName) {
+    public boolean rename(LedgerCategory category, String newName) {
         if(category == null){
             return false;
         }
@@ -137,7 +137,7 @@ public class LedgerCategoryController {
         if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId()).isEmpty()){
             return false;
         }
-        List<Transaction> txs = transactionDAO.getByCategoryId(category.getId()); //get transactions from db
+        //List<Transaction> txs = transactionDAO.getByCategoryId(category.getId()); //get transactions from db
 
         //if(deleteTransaction){//delete transactions
 //            for(Transaction tx : txs){
