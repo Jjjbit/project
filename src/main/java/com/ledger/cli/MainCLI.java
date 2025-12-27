@@ -71,11 +71,9 @@ public class MainCLI {
         System.out.println("2. Ledger Management");
         System.out.println("3. Transaction Management");
         System.out.println("4. Budget Management");
-        System.out.println("5. Lending Management");
-        System.out.println("6. Borrowing Management");
-        System.out.println("7. Category Management");
-        System.out.println("8. User Profile");
-        System.out.println("9. Logout");
+        System.out.println("5. Category Management");
+        System.out.println("6. User Profile");
+        System.out.println("7. Logout");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -97,86 +95,24 @@ public class MainCLI {
                 // budget management menu
                 showBudgetMenu();
                 break;
-//            case"5":
-//                // lending management menu
-//                showLendingMenu();
-//                break;
-//            case"6":
-//                // borrowing management menu
-//                showBorrowingMenu();
-//                break;
-            case "7":
+            case "5":
                 // category management menu
                 showCategoryMenu();
                 break;
-//            case "8":
-//                // installment management menu
-//                showInstallmentMenu();
-//                break;
-//            case "9":
-//                // reimbursement management menu
-//                showReimbursementMenu();
-//                break;
-            case "8" :
+            case "6" :
                 // user profile menu
                 showUserMenu();
                 break;
-            case "9":
+            case "7":
                 // logout
                 userCLI.logout();
                 showWelcomeMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-9.");
+                System.out.println("Invalid option! Please choose 1-7.");
                 showMainMenu();
         }
     }
-
-//    private void showReimbursementMenu() {
-//        System.out.println("\n=== Reimbursement Management ===");
-//        System.out.println("1. Create Reimbursement");
-//        System.out.println("2. Claim Reimbursement");
-//        System.out.println("3. Delete Reimbursement");
-//        System.out.println("4. Edit Pending Reimbursement");
-//        System.out.println("5. Show All Pending Reimbursements");
-//        System.out.println("6. Show All Claimed Reimbursements");
-//        System.out.println("7. Show Reimbursement Details");
-//        System.out.println("8. Back to Main Menu");
-//        System.out.print("Choose an option: ");
-//
-//        String choice = scanner.nextLine().trim();
-//
-//        switch (choice) {
-//            case "1":
-//                reimbursementCLI.create();
-//                break;
-//            case "2":
-//                reimbursementCLI.claim();
-//                break;
-//            case "3":
-//                reimbursementCLI.delete();
-//                break;
-//            case "4":
-//                reimbursementCLI.edit();
-//                break;
-//            case "5":
-//                reimbursementCLI.showAllPendingReimbursements();
-//                break;
-//            case "6":
-//                reimbursementCLI.showAllClaimedReimbursements();
-//                break;
-//            case "7":
-//                reimbursementCLI.showReimbursementDetails();
-//                break;
-//            case "8":
-//                // go back to main menu
-//                showMainMenu();
-//                break;
-//            default:
-//                System.out.println("Invalid option! Please choose 1-8.");
-//                showReimbursementMenu();
-//        }
-//    }
 
     private void showAccountMenu()  {
         System.out.println("\n=== Account Management ===");
@@ -184,13 +120,8 @@ public class MainCLI {
         System.out.println("2. View All Accounts"); //show all accounts
         System.out.println("3. Edit Account");
         System.out.println("4. Delete Account");
-        System.out.println("5. Hide Account");
-        System.out.println("6. Pay Debt of Credit Card");
-        System.out.println("7. Pay Loan");
-        System.out.println("8. Repay Borrowing");
-        System.out.println("9. Receive Lending Payment");
-        System.out.println("10. Show Account's Summary");
-        System.out.println("11. Back to Main Menu");
+        System.out.println("5. Show Account's Summary");
+        System.out.println("6. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -208,75 +139,18 @@ public class MainCLI {
             case "4":
                 accountCLI.deleteAccount();
                 break;
-//            case "5":
-//                accountCLI.hideAccount();
-//                break;
-//            case "6":
-//                accountCLI.payDebt();
-//                break;
-//            case "7":
-//                accountCLI.payLoan();
-//                break;
-//            case "8":
-//                accountCLI.makeBorrowingPayment();
-//                break;
-//            case "9":
-//                accountCLI.receiveLendingPayment();
-//                break;
-            case "10":
+            case "5":
                 accountCLI.viewAccountSummary();
                 break;
-            case "11":
+            case "6":
                 // go back to main menu
                 showMainMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-11.");
+                System.out.println("Invalid option! Please choose 1-6.");
                 showAccountMenu();
         }
     }
-
-//    private void showInstallmentMenu() {
-//        System.out.println("\n=== Installment Plan Management ===");
-//        System.out.println("1. Create Installment Plan");
-//        System.out.println("2. View Installment Plans");
-//        System.out.println("3. Update Installment Plan");
-//        System.out.println("4. Delete Installment Plan");
-//        System.out.println("5. Pay one period");
-//        System.out.println("6. Show Installment Plan Details");
-//        System.out.println("7. Back to Account Menu");
-//        System.out.print("Choose an option: ");
-//
-//        String choice = scanner.nextLine().trim();
-//
-//        switch (choice) {
-//            case "1":
-//                installmentCLI.createInstallment();
-//                break;
-//            case "2":
-//                installmentCLI.viewInstallments();
-//                break;
-//            case "3":
-//                installmentCLI.editInstallmentPlan();
-//                break;
-//            case "4":
-//                installmentCLI.deleteInstallment();
-//                break;
-//            case "5":
-//                installmentCLI.payInstallment();
-//                break;
-//            case "6":
-//                installmentCLI.showInstallmentDetails();
-//                break;
-//            case "7":
-//                // go back to account menu
-//                showAccountMenu();
-//                break;
-//            default:
-//                System.out.println("Invalid option! Please choose 1-7.");
-//                showInstallmentMenu();
-//        }
-//    }
 
     private void showLedgerMenu()  {
         System.out.println("\n=== Ledger Management ===");
@@ -284,11 +158,10 @@ public class MainCLI {
         System.out.println("2. View All Ledgers"); //show all ledgers
         System.out.println("3. Edit Ledger");
         System.out.println("4. Show Ledger's Summary");
-        System.out.println("5. Copy Ledger");
-        System.out.println("6. Delete Ledger");
-        System.out.println("7. Category Settings");
-        System.out.println("8. Add Transaction");
-        System.out.println("9. Back to Main Menu");
+        System.out.println("5. Delete Ledger");
+        System.out.println("6. Category Settings");
+        System.out.println("7. Add Transaction");
+        System.out.println("8. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -307,18 +180,15 @@ public class MainCLI {
                 ledgerCLI.viewLedgerSummary();
                 break;
             case "5":
-                ledgerCLI.copyLedger();
-                break;
-            case "6":
                 ledgerCLI.deleteLedger();
                 break;
-            case "7":
+            case "6":
                 showCategoryMenu();
                 break;
-            case "8":
+            case "7":
                 transactionCLI.addTransaction();
                 break;
-            case "9":
+            case "8":
                 // go back to main menu
                 showMainMenu();
                 break;
@@ -436,7 +306,7 @@ public class MainCLI {
 
     private void showBudgetMenu()  {
         System.out.println("\n=== Budget Management ===");
-        System.out.println("1. Show all Budgets");
+        System.out.println("1. View all Budgets");
         System.out.println("2. Edit Budget");
         System.out.println("3. Merge Budget");
         System.out.println("4. Back to Main Menu");
@@ -463,81 +333,5 @@ public class MainCLI {
                 showBudgetMenu();
         }
     }
-
-//    private void showLendingMenu() {
-//        System.out.println("\n=== Lending Management ===");
-//        System.out.println("1. Create Lending Record");
-//        System.out.println("2. View All Lending Records");
-//        System.out.println("3. Edit Lending Record");
-//        System.out.println("4. Delete Lending Record");
-//        System.out.println("5. Receive Lending Payment");
-//        System.out.println("6. Back to Main Menu");
-//        System.out.print("Choose an option: ");
-//
-//        String choice = scanner.nextLine().trim();
-//
-//        switch (choice) {
-//            case "1":
-//                lendingCLI.addLending();
-//                break;
-//            case "2":
-//                lendingCLI.showAllLendings();
-//                break;
-//            case "3":
-//                lendingCLI.editLending();
-//                break;
-//            case "4":
-//                lendingCLI.deleteLending();
-//                break;
-//            case "5":
-//                lendingCLI.receiveLendingPayment();
-//                break;
-//            case "6":
-//                // go back to main menu
-//                showMainMenu();
-//                break;
-//            default:
-//                System.out.println("Invalid option! Please choose 1-6.");
-//                showLendingMenu();
-//        }
-//    }
-//
-//    private void showBorrowingMenu()  {
-//        System.out.println("\n=== Borrowing Management ===");
-//        System.out.println("1. Create Borrowing Record");
-//        System.out.println("2. View All Borrowing Records");
-//        System.out.println("3. Edit Borrowing Record");
-//        System.out.println("4. Delete Borrowing Record");
-//        System.out.println("5. Repay Borrowing");
-//        System.out.println("6. Back to Main Menu");
-//        System.out.print("Choose an option: ");
-//
-//        String choice = scanner.nextLine().trim();
-//
-//        switch (choice) {
-//            case "1":
-//                borrowingCLI.addBorrowing();
-//                break;
-//            case "2":
-//                borrowingCLI.showAllBorrowings();
-//                break;
-//            case "3":
-//                borrowingCLI.editBorrowing();
-//                break;
-//            case "4":
-//                borrowingCLI.deleteBorrowing();
-//                break;
-//            case "5":
-//                borrowingCLI.makeBorrowingPayment();
-//                break;
-//            case "6":
-//                // go back to main menu
-//                showMainMenu();
-//                break;
-//            default:
-//                System.out.println("Invalid option! Please choose 1-6.");
-//                showBorrowingMenu();
-//        }
-//    }
 
 }
