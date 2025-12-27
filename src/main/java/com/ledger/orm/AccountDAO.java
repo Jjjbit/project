@@ -15,13 +15,13 @@ public class AccountDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean createAccount(Account account) {
-        String sql = "INSERT INTO accounts (name, balance, user_id, included_in_net_asset, selectable) " +
+        String sql = "INSERT INTO accounts (name, balance, user_id, included_in_asset, selectable) " +
                 "VALUES (?, ?, ?, ?, ?)";
         try(PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, account.getName());
             stmt.setBigDecimal(2, account.getBalance());
             stmt.setLong(3, account.getOwner().getId());
-            stmt.setBoolean(4, account.getIncludedInNetAsset());
+            stmt.setBoolean(4, account.getIncludedInAsset());
             stmt.setBoolean(5, account.getSelectable());
 
             int affectedRows = stmt.executeUpdate();
@@ -445,7 +445,7 @@ public class AccountDAO {
         account.setId(rs.getLong("id"));
         account.setName(rs.getString("name"));
         account.setBalance(rs.getBigDecimal("balance"));
-        account.setIncludedInNetAsset(rs.getBoolean("included_in_net_asset"));
+        account.setIncludedInAsset(rs.getBoolean("included_in_asset"));
         account.setSelectable(rs.getBoolean("selectable"));
         return account;
     }
@@ -470,12 +470,12 @@ public class AccountDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean update(Account account) {
-        String sql = "UPDATE accounts SET name = ?, balance = ?, included_in_net_asset = ?, selectable = ?  WHERE id = ?";
+        String sql = "UPDATE accounts SET name = ?, balance = ?, included_in_asset = ?, selectable = ?  WHERE id = ?";
         try(PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, account.getName());
             stmt.setBigDecimal(2, account.getBalance());
             //stmt.setString(3, account.getNotes());
-            stmt.setBoolean(3, account.getIncludedInNetAsset());
+            stmt.setBoolean(3, account.getIncludedInAsset());
             stmt.setBoolean(4, account.getSelectable());
             stmt.setLong(5, account.getId());
             return stmt.executeUpdate() > 0;
