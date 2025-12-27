@@ -577,7 +577,7 @@ public class TransactionCLI {
     }
 
     private LedgerCategory selectCategory(Ledger ledger, CategoryType type) {
-        List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(ledger);
+        List<LedgerCategory> categories = ledgerCategoryController.getCategoryTreeByLedger(ledger);
 
         if(categories.isEmpty()) {
             System.out.println("No categories found in the selected ledger.");

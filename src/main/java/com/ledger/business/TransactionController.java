@@ -31,7 +31,7 @@ public class TransactionController {
                 .toList();
     }
 
-    public Income createIncome(Ledger ledger, Account toAccount, LedgerCategory category, String description,
+    public Income createIncome(Ledger ledger, Account toAccount, LedgerCategory category, String note,
                                LocalDate date, BigDecimal amount) {
         if (ledger == null) {
             return null;
@@ -49,7 +49,7 @@ public class TransactionController {
             return null;
         }
 
-        Income incomeTransaction = new Income(date != null ? date : LocalDate.now(), amount, description, toAccount,
+        Income incomeTransaction = new Income(date != null ? date : LocalDate.now(), amount, note, toAccount,
                 ledger, category);
         transactionDAO.insert(incomeTransaction);
         if( toAccount != null) {
@@ -62,7 +62,7 @@ public class TransactionController {
         return incomeTransaction;
     }
 
-    public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String description,
+    public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String note,
                                  LocalDate date, BigDecimal amount) {
         if (ledger == null) {
             return null;
@@ -80,7 +80,7 @@ public class TransactionController {
             return null;
         }
 
-        Expense expenseTransaction = new Expense(date != null ? date : LocalDate.now(), amount, description, fromAccount,
+        Expense expenseTransaction = new Expense(date != null ? date : LocalDate.now(), amount, note, fromAccount,
                 ledger, category);
         transactionDAO.insert(expenseTransaction);
         if( fromAccount != null) {
@@ -93,7 +93,7 @@ public class TransactionController {
         return expenseTransaction;
     }
 
-    public Transfer createTransfer(Ledger ledger, Account fromAccount, Account toAccount, String description,
+    public Transfer createTransfer(Ledger ledger, Account fromAccount, Account toAccount, String note,
                                    LocalDate date, BigDecimal amount) {
         if( ledger == null) {
             return null;
@@ -117,7 +117,7 @@ public class TransactionController {
             return null;
         }
 
-        Transfer transferTransaction = new Transfer(date != null ? date : LocalDate.now(), description, fromAccount,
+        Transfer transferTransaction = new Transfer(date != null ? date : LocalDate.now(), note, fromAccount,
                 toAccount, amount, ledger);
         transactionDAO.insert(transferTransaction);
 
