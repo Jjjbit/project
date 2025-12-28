@@ -178,27 +178,27 @@ public class TransactionController {
 
     public boolean updateIncome(Income income, Account toAccount, LedgerCategory category, String note, LocalDate date,
                                 BigDecimal amount, Ledger ledger) {
-        if (income == null) {
+        if (income == null || toAccount == null || category == null || ledger == null || amount == null || date == null) {
             return false;
         }
-        if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
             return false;
-        } //change amount and amount>0
+        }
 
         BigDecimal oldAmount = income.getAmount();
         Account oldToAccount = income.getToAccount();
         LedgerCategory oldCategory = income.getCategory();
         Ledger oldLedger = income.getLedger();
-        if (ledger != null && ledger.getId() != oldLedger.getId()) {
+        if (ledger.getId() != oldLedger.getId()) { //change ledger
             income.setLedger(ledger);
         }
-        if (category != null && category.getId() != oldCategory.getId()) {
+        if (category.getId() != oldCategory.getId()) { //change category
             if (category.getType() != CategoryType.INCOME) {
                 return false;
             }
             income.setCategory(category);
         }
-        if (toAccount != null && toAccount.getId() != oldToAccount.getId()) { //change account
+        if (toAccount.getId() != oldToAccount.getId()) { //change account
             //rollback old account
             oldToAccount.debit(oldAmount);
             accountDAO.update(oldToAccount);
@@ -206,38 +206,38 @@ public class TransactionController {
                 return false;
             }
             //apply new account
-            toAccount.credit(amount != null ? amount : oldAmount);
+            toAccount.credit(amount);
             income.setToAccount(toAccount);
             accountDAO.update(toAccount);
         }
-        income.setAmount(amount != null ? amount : oldAmount);
-        income.setDate(date != null ? date : income.getDate());
+        income.setAmount(amount);
+        income.setDate(date);
         income.setNote(note);
         return transactionDAO.update(income);
     }
 
     public boolean updateExpense(Expense expense, Account fromAccount, LedgerCategory category, String note, LocalDate date,
                                  BigDecimal amount, Ledger ledger) {
-        if (expense == null) {
+        if (expense == null || fromAccount == null || ledger == null || date == null || category == null || amount == null) {
             return false;
         }
-        if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
             return false;
         } //change amount and amount>0
         BigDecimal oldAmount = expense.getAmount();
         Account oldFromAccount = expense.getFromAccount();
         LedgerCategory oldCategory = expense.getCategory();
         Ledger oldLedger = expense.getLedger();
-        if (ledger != null && ledger.getId() != oldLedger.getId()) {
+        if (ledger.getId() != oldLedger.getId()) {
             expense.setLedger(ledger);
         }
-        if (category != null && category.getId() != oldCategory.getId()) {
+        if (category.getId() != oldCategory.getId()) {
             if (category.getType() != CategoryType.EXPENSE) {
                 return false;
             }
             expense.setCategory(category);
         }
-        if (fromAccount != null && fromAccount.getId() != oldFromAccount.getId()) { //change account
+        if (fromAccount.getId() != oldFromAccount.getId()) { //change account
             //rollback old account
             oldFromAccount.credit(oldAmount);
             accountDAO.update(oldFromAccount);
@@ -245,12 +245,12 @@ public class TransactionController {
                 return false;
             }
             //apply new account
-            fromAccount.debit(amount != null ? amount : oldAmount);
+            fromAccount.debit(amount);
             expense.setFromAccount(fromAccount);
             accountDAO.update(fromAccount);
         }
-        expense.setAmount(amount != null ? amount : oldAmount);
-        expense.setDate(date != null ? date : expense.getDate());
+        expense.setAmount(amount);
+        expense.setDate(date);
         expense.setNote(note);
         return transactionDAO.update(expense);
     }
@@ -258,7 +258,7 @@ public class TransactionController {
     //newFromAccount or newToAccount can be null meaning removal of that account
     public boolean updateTransfer(Transfer transfer, Account newFromAccount, Account newToAccount, String note,
                                   LocalDate date, BigDecimal amount, Ledger ledger) {
-        if (transfer == null) {
+        if (transfer == null || ledger == null || date == null) {
             return false;
         }
         if( newFromAccount == null && newToAccount == null) {
@@ -273,18 +273,19 @@ public class TransactionController {
         if(newToAccount != null && !newToAccount.getSelectable()) {
             return false;
         }
-        if (amount != null && amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
             return false;
         } //change amount and amount>0
         BigDecimal oldAmount = transfer.getAmount();
         Account oldFromAccount = transfer.getFromAccount();
         Account oldToAccount = transfer.getToAccount();
         Ledger oldLedger = transfer.getLedger();
-        if (ledger != null && ledger.getId() != oldLedger.getId()) {
+        if (ledger.getId() != oldLedger.getId()) {
             transfer.setLedger(ledger);
         } //change ledger
-        //fromAccount change, removal or addition
-        if (newFromAccount != null && (oldFromAccount == null || newFromAccount.getId() != oldFromAccount.getId())
+        boolean amountChanged = amount.compareTo(oldAmount) != 0;
+        //change amount or change fromAccount
+        if (amountChanged || (newFromAccount != null && (oldFromAccount == null || newFromAccount.getId() != oldFromAccount.getId()))
                 || (newFromAccount == null && oldFromAccount != null)) {
             //rollback old fromAccount
             if (oldFromAccount != null) {
@@ -296,14 +297,14 @@ public class TransactionController {
                 if (!newFromAccount.getSelectable()) {
                     return false;
                 }
-                BigDecimal amountToApply = amount != null ? amount : oldAmount;
-                newFromAccount.debit(amountToApply);
+
+                newFromAccount.debit(amount);
                 accountDAO.update(newFromAccount);
             }
             transfer.setFromAccount(newFromAccount); //apply new fromAccount (can be null)
         }
-        //toAccount change
-        if (newToAccount != null && (oldToAccount == null || newToAccount.getId()!= oldToAccount.getId())
+        //change toAccount or change amount
+        if (amountChanged || (newToAccount != null && (oldToAccount == null || newToAccount.getId() != oldToAccount.getId()))
                 || (newToAccount == null && oldToAccount != null)) {
             //rollback old toAccount
             if (oldToAccount != null) {
@@ -316,14 +317,13 @@ public class TransactionController {
                     return false;
                 }
 
-                BigDecimal amountToApply = amount != null ? amount : oldAmount;
-                newToAccount.credit(amountToApply);
+                newToAccount.credit(amount);
                 accountDAO.update(newToAccount);
             }
             transfer.setToAccount(newToAccount); //apply new toAccount (can be null)
         }
-        transfer.setAmount(amount != null ? amount : oldAmount);
-        transfer.setDate(date != null ? date : transfer.getDate());
+        transfer.setAmount(amount);
+        transfer.setDate(date);
         transfer.setNote(note);
         return transactionDAO.update(transfer);
     }

@@ -284,12 +284,11 @@ public class TransactionCLI {
             note = selectedTransaction.getNote(); //keep the same
         }
 
-
         //edit amount
         System.out.println("Current amount: " + selectedTransaction.getAmount());
         System.out.print("Do you want to edit the amount ? (y/n): ");
         confirm = scanner.nextLine().trim().toLowerCase();
-        BigDecimal amount=null;
+        BigDecimal amount=selectedTransaction.getAmount(); //default to current amount
         if(confirm.equals("y") || confirm.equals("yes")){
             //edit amount
             System.out.print("Enter the amount for the transaction: ");
@@ -300,7 +299,7 @@ public class TransactionCLI {
         System.out.println("Current transaction date: " + selectedTransaction.getDate());
         System.out.print("Do you want to edit the date ? (y/n): ");
         confirm = scanner.nextLine().trim().toLowerCase();
-        LocalDate date=null;
+        LocalDate date=selectedTransaction.getDate(); //default to current date
         if(confirm.equals("y") || confirm.equals("yes")){
             //edit date
             System.out.print("Enter the date for the transaction (YYYY-MM-DD): ");
@@ -311,12 +310,12 @@ public class TransactionCLI {
         System.out.println("Current ledger: " + selectedTransaction.getLedger().getName());
         System.out.print("Do you want to edit the ledger ? (y/n): ");
         confirm = scanner.nextLine().trim().toLowerCase();
-        Ledger newLedger=null;
+        Ledger newLedger=selectedTransaction.getLedger(); //default to current ledger
         if(confirm.equals("y") || confirm.equals("yes")){
            newLedger = selectLedger(userController.getCurrentUser());
         }
 
-        LedgerCategory newCategory = null;
+        LedgerCategory newCategory;
         Account newToAccount = null;
         Account newFromAccount = null;
         boolean updated = false;
@@ -324,20 +323,26 @@ public class TransactionCLI {
         //edit from/to account or category based on transaction type
         switch(selectedTransaction.getType()){
             case INCOME -> {
+                //edit category
                 System.out.println("Current category: " + selectedTransaction.getCategory().getName());
                 System.out.print("Do you want to edit the category ? (y/n): ");
                 confirm = scanner.nextLine().trim().toLowerCase();
                 if (confirm.equals("y") || confirm.equals("yes")) {
                     System.out.println("Select a new category:");
                     newCategory = selectCategory(selectedLedger, CategoryType.INCOME);
+                }else{
+                    newCategory = selectedTransaction.getCategory(); //keep the same
                 }
 
+                //edit to account
                 System.out.println("Current account: " + selectedTransaction.getToAccount().getName());
                 System.out.print("Do you want to edit the account ? (y/n): ");
                 confirm = scanner.nextLine().trim().toLowerCase();
                 if (confirm.equals("y") || confirm.equals("yes")) {
                     System.out.println("Select a new account:");
                     newToAccount = selectAccount();
+                }else{
+                    newToAccount = selectedTransaction.getToAccount(); //keep the same
                 }
                 updated = transactionController.updateIncome((Income) selectedTransaction, newToAccount,
                         newCategory, note, date, amount, newLedger);
@@ -349,6 +354,8 @@ public class TransactionCLI {
                 if (confirm.equals("y") || confirm.equals("yes")) {
                     System.out.println("Select a new category:");
                     newCategory = selectCategory(selectedLedger, CategoryType.EXPENSE);
+                }else{
+                    newCategory = selectedTransaction.getCategory(); //keep the same
                 }
 
                 System.out.println("Current account: " + selectedTransaction.getFromAccount().getName());
@@ -357,6 +364,8 @@ public class TransactionCLI {
                 if (confirm.equals("y") || confirm.equals("yes")) {
                     System.out.println("Select a new account:");
                     newFromAccount = selectAccount();
+                }else{
+                    newFromAccount = selectedTransaction.getFromAccount(); //keep the same
                 }
                 updated = transactionController.updateExpense((Expense) selectedTransaction, newFromAccount,
                         newCategory, note, date, amount, newLedger);
@@ -387,7 +396,7 @@ public class TransactionCLI {
                         System.out.println("Invalid choice: number out of range.");
                         return;
                     }
-                }else{
+                } else{
                     newFromAccount = selectedTransaction.getFromAccount(); //keep the same
                 }
 
