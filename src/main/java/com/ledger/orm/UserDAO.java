@@ -59,7 +59,7 @@ public class UserDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public boolean updateUser(User user) {
+    public boolean update(User user) {
         String sql = "UPDATE users SET username = ?, password = ? WHERE id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
