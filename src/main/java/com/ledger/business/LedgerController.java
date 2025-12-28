@@ -43,7 +43,7 @@ public class LedgerController {
         }
         Ledger ledger = new Ledger(name, owner);
         ledgerDAO.insert(ledger); //insert to db
-        List<Category> templateCategories = new ArrayList<>(categoryDAO.getCategoriesNullParent()); //get only parents
+        List<Category> templateCategories = new ArrayList<>(categoryDAO.getParentCategories()); //get only parents
         List<LedgerCategory> allCategories = new ArrayList<>();
         for (Category template : templateCategories) {
             allCategories.addAll(copyCategoryTree(template, ledger));

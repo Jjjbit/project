@@ -18,7 +18,7 @@ public class CategoryDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<Category> getCategoriesNullParent() {
+    public List<Category> getParentCategories() {
         List<Category> categories = new ArrayList<>();
 
         String sql = "SELECT id, name, parent_id, type FROM global_categories WHERE parent_id IS NULL ORDER BY id";
@@ -64,5 +64,4 @@ public class CategoryDAO {
         }
         return categories;
     }
-
 }
