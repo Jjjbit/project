@@ -61,7 +61,7 @@ public class UserController {
             return currentUser.getUsername().equals(newUsername);
         }
         currentUser.setUsername(newUsername);
-        return userDAO.updateUser(currentUser);
+        return userDAO.update(currentUser);
      }
 
     public boolean updatePassword(String newPassword) {
@@ -80,7 +80,7 @@ public class UserController {
         }
         String hashedPassword = PasswordUtils.hash(newPassword);
         currentUser.setPassword(hashedPassword);
-        return userDAO.updateUser(currentUser);
+        return userDAO.update(currentUser);
     }
 
     public User getCurrentUser(){

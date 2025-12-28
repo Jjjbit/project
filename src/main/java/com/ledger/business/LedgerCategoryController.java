@@ -21,7 +21,7 @@ public class LedgerCategoryController {
     }
 
     public List<LedgerCategory> getCategoryTreeByLedger(Ledger ledger) {
-        return ledgerCategoryDAO.getTreeByLedgerId(ledger.getId()).stream()
+        return ledgerCategoryDAO.getTreeByLedger(ledger).stream()
                 .filter(category -> !category.getName().equals("Claim Income"))
                 .toList();
     }
@@ -36,16 +36,23 @@ public class LedgerCategoryController {
         if(type == null){
             return null;
         }
-        if(ledgerCategoryDAO.getByNameAndLedger(name, ledger) != null) {
+        LedgerCategory existingCategory = ledgerCategoryDAO.getByNameAndLedger(name, ledger);
+        if(existingCategory!= null && existingCategory.getType() == type) {
             return null;
         }
         LedgerCategory category = new LedgerCategory(name, type, ledger);
-        ledgerCategoryDAO.insert(category);
+        boolean insert = ledgerCategoryDAO.insert(category);
 
         //create budget for ledgerCategory
         for(Period period : Period.values()){
             Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
-            budgetDAO.insert(budget);
+            boolean insertBudget=budgetDAO.insert(budget);
+            if(!insertBudget){
+                return null;
+            }
+        }
+        if(!insert){
+            return null;
         }
         return category;
     }
@@ -60,7 +67,8 @@ public class LedgerCategoryController {
         if(name == null || name.isEmpty() || name.length() > 50) {
             return null;
         }
-        if (ledgerCategoryDAO.getByNameAndLedger(name, ledger) != null) {
+        LedgerCategory existingCategory = ledgerCategoryDAO.getByNameAndLedger(name, ledger);
+        if (existingCategory != null && existingCategory.getType() == parentCategory.getType()) {
             return null;
         }
 
@@ -103,7 +111,7 @@ public class LedgerCategoryController {
         if (category.getParent() != null) {
             return false;
         }
-        if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId()).isEmpty()){
+        if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId(), category.getLedger()).isEmpty()){
             return false;
         }
         if (category.getType() != parent.getType()) {
@@ -134,7 +142,7 @@ public class LedgerCategoryController {
         if(category == null){
             return false;
         }
-        if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId()).isEmpty()){
+        if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId(), category.getLedger()).isEmpty()){
             return false;
         }
         //List<Transaction> txs = transactionDAO.getByCategoryId(category.getId()); //get transactions from db

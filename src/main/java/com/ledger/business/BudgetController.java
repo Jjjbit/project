@@ -70,7 +70,7 @@ public class BudgetController {
 
         Ledger ledger = targetBudget.getLedger();
         if (targetBudget.getCategory() == null) { //merge category-level budget into ledger-level budget
-            List<LedgerCategory> expenseCategories = ledgerCategoryDAO.getTreeByLedgerId(ledger.getId()).stream()
+            List<LedgerCategory> expenseCategories = ledgerCategoryDAO.getTreeByLedger(ledger).stream()
                     .filter(c -> c.getType().equals(CategoryType.EXPENSE)) //only expense categories
                     .filter(c -> c.getParent() == null) //only top-level categories
                     .toList();
@@ -94,7 +94,7 @@ public class BudgetController {
             if (targetBudget.getCategory().getParent() != null) {
                 return false; //targetBudget category must be a top-level category
             }
-            List<LedgerCategory> subcategories = ledgerCategoryDAO.getCategoriesByParentId(targetBudget.getCategory().getId()).stream()
+            List<LedgerCategory> subcategories = ledgerCategoryDAO.getCategoriesByParentId(targetBudget.getCategory().getId(), ledger).stream()
                     .filter(c -> c.getType().equals(CategoryType.EXPENSE)) //only expense categories
                     .toList();
             List<Budget> sourceBudgets = new ArrayList<>();

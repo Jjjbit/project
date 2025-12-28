@@ -57,7 +57,7 @@ public class ReportController {
     }
 
     public BigDecimal getTotalAssets(User user) {
-        return accountDAO.getAccountsByOwnerId(user.getId()).stream()
+        return accountDAO.getAccountsByOwner(user).stream()
 //                .filter(account -> account instanceof BasicAccount || account instanceof CreditAccount)
                 .filter(Account::getIncludedInAsset)
                 .map(Account::getBalance)
@@ -120,7 +120,7 @@ public class ReportController {
                     .filter(t -> t.getDate().isBefore(budget.getEndDate().plusDays(1))) //inclusive end date
                     .toList());
 
-            List<LedgerCategory> childCategories = ledgerCategoryDAO.getCategoriesByParentId(category.getId());
+            List<LedgerCategory> childCategories = ledgerCategoryDAO.getCategoriesByParentId(category.getId(), category.getLedger());
             for (LedgerCategory childCategory : childCategories) {
                 transactions.addAll(transactionDAO.getByCategoryId(childCategory.getId()).stream()
                         .filter(t -> t.getDate().isAfter(budget.getStartDate().minusDays(1))) //inclusive start date
