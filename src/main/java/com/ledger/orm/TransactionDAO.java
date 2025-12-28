@@ -9,15 +9,14 @@ import java.util.List;
 
 public class TransactionDAO {
     private final Connection connection;
-    private final LedgerCategoryDAO categoryDAO;
-    private final AccountDAO accountDAO;
-    private final LedgerDAO ledgerDAO;
+    //private final LedgerCategoryDAO categoryDAO;
+    //private final AccountDAO accountDAO;
+    //private final LedgerDAO ledgerDAO;
 
-    public TransactionDAO(Connection connection, LedgerCategoryDAO categoryDAO,
-                          AccountDAO  accountDAO, LedgerDAO ledgerDAO) {
-        this.accountDAO = accountDAO;
-        this.ledgerDAO = ledgerDAO;
-        this.categoryDAO = categoryDAO;
+    public TransactionDAO(Connection connection) {
+        //this.accountDAO = accountDAO;
+        //this.ledgerDAO = ledgerDAO;
+        //this.categoryDAO = categoryDAO;
         this.connection = connection;
     }
 
@@ -121,6 +120,10 @@ public class TransactionDAO {
 
     @SuppressWarnings("SqlResolve")
     public Transaction getById(long id) {
+        AccountDAO accountDAO = new AccountDAO(connection);
+        LedgerDAO ledgerDAO = new LedgerDAO(connection);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
                 "ta.id as to_account_id, ta.name as to_account_name, " +
@@ -137,7 +140,7 @@ public class TransactionDAO {
             stmt.setLong(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return mapResultSetToTransaction(rs);
+                    return mapResultSetToTransaction(rs, ledgerDAO, accountDAO, ledgerCategoryDAO);
                 }
             }
         }catch (SQLException e){
@@ -149,6 +152,10 @@ public class TransactionDAO {
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getByLedgerId(long ledgerId) {
         List<Transaction> transactions = new ArrayList<>();
+
+        AccountDAO accountDAO = new AccountDAO(connection);
+        LedgerDAO ledgerDAO = new LedgerDAO(connection);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
 
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
@@ -167,7 +174,7 @@ public class TransactionDAO {
             stmt.setLong(1, ledgerId);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    transactions.add(mapResultSetToTransaction(rs));
+                    transactions.add(mapResultSetToTransaction(rs, ledgerDAO, accountDAO, ledgerCategoryDAO));
                 }
             }
         }catch (SQLException e){
@@ -179,6 +186,10 @@ public class TransactionDAO {
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getByCategoryId(long categoryId) {
         List<Transaction> transactions = new ArrayList<>();
+        AccountDAO accountDAO = new AccountDAO(connection);
+        LedgerDAO ledgerDAO = new LedgerDAO(connection);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
                 "ta.id as to_account_id, ta.name as to_account_name, " +
@@ -197,7 +208,7 @@ public class TransactionDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    transactions.add(mapResultSetToTransaction(rs));
+                    transactions.add(mapResultSetToTransaction(rs, ledgerDAO, accountDAO, ledgerCategoryDAO));
                 }
             }
         }catch (SQLException e){
@@ -209,6 +220,10 @@ public class TransactionDAO {
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getByAccountId(long accountId) {
         List<Transaction> transactions = new ArrayList<>();
+        AccountDAO accountDAO = new AccountDAO(connection);
+        LedgerDAO ledgerDAO = new LedgerDAO(connection);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+
         String sql = "SELECT t.*, " +
                 "fa.id as from_account_id, fa.name as from_account_name, " +
                 "ta.id as to_account_id, ta.name as to_account_name, " +
@@ -228,7 +243,7 @@ public class TransactionDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    transactions.add(mapResultSetToTransaction(rs));
+                    transactions.add(mapResultSetToTransaction(rs, ledgerDAO, accountDAO, ledgerCategoryDAO));
                 }
             }
         }catch (SQLException e){
@@ -237,7 +252,7 @@ public class TransactionDAO {
         return transactions;
     }
 
-    private Transaction mapResultSetToTransaction(ResultSet rs) throws SQLException {
+    private Transaction mapResultSetToTransaction(ResultSet rs, LedgerDAO ledgerDAO, AccountDAO accountDAO, LedgerCategoryDAO ledgerCategoryDAO) throws SQLException {
         Transaction transaction;
         String type = rs.getString("type").toUpperCase();
         // based on type, create appropriate subclass instance
@@ -275,7 +290,7 @@ public class TransactionDAO {
         }
         //set category
         if( rs.getLong("category_id") != 0) {
-            transaction.setCategory(categoryDAO.getById(rs.getLong("category_id")));
+            transaction.setCategory(ledgerCategoryDAO.getById(rs.getLong("category_id")));
         }
         return transaction;
     }

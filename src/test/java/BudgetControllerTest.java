@@ -39,10 +39,10 @@ public class BudgetControllerTest {
 
         UserDAO userDAO = new UserDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
-        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
         budgetDAO = new BudgetDAO(connection);
         AccountDAO accountDAO = new AccountDAO(connection);
-        TransactionDAO transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
+        TransactionDAO transactionDAO = new TransactionDAO(connection);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
 
         UserController userController = new UserController(userDAO);
@@ -54,7 +54,7 @@ public class BudgetControllerTest {
 
         testLedger = ledgerController.createLedger("Test Ledger");
 
-        testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+        testCategories = ledgerCategoryDAO.getTreeByLedger(testLedger);
     }
 
     private void runSchemaScript() {

@@ -10,11 +10,11 @@ import java.util.List;
 
 public class LedgerCategoryDAO {
     private final Connection connection;
-    private final LedgerDAO ledgerDAO;
+    //private final LedgerDAO ledgerDAO;
 
-    public LedgerCategoryDAO(Connection connection, LedgerDAO ledgerDAO) {
+    public LedgerCategoryDAO(Connection connection) {
         this.connection = connection;
-        this.ledgerDAO = ledgerDAO;
+        //this.ledgerDAO = ledgerDAO;
     }
 
     @SuppressWarnings("SqlResolve")
@@ -28,6 +28,7 @@ public class LedgerCategoryDAO {
                     category.setId(rs.getLong("id"));
                     category.setName(rs.getString("name"));
                     category.setType(CategoryType.valueOf(rs.getString("type")));
+                    LedgerDAO ledgerDAO = new LedgerDAO(connection);
                     category.setLedger(ledgerDAO.getById(rs.getLong("ledger_id")));
                     return category;
                 }
@@ -84,18 +85,18 @@ public class LedgerCategoryDAO {
         }
     }
 
-    public List<LedgerCategory> getTreeByLedgerId(long ledgerId) {
-        List<LedgerCategory> categoriesNullParent = getCategoriesNullParent(ledgerId);
-        return buildCategoryTree(categoriesNullParent);
+    public List<LedgerCategory> getTreeByLedger(Ledger ledger) {
+        List<LedgerCategory> categoriesNullParent = getParentCategories(ledger);
+        return buildCategoryTree(categoriesNullParent, ledger);
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<LedgerCategory> getCategoriesNullParent(long ledgerId) {
+    private List<LedgerCategory> getParentCategories(Ledger ledger) {
         List<LedgerCategory> categories = new ArrayList<>();
         String sql = "SELECT id, name, parent_id, type, ledger_id FROM ledger_categories WHERE parent_id IS NULL AND ledger_id = ? " +
                 "ORDER BY id";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, ledgerId);
+            stmt.setLong(1, ledger.getId());
             try(ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     LedgerCategory category = new LedgerCategory();
@@ -103,7 +104,8 @@ public class LedgerCategoryDAO {
                     category.setName(rs.getString("name"));
                     category.setType(CategoryType.valueOf(rs.getString("type")));
                     category.setParent(null);
-                    category.setLedger(ledgerDAO.getById(rs.getLong("ledger_id")));
+                    category.setLedger(ledger);
+                    //category.setLedger(ledgerDAO.getById(rs.getLong("ledger_id")));
                     categories.add(category);
                 }
             }
@@ -114,9 +116,9 @@ public class LedgerCategoryDAO {
     }
 
     @SuppressWarnings("SqlResolve")
-    public List<LedgerCategory> getCategoriesByParentId(long parentId) {
+    public List<LedgerCategory> getCategoriesByParentId(long parentId, Ledger ledger) {
         List<LedgerCategory> categories = new ArrayList<>();
-        String sql = "SELECT id, name, parent_id, type, ledger_id FROM ledger_categories WHERE parent_id = ? ORDER BY id";
+        String sql = "SELECT id, name, parent_id, type FROM ledger_categories WHERE parent_id = ? ORDER BY id";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setLong(1, parentId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -125,7 +127,8 @@ public class LedgerCategoryDAO {
                     category.setId(rs.getLong("id"));
                     category.setName(rs.getString("name"));
                     category.setType(CategoryType.valueOf(rs.getString("type")));
-                    category.setLedger( ledgerDAO.getById(rs.getLong("ledger_id")));
+                    category.setLedger(ledger);
+                    //category.setLedger( ledgerDAO.getById(rs.getLong("ledger_id")));
                     categories.add(category);
                 }
             }
@@ -135,12 +138,11 @@ public class LedgerCategoryDAO {
         return categories;
     }
 
-
-    private List<LedgerCategory> buildCategoryTree(List<LedgerCategory> categories) {
+    private List<LedgerCategory> buildCategoryTree(List<LedgerCategory> categories, Ledger ledger) {
         List<LedgerCategory> allCategories = new ArrayList<>();
 
         for (LedgerCategory category : categories) {
-            List<LedgerCategory> children = getCategoriesByParentId(category.getId());
+            List<LedgerCategory> children = getCategoriesByParentId(category.getId(), ledger);
             allCategories.add(category);
             for (LedgerCategory child : children) {
                 child.setParent(category);

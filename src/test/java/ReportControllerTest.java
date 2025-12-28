@@ -42,15 +42,15 @@ public class ReportControllerTest {
         UserDAO userDAO = new UserDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
         AccountDAO accountDAO = new AccountDAO(connection);
-        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
-        TransactionDAO transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
+        LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+        TransactionDAO transactionDAO = new TransactionDAO(connection);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         budgetDAO = new BudgetDAO(connection);
 
         budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
         UserController userController = new UserController(userDAO);
-        AccountController accountController = new AccountController(accountDAO);
+        AccountController accountController = new AccountController(accountDAO, transactionDAO);
         reportController = new ReportController(transactionDAO, accountDAO, budgetDAO, ledgerCategoryDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO,
                 accountDAO, budgetDAO);
@@ -58,7 +58,7 @@ public class ReportControllerTest {
         userController.register("test user", "password123");
         testUser = userController.login("test user", "password123");
         testLedger = ledgerController.createLedger("Test Ledger");
-        testCategories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+        testCategories = ledgerCategoryDAO.getTreeByLedger(testLedger);
         testAccount = accountController.createAccount("Test Account", BigDecimal.valueOf(1000.00), true, true);
     }
 

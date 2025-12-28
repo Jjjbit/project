@@ -42,27 +42,23 @@ public class LedgerCategoryControllerTest {
         UserDAO userDAO = new UserDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
         AccountDAO accountDAO = new AccountDAO(connection);
-        ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
+        ledgerCategoryDAO = new LedgerCategoryDAO(connection);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
-        transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
+        transactionDAO = new TransactionDAO(connection);
         budgetDAO = new BudgetDAO(connection);
-//        DebtPaymentDAO debtPaymentDAO = new DebtPaymentDAO(connection, transactionDAO);
-//        LoanTxLinkDAO loanTxLinkDAO = new LoanTxLinkDAO(connection, transactionDAO);
-//        BorrowingTxLinkDAO borrowingTxLinkDAO = new BorrowingTxLinkDAO(connection, transactionDAO);
-//        LendingTxLinkDAO lendingTxLinkDAO = new LendingTxLinkDAO(connection, transactionDAO);
 
         UserController userController = new UserController(userDAO);
         ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        AccountController accountController= new AccountController(accountDAO);
+        AccountController accountController= new AccountController(accountDAO, transactionDAO);
 
         userController.register("test user", "password123");
         User testUser = userController.login("test user", "password123");
 
         testLedger=ledgerController.createLedger("Test Ledger");
 
-        testCategories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+        testCategories=ledgerCategoryDAO.getTreeByLedger(testLedger);
 
         account =accountController.createAccount("Test Account", BigDecimal.valueOf(1000.00), true,
                 true);
@@ -134,7 +130,7 @@ public class LedgerCategoryControllerTest {
         assertNotNull(monthlyBudget);
         assertNotNull(yearlyBudget);
 
-        List<LedgerCategory> categories=ledgerCategoryDAO.getCategoriesByParentId(parentCategory.getId());
+        List<LedgerCategory> categories=ledgerCategoryDAO.getCategoriesByParentId(parentCategory.getId(), testLedger);
         assertEquals(4, categories.size()); //exists in DB under parent
         assertTrue(categories.stream().anyMatch(cat->cat.getId() == subCategory.getId()));
     }
@@ -173,7 +169,7 @@ public class LedgerCategoryControllerTest {
         assertEquals(0, transactionDAO.getByCategoryId(salary.getId()).size());
         assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
 
-        List<LedgerCategory> categories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+        List<LedgerCategory> categories = ledgerCategoryDAO.getTreeByLedger(testLedger);
         assertEquals(16, categories.size());
 
         List<LedgerCategory> parents = categories.stream()
@@ -347,7 +343,7 @@ public class LedgerCategoryControllerTest {
         assertTrue(result);
         assertNull(breakfast.getParent());
 
-        List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+        List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedger(testLedger);
         LedgerCategory promotedCategory=categories.stream()
                 .filter(cat->cat.getId() == breakfast.getId())
                 .findFirst()
@@ -410,7 +406,7 @@ public class LedgerCategoryControllerTest {
         assertTrue(result);
         assertEquals(salary.getId(), bonus.getParent().getId());
 
-        List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+        List<LedgerCategory> categories=ledgerCategoryDAO.getTreeByLedger(testLedger);
         LedgerCategory demotedCategory=categories.stream()
                 .filter(cat->cat.getId() == bonus.getId())
                 .findFirst()
@@ -579,7 +575,7 @@ public class LedgerCategoryControllerTest {
         assertTrue(result);
         assertEquals(entertainment.getId(), breakfast.getParent().getId());
 
-        List<LedgerCategory> categories = ledgerCategoryDAO.getTreeByLedgerId(testLedger.getId());
+        List<LedgerCategory> categories = ledgerCategoryDAO.getTreeByLedger(testLedger);
         LedgerCategory updatedCategory = categories.stream()
                 .filter(cat -> cat.getId() == breakfast.getId())
                 .findFirst()

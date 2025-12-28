@@ -45,8 +45,8 @@ public class LedgerControllerTest {
         UserDAO userDAO = new UserDAO(connection);
         ledgerDAO = new LedgerDAO(connection);
         AccountDAO accountDAO = new AccountDAO(connection);
-        ledgerCategoryDAO = new LedgerCategoryDAO(connection, ledgerDAO);
-        transactionDAO = new TransactionDAO(connection, ledgerCategoryDAO, accountDAO, ledgerDAO);
+        ledgerCategoryDAO = new LedgerCategoryDAO(connection);
+        transactionDAO = new TransactionDAO(connection);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
         budgetDAO = new BudgetDAO(connection);
 
@@ -54,7 +54,7 @@ public class LedgerControllerTest {
         UserController userController = new UserController(userDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        AccountController accountController = new AccountController(accountDAO);
+        AccountController accountController = new AccountController(accountDAO, transactionDAO);
 
         userController.register("test user", "password123"); // create test user and insert into db
         testUser = userController.login("test user", "password123"); // login to set current user
@@ -108,8 +108,8 @@ public class LedgerControllerTest {
         assertNotNull(monthlyLedgerBudget);
         assertNotNull(yearlyLedgerBudget);
 
-        assertEquals(17, ledgerCategoryDAO.getTreeByLedgerId(ledger.getId()).size());
-        List<LedgerCategory> categories= ledgerCategoryDAO.getTreeByLedgerId(ledger.getId());
+        assertEquals(17, ledgerCategoryDAO.getTreeByLedger(ledger).size());
+        List<LedgerCategory> categories= ledgerCategoryDAO.getTreeByLedger(ledger);
 
         //print details
         List<LedgerCategory> expense= categories.stream()
@@ -176,7 +176,7 @@ public class LedgerControllerTest {
         Ledger ledger = ledgerController.createLedger("Ledger With Transactions");
         assertNotNull(ledger);
 
-        List<LedgerCategory> categories = ledgerCategoryDAO.getTreeByLedgerId(ledger.getId());
+        List<LedgerCategory> categories = ledgerCategoryDAO.getTreeByLedger(ledger);
         LedgerCategory food = categories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
@@ -201,7 +201,7 @@ public class LedgerControllerTest {
         assertNull(transactionDAO.getById(tx2.getId()));
         assertEquals(0, transactionDAO.getByCategoryId(food.getId()).size());
         assertEquals(0, transactionDAO.getByCategoryId(salary.getId()).size());
-        assertEquals(0, ledgerCategoryDAO.getTreeByLedgerId(ledger.getId()).size()); //all categories should be deleted
+        assertEquals(0, ledgerCategoryDAO.getTreeByLedger(ledger).size()); //all categories should be deleted
         assertEquals(0, transactionDAO.getByAccountId(account.getId()).size()); //transactions should be deleted
 
         //delete budgets
