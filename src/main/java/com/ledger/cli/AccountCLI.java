@@ -149,14 +149,14 @@ public class AccountCLI {
         System.out.print("Current name: " + accountToUpdate.getName() + ". Enter new name (press Enter to skip): ");
         String newName = scanner.nextLine();
         if (newName.isEmpty()) {
-            newName = null; //no change
+            newName = accountToUpdate.getName(); //no change
         }
 
         //select included in net worth
         String includeInNetWorthProm = accountToUpdate.getIncludedInAsset() ? "Current: included in net worth. " : "Current: not included in net worth. ";
         System.out.print(includeInNetWorthProm + "(press Enter to skip). Include in net worth? (y/n): ");
         String input = scanner.nextLine().trim().toLowerCase();
-        Boolean newIncludedInNetWorth = null;
+        boolean newIncludedInNetWorth = accountToUpdate.getIncludedInAsset();
         if (input.equals("y") || input.equals("yes")) {
             newIncludedInNetWorth = true;
         } else if (input.equals("n") || input.equals("no")) {
@@ -164,7 +164,7 @@ public class AccountCLI {
         }
 
         //update selectable and balance
-        Boolean newSelectable = null;
+        boolean newSelectable = accountToUpdate.getSelectable();
         BigDecimal newBalance;
         System.out.print("it is: " + (accountToUpdate.getSelectable() ? "selectable." : "not selectable.") +
                 " Do you want to set as selectable? (y/n, press Enter to skip): ");
@@ -385,8 +385,12 @@ public class AccountCLI {
 //            System.out.print(" | Lending Status: " + ( ((LendingAccount) account).getIsEnded() ? "Ended" : "Active") +"\n");
 //        }
 
+        if(transactions.isEmpty()) {
+            System.out.println("No transactions found for this account in the selected date range.");
+            return;
+        }
+
         int i = 0;
-        System.out.println("Transactions for Account " + account.getName() + ":");
         for (Transaction tx : transactions) {
             i++;
             StringBuilder info = new StringBuilder();
