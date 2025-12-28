@@ -206,7 +206,8 @@ public class MainCLI {
         System.out.println("4. Demote category of first level to second level");
         System.out.println("5. Change Parent Category of second level category");
         System.out.println("6. Delete");
-        System.out.println("7. Back to Main Menu");
+        System.out.println("7. Show Category Tree");
+        System.out.println("8. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -231,11 +232,14 @@ public class MainCLI {
                 ledgerCategoryCLI.deleteCategory();
                 break;
             case "7":
+                ledgerCategoryCLI.showCategoryTree();
+                break;
+            case "8":
                 // go back to main menu
                 showMainMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-7.");
+                System.out.println("Invalid option! Please choose 1-8.");
                 showCategoryMenu();
         }
     }
