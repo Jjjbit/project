@@ -1,8 +1,8 @@
 package com.ledger.business;
 
-import com.ledger.domain.*;
+import com.ledger.domain.Account;
+import com.ledger.domain.User;
 import com.ledger.orm.AccountDAO;
-import com.ledger.orm.TransactionDAO;
 import com.ledger.session.UserSession;
 
 import java.math.BigDecimal;
@@ -10,10 +10,8 @@ import java.util.List;
 
 public class AccountController {
     private final AccountDAO accountDAO;
-    private final TransactionDAO transactionDAO;
 
-    public AccountController(AccountDAO accountDAO, TransactionDAO transactionDAO) {
-        this.transactionDAO = transactionDAO;
+    public AccountController(AccountDAO accountDAO) {
         this.accountDAO = accountDAO;
     }
 
@@ -45,150 +43,6 @@ public class AccountController {
             return null;
         }
     }
-
-//    public CreditAccount createCreditAccount(String name, String notes, BigDecimal balance, boolean includedInNetAsset,
-//                                             boolean selectable, User user, AccountType type, BigDecimal creditLimit,
-//                                             BigDecimal currentDebt, Integer billDate, Integer dueDate) {
-//        if (name == null || name.isEmpty()) {
-//            return null;
-//        }
-//        if (type == null) {
-//            return null;
-//        }
-//        if(creditLimit == null || creditLimit.compareTo(BigDecimal.ZERO) <= 0){
-//            return null;
-//        }
-//        if (currentDebt == null) {
-//            currentDebt = BigDecimal.ZERO;
-//        }
-//        if (currentDebt.compareTo(creditLimit) > 0) {
-//            return null;
-//        }
-//        if (balance == null) {
-//            balance = BigDecimal.ZERO;
-//        }
-//        CreditAccount account = new CreditAccount(name, balance, user, notes, includedInNetAsset, selectable, creditLimit,
-//                currentDebt, billDate, dueDate, type);
-//        boolean result = accountDAO.createCreditAccount(account);
-//        if(result){
-//            return account;
-//        } else {
-//            return null;
-//        }
-//    }
-//
-//    public LoanAccount createLoanAccount(String name, String notes, boolean includedInNetAsset, User user, int totalPeriods, int repaidPeriods, BigDecimal annualInterestRate,
-//                                         BigDecimal loanAmount, Account receivingAccount, LocalDate repaymentDate, LoanAccount.RepaymentType repaymentType, Ledger ledger) {
-//        if (name == null || name.isEmpty()) {
-//            return null;
-//        }
-//        if(totalPeriods <=0 || totalPeriods > 480){ //max 40 years
-//            return null;
-//        }
-//        if(repaidPeriods > totalPeriods){
-//            return null;
-//        }
-//        if(ledger == null){
-//            return null;
-//        }
-//        if (repaymentDate == null) {
-//            return null;
-//        }
-//        if (repaymentType == null) {
-//            repaymentType = LoanAccount.RepaymentType.EQUAL_INTEREST;
-//        }
-//        if(loanAmount == null || loanAmount.compareTo(BigDecimal.ZERO) < 0){
-//            return null;
-//        }
-//        if(receivingAccount != null){
-//            if(!receivingAccount.getSelectable()){
-//                return null;
-//            }
-//        }
-//        LoanAccount account = new LoanAccount(name, user, notes, includedInNetAsset, totalPeriods, repaidPeriods,
-//                annualInterestRate, loanAmount, repaymentDate, repaymentType);
-//        boolean result = accountDAO.createLoanAccount(account); //insert loan account to db
-//        Transaction tx = new Transfer(LocalDate.now(), "Loan disbursement", account, receivingAccount,
-//                loanAmount, ledger);
-//        transactionDAO.insert(tx); //insert transaction to db
-//        loanTxLinkDAO.insert(account, tx); //insert loan payment record to db
-//        if (receivingAccount != null) {
-//            receivingAccount.credit(loanAmount);
-//            accountDAO.update(receivingAccount); //update balance in db
-//        }
-//        if(result){return account;}
-//        else {return null;}
-//    }
-//
-//    public BorrowingAccount createBorrowingAccount(User user, String name, BigDecimal amount, String note,
-//                                                   boolean includeInAssets, boolean selectable, Account toAccount,
-//                                                   LocalDate date, Ledger ledger) {
-//        if (name == null || name.isEmpty()) {
-//            return null;
-//        }
-//        if(amount == null || amount.compareTo(BigDecimal.ZERO) < 0){
-//            return null;
-//        }
-//        if(toAccount != null){
-//            if(!toAccount.getSelectable()){
-//                return null;
-//            }
-//        }
-//        LocalDate transactionDate = date != null ? date : LocalDate.now();
-//        BorrowingAccount borrowingAccount = new BorrowingAccount(name, amount, note, includeInAssets, selectable, user,
-//                transactionDate);
-//        boolean result = accountDAO.createBorrowingAccount(borrowingAccount); //insert borrowing account to db
-//        String description = toAccount != null
-//                ? borrowingAccount.getName() + " to " + toAccount.getName()
-//                : borrowingAccount.getName() + " to External Account";
-//        Transaction tx = new Transfer(transactionDate, description, borrowingAccount, toAccount, amount, ledger);
-//        transactionDAO.insert(tx); //insert transaction to db
-//        borrowingTxLinkDAO.insert(borrowingAccount, tx); //insert borrowing payment record to db
-//        if (toAccount != null) {
-//            toAccount.credit(amount);
-//            accountDAO.update(toAccount); //update balance in db
-//        }
-//        if(result){
-//            return borrowingAccount;
-//        } else {
-//            return null;
-//        }
-//    }
-//
-//    public LendingAccount createLendingAccount(User user, String name, BigDecimal amount, String note,
-//                                               boolean includeInAssets, boolean selectable, Account fromAccount,
-//                                               LocalDate date, Ledger ledger) {
-//        if (name == null || name.isEmpty()) {
-//            return null;
-//        }
-//        if(amount == null || amount.compareTo(BigDecimal.ZERO) < 0){
-//            return null;
-//        }
-//        if(fromAccount != null){
-//            if(!fromAccount.getSelectable()){
-//                return null;
-//            }
-//        }
-//        LocalDate transactionDate = date != null ? date : LocalDate.now();
-//        LendingAccount lendingAccount = new LendingAccount(name, amount, note, includeInAssets, selectable, user,
-//                transactionDate);
-//        boolean result = accountDAO.createLendingAccount(lendingAccount); //insert lending account to db
-//        String description = fromAccount != null
-//                ? fromAccount.getName() + " to " + lendingAccount.getName()
-//                : "External Account to " + lendingAccount.getName();
-//        Transaction tx = new Transfer(transactionDate, description, fromAccount, lendingAccount, amount, ledger);
-//        transactionDAO.insert(tx); //insert transaction to db
-//        lendingTxLinkDAO.insert(lendingAccount, tx); //insert lending receiving record to db
-//        if (fromAccount != null) {
-//            fromAccount.debit(amount);
-//            accountDAO.update(fromAccount); //update balance in db
-//        }
-//        if(result){
-//            return lendingAccount;
-//        } else {
-//            return null;
-//        }
-//    }
 
     public boolean deleteAccount(Account account) { //keep all transactions
         return accountDAO.delete(account);
@@ -419,8 +273,4 @@ public class AccountController {
 //        }
 //        return accountDAO.update(lendingAccount); //update lending account lending amount in db
 //    }
-
 }
-
-
-
