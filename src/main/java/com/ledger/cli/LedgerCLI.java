@@ -118,7 +118,7 @@ public class LedgerCLI {
         List<Transaction> transactions = transactionController.getTransactionsByLedgerInRangeDate(
                 selectedLedger, startDate, endDate);
         if(transactions.isEmpty()) {
-            System.out.println("No transactions found for the selected period.");
+            System.out.println("\nNo transactions found for the selected period.");
             return;
         }
         System.out.println("\nTransactions for Ledger: " + selectedLedger.getName());
