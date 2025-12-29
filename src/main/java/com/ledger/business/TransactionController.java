@@ -1,12 +1,15 @@
 package com.ledger.business;
 
 import com.ledger.domain.*;
-import com.ledger.orm.*;
+import com.ledger.orm.AccountDAO;
+import com.ledger.orm.ConnectionManager;
+import com.ledger.orm.TransactionDAO;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
-
 import static java.util.Comparator.comparing;
 
 public class TransactionController {
@@ -31,8 +34,7 @@ public class TransactionController {
                 .toList();
     }
 
-    public Income createIncome(Ledger ledger, Account toAccount, LedgerCategory category, String note,
-                               LocalDate date, BigDecimal amount) {
+    public Income createIncome(Ledger ledger, Account toAccount, LedgerCategory category, String note, LocalDate date, BigDecimal amount) {
         if (ledger == null) {
             return null;
         }
@@ -48,22 +50,30 @@ public class TransactionController {
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
             return null;
         }
-
+        if( toAccount == null || !toAccount.getSelectable()) {
+            return null;
+        }
         Income incomeTransaction = new Income(date != null ? date : LocalDate.now(), amount, note, toAccount,
                 ledger, category);
-        transactionDAO.insert(incomeTransaction);
-        if( toAccount != null) {
-            if (!toAccount.getSelectable()) {
+        try {
+            if (!transactionDAO.insert(incomeTransaction)) {
                 return null;
             }
             toAccount.credit(amount);
-            accountDAO.update(toAccount); //update balance in database
+            if (!accountDAO.update(toAccount)) {
+                throw new SQLException("Account balance update failed");
+            }
+            return incomeTransaction;
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            if (incomeTransaction.getId() != 0) {
+                transactionDAO.delete(incomeTransaction);
+            }
+            return null;
         }
-        return incomeTransaction;
     }
 
-    public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String note,
-                                 LocalDate date, BigDecimal amount) {
+    public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String note, LocalDate date, BigDecimal amount) {
         if (ledger == null) {
             return null;
         }
@@ -74,27 +84,33 @@ public class TransactionController {
             return null;
         }
         if (amount == null) {
-            return null;
+            amount = BigDecimal.ZERO;
         }
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
             return null;
         }
-
-        Expense expenseTransaction = new Expense(date != null ? date : LocalDate.now(), amount, note, fromAccount,
-                ledger, category);
-        transactionDAO.insert(expenseTransaction);
-        if( fromAccount != null) {
-            if (!fromAccount.getSelectable()) {
+        if( fromAccount == null || !fromAccount.getSelectable()) {
+            return null;
+        }
+        Expense expenseTransaction = new Expense(date != null ? date : LocalDate.now(), amount, note, fromAccount, ledger, category);
+        try {
+            if(!transactionDAO.insert(expenseTransaction)){
                 return null;
             }
             fromAccount.debit(amount);
-            accountDAO.update(fromAccount); //update balance in database
+            if(!accountDAO.update(fromAccount)) throw new Exception("Account balance update failed");
+
+            return expenseTransaction;
+        }catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            if (expenseTransaction.getId() != 0) {
+                transactionDAO.delete(expenseTransaction);
+            }
+            return null;
         }
-        return expenseTransaction;
     }
 
-    public Transfer createTransfer(Ledger ledger, Account fromAccount, Account toAccount, String note,
-                                   LocalDate date, BigDecimal amount) {
+    public Transfer createTransfer(Ledger ledger, Account fromAccount, Account toAccount, String note, LocalDate date, BigDecimal amount) {
         if( ledger == null) {
             return null;
         }
@@ -116,75 +132,204 @@ public class TransactionController {
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
             return null;
         }
+        Transfer transferTransaction = new Transfer(date != null ? date : LocalDate.now(), note, fromAccount, toAccount, amount, ledger);
+        Connection connection = ConnectionManager.getInstance().getConnection();
+        try {
+            connection.setAutoCommit(false);
+            if(!transactionDAO.insert(transferTransaction)){
+                throw new SQLException("Failed to insert transfer transaction");
+            }
 
-        Transfer transferTransaction = new Transfer(date != null ? date : LocalDate.now(), note, fromAccount,
-                toAccount, amount, ledger);
-        transactionDAO.insert(transferTransaction);
-
-        if (fromAccount != null) {
-            fromAccount.debit(amount);
-            accountDAO.update(fromAccount);
+            if (fromAccount != null) {
+                fromAccount.debit(amount);
+                if(!accountDAO.update(fromAccount)){
+                    throw new SQLException("Account balance update failed");
+                }
+            }
+            if (toAccount != null) {
+                toAccount.credit(amount);
+                if(!accountDAO.update(toAccount)){
+                    throw new SQLException("Account balance update failed");
+                }
+            }
+            connection.commit();
+            return transferTransaction;
+        }catch (Exception e) {
+            try {
+                System.err.println("Error: " + e.getMessage());
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Rollback failed: " + ex.getMessage());
+            }
+            return null;
+        }finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException e) {
+                System.err.println("Failed to reset auto-commit: " + e.getMessage());
+            }
         }
-        if (toAccount != null) {
-            toAccount.credit(amount);
-            accountDAO.update(toAccount);
-        }
-        return transferTransaction;
     }
+
+//    public boolean deleteTransaction(Transaction tx) {
+//        if (tx == null) {
+//            return false;
+//        }
+//        if (!transactionDAO.delete(tx)) {
+//            return false;
+//        }
+//        switch (tx.getType()) {
+//            case INCOME:
+//                if (tx.getToAccount() == null) {
+//                    return false;
+//                }
+//                Account toAccount = accountDAO.getAccountById(tx.getToAccount().getId());
+//                toAccount.debit(tx.getAmount());
+//                if(!accountDAO.update(toAccount)){
+//                    return false;
+//                }
+//                break;
+//            case EXPENSE:
+//                if (tx.getFromAccount() != null) {
+//                    Account fromAccount = accountDAO.getAccountById(tx.getFromAccount().getId());
+//                    fromAccount.credit(tx.getAmount());
+//                    if(!accountDAO.update(fromAccount)){
+//                        return false;
+//                    }
+//                }
+//                break;
+//            case TRANSFER:
+//                //rollback fromAccount
+//                if (tx.getFromAccount() != null) {
+//                    Account fromAccount = accountDAO.getAccountById(tx.getFromAccount().getId());
+//                    fromAccount.credit(tx.getAmount());
+//                    if(!accountDAO.update(fromAccount)){
+//                        return false;
+//                    }
+//                }
+//                //rollback toAccount
+//                if (tx.getToAccount() != null) {
+//                    Account toAccount2 = accountDAO.getAccountById(tx.getToAccount().getId());
+//                    toAccount2.debit(tx.getAmount());
+//                    if(!accountDAO.update(toAccount2)){
+//                        return false;
+//                    }
+//                }
+//                break;
+//        }
+//        return true;
+//    }
 
     public boolean deleteTransaction(Transaction tx) {
         if (tx == null) {
             return false;
         }
-        Account toAccount;
+        Account toAccount = null;
         Account fromAccount = null;
-
-        switch (tx.getType()) {
-            case INCOME:
-                if(tx.getToAccount() == null) {
-                    return false;
-                }
-                toAccount = accountDAO.getAccountById(tx.getToAccount().getId());
-                toAccount.debit(tx.getAmount());
-                accountDAO.update(toAccount);
-                break;
-            case EXPENSE:
-                if(tx.getFromAccount() != null) {
-                    fromAccount = accountDAO.getAccountById(tx.getFromAccount().getId());
-                }
-                if(fromAccount != null) {
-                    fromAccount.credit(tx.getAmount());
-                    accountDAO.update(fromAccount);
-                }
-                break;
-            case TRANSFER:
-                //rollback fromAccount
-                if (tx.getFromAccount() != null) {
-                    fromAccount= accountDAO.getAccountById(tx.getFromAccount().getId());
-                    fromAccount.credit(tx.getAmount());
-                    accountDAO.update(fromAccount);
-                }
-
-                //rollback toAccount
-                if (tx.getToAccount() != null) {
-                    toAccount= accountDAO.getAccountById(tx.getToAccount().getId());
-                    toAccount.debit(tx.getAmount());
-                    accountDAO.update(toAccount);
-                }
-                break;
+        if( tx.getToAccount() != null) {
+            toAccount = accountDAO.getAccountById(tx.getToAccount().getId());
         }
-        return transactionDAO.delete(tx);
+        if( tx.getFromAccount() != null) {
+            fromAccount = accountDAO.getAccountById(tx.getFromAccount().getId());
+        }
+        Connection connection = ConnectionManager.getInstance().getConnection();
+        try {
+            connection.setAutoCommit(false);
+            if (!transactionDAO.delete(tx)) throw new SQLException("Delete transaction failed");
+            switch (tx.getType()) {
+                case INCOME:
+                    if(toAccount!= null) {
+                        toAccount = accountDAO.getAccountById(tx.getToAccount().getId());
+                        toAccount.debit(tx.getAmount());
+                        if (!accountDAO.update(toAccount)) throw new SQLException("Update toAccount failed");
+                    }
+                    break;
+                case EXPENSE:
+                    if (fromAccount != null) {
+                        fromAccount = accountDAO.getAccountById(tx.getFromAccount().getId());
+                        fromAccount.credit(tx.getAmount());
+                        if (!accountDAO.update(fromAccount)) throw new SQLException("Update fromAccount failed");
+                    }
+                    break;
+                case TRANSFER:
+                    //rollback fromAccount
+                    if (fromAccount != null) {
+                        fromAccount = accountDAO.getAccountById(tx.getFromAccount().getId());
+                        fromAccount.credit(tx.getAmount());
+                        if(!accountDAO.update(fromAccount)) throw new SQLException("Update fromAccount failed");
+                    }
+                    //rollback toAccount
+                    if (toAccount != null) {
+                        toAccount = accountDAO.getAccountById(tx.getToAccount().getId());
+                        toAccount.debit(tx.getAmount());
+                        if(!accountDAO.update(toAccount)) throw new SQLException("Update toAccount failed");
+                    }
+                    break;
+            }
+            connection.commit();
+            return true;
+        }catch (SQLException e) {
+            System.err.println("Error: " + e.getMessage());
+            try {
+               connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Rollback failed: " + ex.getMessage());
+            }
+            return false;
+        }finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException e) {
+                System.err.println("Failed to reset auto-commit: " + e.getMessage());
+            }
+        }
     }
 
-    public boolean updateIncome(Income income, Account toAccount, LedgerCategory category, String note, LocalDate date,
-                                BigDecimal amount, Ledger ledger) {
-        if (income == null || toAccount == null || category == null || ledger == null || amount == null || date == null) {
+//    public boolean updateIncome(Income income, Account toAccount, LedgerCategory category, String note, LocalDate date, BigDecimal amount, Ledger ledger) {
+//        if (income == null || toAccount == null || category == null || ledger == null || amount == null || date == null) {
+//            return false;
+//        }
+//        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+//            return false;
+//        }
+//
+//        BigDecimal oldAmount = income.getAmount();
+//        Account oldToAccount = income.getToAccount();
+//        LedgerCategory oldCategory = income.getCategory();
+//        Ledger oldLedger = income.getLedger();
+//
+//        if (ledger.getId() != oldLedger.getId()) { //change ledger
+//            income.setLedger(ledger);
+//        }
+//        if (category.getId() != oldCategory.getId()) { //change category
+//            if (category.getType() != CategoryType.INCOME) {
+//                return false;
+//            }
+//            income.setCategory(category);
+//        }
+//
+//        oldToAccount.debit(oldAmount);
+//        accountDAO.update(oldToAccount);
+//        if (!toAccount.getSelectable()) {
+//            return false;
+//        }
+//        toAccount.credit(amount);
+//        income.setToAccount(toAccount);
+//        accountDAO.update(toAccount);
+//
+//        income.setAmount(amount);
+//        income.setDate(date);
+//        income.setNote(note);
+//        return transactionDAO.update(income);
+//    }
+
+    public boolean updateIncome(Income income, Account toAccount, LedgerCategory category, String note, LocalDate date, BigDecimal amount, Ledger ledger) {
+        if (income == null || toAccount == null || category == null || amount == null|| ledger == null || date == null || !toAccount.getSelectable()) {
             return false;
         }
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
             return false;
         }
-
         BigDecimal oldAmount = income.getAmount();
         Account oldToAccount = income.getToAccount();
         LedgerCategory oldCategory = income.getCategory();
@@ -198,67 +343,130 @@ public class TransactionController {
             }
             income.setCategory(category);
         }
-        if (toAccount.getId() != oldToAccount.getId()) { //change account
-            //rollback old account
+        Connection connection= ConnectionManager.getInstance().getConnection();
+        try {
+            connection.setAutoCommit(false);
+
             oldToAccount.debit(oldAmount);
-            accountDAO.update(oldToAccount);
-            if (!toAccount.getSelectable()) {
-                return false;
-            }
-            //apply new account
+            if (!accountDAO.update(oldToAccount)) throw new SQLException("Failed to rollback old account");
             toAccount.credit(amount);
             income.setToAccount(toAccount);
-            accountDAO.update(toAccount);
+            if (!accountDAO.update(toAccount)) throw new SQLException("Failed to apply new account");
+
+            income.setAmount(amount);
+            income.setDate(date);
+            income.setNote(note);
+            if (!transactionDAO.update(income)) throw new SQLException("Failed to update transaction");
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackEx) {
+                System.err.println("Rollback failed: " + rollbackEx.getMessage());
+            }
+            return false;
+        } finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException finalEx) {
+                System.err.println("Failed to reset auto-commit: " + finalEx.getMessage());
+            }
         }
-        income.setAmount(amount);
-        income.setDate(date);
-        income.setNote(note);
-        return transactionDAO.update(income);
     }
 
-    public boolean updateExpense(Expense expense, Account fromAccount, LedgerCategory category, String note, LocalDate date,
-                                 BigDecimal amount, Ledger ledger) {
-        if (expense == null || fromAccount == null || ledger == null || date == null || category == null || amount == null) {
+//    public boolean updateExpense(Expense expense, Account fromAccount, LedgerCategory category, String note, LocalDate date, BigDecimal amount, Ledger ledger) {
+//        if (expense == null || fromAccount == null || ledger == null || date == null || category == null || amount == null) {
+//            return false;
+//        }
+//        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+//            return false;
+//        } //change amount and amount>0
+//        BigDecimal oldAmount = expense.getAmount();
+//        Account oldFromAccount = expense.getFromAccount();
+//        LedgerCategory oldCategory = expense.getCategory();
+//        Ledger oldLedger = expense.getLedger();
+//        if (ledger.getId() != oldLedger.getId()) {
+//            expense.setLedger(ledger);
+//        }
+//        if (category.getId() != oldCategory.getId()) {
+//            if (category.getType() != CategoryType.EXPENSE) {
+//                return false;
+//            }
+//            expense.setCategory(category);
+//        }
+//        oldFromAccount.credit(oldAmount);
+//        accountDAO.update(oldFromAccount);
+//        if (!fromAccount.getSelectable()) {
+//            return false;
+//        }
+//        fromAccount.debit(amount);
+//        expense.setFromAccount(fromAccount);
+//        accountDAO.update(fromAccount);
+//
+//        expense.setAmount(amount);
+//        expense.setDate(date);
+//        expense.setNote(note);
+//        return transactionDAO.update(expense);
+//    }
+
+    public boolean updateExpense(Expense expense, Account fromAccount, LedgerCategory category, String note, LocalDate date, BigDecimal amount, Ledger ledger) {
+        if (expense == null || fromAccount == null || category == null || ledger == null || amount == null || date == null || !fromAccount.getSelectable()) {
             return false;
         }
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
             return false;
-        } //change amount and amount>0
+        }
         BigDecimal oldAmount = expense.getAmount();
         Account oldFromAccount = expense.getFromAccount();
         LedgerCategory oldCategory = expense.getCategory();
         Ledger oldLedger = expense.getLedger();
-        if (ledger.getId() != oldLedger.getId()) {
+        if (ledger.getId() != oldLedger.getId()) { //change ledger
             expense.setLedger(ledger);
         }
-        if (category.getId() != oldCategory.getId()) {
+        if (category.getId() != oldCategory.getId()) { //change category
             if (category.getType() != CategoryType.EXPENSE) {
                 return false;
             }
             expense.setCategory(category);
         }
-        if (fromAccount.getId() != oldFromAccount.getId()) { //change account
-            //rollback old account
+        Connection connection= ConnectionManager.getInstance().getConnection();
+        try {
+            connection.setAutoCommit(false); //
+
             oldFromAccount.credit(oldAmount);
-            accountDAO.update(oldFromAccount);
-            if (!fromAccount.getSelectable()) {
-                return false;
-            }
-            //apply new account
+            if (!accountDAO.update(oldFromAccount)) throw new SQLException("Failed to rollback old account");
+
             fromAccount.debit(amount);
             expense.setFromAccount(fromAccount);
-            accountDAO.update(fromAccount);
+            if (!accountDAO.update(fromAccount)) throw new SQLException("Failed to apply new account");
+
+            expense.setAmount(amount);
+            expense.setDate(date);
+            expense.setNote(note);
+            if (!transactionDAO.update(expense)) throw new SQLException("Failed to update transaction");
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackEx) {
+                System.err.println("Rollback failed: " + rollbackEx.getMessage());
+            }
+            return false;
+        } finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException finalEx) {
+                System.err.println("Failed to reset auto-commit: " + finalEx.getMessage());
+            }
         }
-        expense.setAmount(amount);
-        expense.setDate(date);
-        expense.setNote(note);
-        return transactionDAO.update(expense);
     }
 
-    //newFromAccount or newToAccount can be null meaning removal of that account
-    public boolean updateTransfer(Transfer transfer, Account newFromAccount, Account newToAccount, String note,
-                                  LocalDate date, BigDecimal amount, Ledger ledger) {
-        if (transfer == null || ledger == null || date == null) {
+    public boolean updateTransfer(Transfer transfer, Account newFromAccount, Account newToAccount, String note, LocalDate date, BigDecimal amount, Ledger ledger) {
+        if (transfer == null || ledger == null || date == null || amount == null) {
             return false;
         }
         if( newFromAccount == null && newToAccount == null) {
@@ -275,7 +483,7 @@ public class TransactionController {
         }
         if (amount.compareTo(BigDecimal.ZERO) < 0) {
             return false;
-        } //change amount and amount>0
+        }
         BigDecimal oldAmount = transfer.getAmount();
         Account oldFromAccount = transfer.getFromAccount();
         Account oldToAccount = transfer.getToAccount();
@@ -283,49 +491,104 @@ public class TransactionController {
         if (ledger.getId() != oldLedger.getId()) {
             transfer.setLedger(ledger);
         } //change ledger
-        boolean amountChanged = amount.compareTo(oldAmount) != 0;
-        //change amount or change fromAccount
-        if (amountChanged || (newFromAccount != null && (oldFromAccount == null || newFromAccount.getId() != oldFromAccount.getId()))
-                || (newFromAccount == null && oldFromAccount != null)) {
-            //rollback old fromAccount
+
+        Connection connection= ConnectionManager.getInstance().getConnection();
+        try {
+            connection.setAutoCommit(false);
             if (oldFromAccount != null) {
                 oldFromAccount.credit(oldAmount);
-                accountDAO.update(oldFromAccount);
+                if (!accountDAO.update(oldFromAccount)) throw new SQLException("Failed to rollback old from account");
             }
-            //apply new fromAccount
-            if (newFromAccount != null) {
-                if (!newFromAccount.getSelectable()) {
-                    return false;
-                }
-
-                newFromAccount.debit(amount);
-                accountDAO.update(newFromAccount);
-            }
-            transfer.setFromAccount(newFromAccount); //apply new fromAccount (can be null)
-        }
-        //change toAccount or change amount
-        if (amountChanged || (newToAccount != null && (oldToAccount == null || newToAccount.getId() != oldToAccount.getId()))
-                || (newToAccount == null && oldToAccount != null)) {
-            //rollback old toAccount
             if (oldToAccount != null) {
                 oldToAccount.debit(oldAmount);
-                accountDAO.update(oldToAccount);
+                if (!accountDAO.update(oldToAccount)) throw new SQLException("Failed to rollback old to account");
             }
-            //apply new toAccount
-            if (newToAccount != null) {
-                if (!newToAccount.getSelectable()) {
-                    return false;
-                }
 
-                newToAccount.credit(amount);
-                accountDAO.update(newToAccount);
+            if (newFromAccount != null) {
+                newFromAccount.debit(amount);
+                if (!accountDAO.update(newFromAccount)) throw new SQLException("Failed to apply new from account");
             }
-            transfer.setToAccount(newToAccount); //apply new toAccount (can be null)
+            if (newToAccount != null) {
+                newToAccount.credit(amount);
+                if (!accountDAO.update(newToAccount)) throw new SQLException("Failed to apply new to account");
+            }
+            transfer.setFromAccount(newFromAccount);
+            transfer.setToAccount(newToAccount);
+            transfer.setAmount(amount);
+            transfer.setDate(date);
+            transfer.setNote(note);
+            if (!transactionDAO.update(transfer)) throw new SQLException("Failed to update Transfer record");
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Failed to update Transfer: " + e.getMessage());
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackEx) {
+                System.err.println("Error during rollback: " + rollbackEx.getMessage());
+            }
+            return false;
+        } finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException e) {
+                System.err.println("Failed to reset auto-commit: " + e.getMessage());
+            }
         }
-        transfer.setAmount(amount);
-        transfer.setDate(date);
-        transfer.setNote(note);
-        return transactionDAO.update(transfer);
     }
 
+    //newFromAccount or newToAccount can be null meaning removal of that account
+//    public boolean updateTransfer(Transfer transfer, Account newFromAccount, Account newToAccount, String note, LocalDate date, BigDecimal amount, Ledger ledger) {
+//        if (transfer == null || ledger == null || date == null) {
+//            return false;
+//        }
+//        if( newFromAccount == null && newToAccount == null) {
+//            return false;
+//        }
+//        if (newFromAccount != null && newToAccount != null && newFromAccount.getId() == newToAccount.getId()) {
+//            return false;
+//        }
+//        if(newFromAccount != null && !newFromAccount.getSelectable()) {
+//            return false;
+//        }
+//        if(newToAccount != null && !newToAccount.getSelectable()) {
+//            return false;
+//        }
+//        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+//            return false;
+//        } //change amount and amount>0
+//        BigDecimal oldAmount = transfer.getAmount();
+//        Account oldFromAccount = transfer.getFromAccount();
+//        Account oldToAccount = transfer.getToAccount();
+//        Ledger oldLedger = transfer.getLedger();
+//        if (ledger.getId() != oldLedger.getId()) {
+//            transfer.setLedger(ledger);
+//        } //change ledger
+//        //rollback old accounts
+//        if (oldFromAccount != null) {
+//            oldFromAccount.credit(oldAmount);
+//            if (!accountDAO.update(oldFromAccount)) return false;
+//        }
+//        if (oldToAccount != null) {
+//            oldToAccount.debit(oldAmount);
+//            if (!accountDAO.update(oldToAccount)) return false;
+//        }
+//        //apply new accounts
+//        if (newFromAccount != null) {
+//            if (!newFromAccount.getSelectable()) return false;
+//            newFromAccount.debit(amount);
+//            if (!accountDAO.update(newFromAccount)) return false;
+//        }
+//        if (newToAccount != null) {
+//            if (!newToAccount.getSelectable()) return false;
+//            newToAccount.credit(amount);
+//            if (!accountDAO.update(newToAccount)) return false;
+//        }
+//        transfer.setFromAccount(newFromAccount);
+//        transfer.setToAccount(newToAccount);
+//        transfer.setAmount(amount);
+//        transfer.setDate(date);
+//        transfer.setNote(note);
+//        return transactionDAO.update(transfer);
+//    }
 }

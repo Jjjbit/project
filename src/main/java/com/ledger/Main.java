@@ -34,7 +34,7 @@ public class Main {
 
             // create Business layer
             UserController userController = new UserController(userDAO);
-            AccountController accountController = new AccountController(accountDAO, transactionDAO);
+            AccountController accountController = new AccountController(accountDAO);
             TransactionController transactionController = new TransactionController(transactionDAO, accountDAO);
             LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
             LedgerCategoryController ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO, accountDAO);

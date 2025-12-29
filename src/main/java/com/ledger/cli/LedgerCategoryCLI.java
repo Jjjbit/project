@@ -106,7 +106,7 @@ public class LedgerCategoryCLI {
         String subCategoryName = inputName();
 
         //create sub-category
-        LedgerCategory subCategory = ledgerCategoryController.createSubCategory(subCategoryName, parentCategory, selectedLedger);
+        LedgerCategory subCategory = ledgerCategoryController.createSubCategory(subCategoryName, parentCategory);
         if (subCategory == null) {
             System.out.println("Failed to create sub-category.");
             return;

@@ -163,31 +163,25 @@ public class LedgerController {
                     case INCOME:
                         if (to != null) {
                             to.debit(tx.getAmount());
-                            if(!accountDAO.update(to)){
-                                throw new SQLException("Failed to update account during ledger deletion");
-                            }
+                            if(!accountDAO.update(to)) throw new SQLException("Failed to update account during ledger deletion");
                         }
                         break;
                     case EXPENSE:
                         if (from != null) {
                             from.credit(tx.getAmount());
-                            if(!accountDAO.update(from)){
-                                throw new SQLException("Failed to update account during ledger deletion");
-                            }
+                            if(!accountDAO.update(from)) throw new SQLException("Failed to update account during ledger deletion");
                         }
                         break;
                     case TRANSFER:
                         if (from != null) {
                             from.credit(tx.getAmount());
-                            if(!accountDAO.update(from)){
-                                throw new SQLException("Failed to update account during ledger deletion");
-                            }
+                            if(!accountDAO.update(from)) throw new SQLException("Failed to update account during ledger deletion");
+
                         }
                         if (to != null) {
                             to.debit(tx.getAmount());
-                            if(!accountDAO.update(to)){
-                                throw new SQLException("Failed to update account during ledger deletion");
-                            }
+                            if(!accountDAO.update(to)) throw new SQLException("Failed to update account during ledger deletion");
+
                         }
                         break;
                 }

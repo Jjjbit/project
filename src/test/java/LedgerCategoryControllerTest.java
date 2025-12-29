@@ -52,7 +52,7 @@ public class LedgerCategoryControllerTest {
         ledgerCategoryController = new LedgerCategoryController(ledgerCategoryDAO, transactionDAO, budgetDAO, accountDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        AccountController accountController= new AccountController(accountDAO, transactionDAO);
+        AccountController accountController= new AccountController(accountDAO);
 
         userController.register("test user", "password123");
         userController.login("test user", "password123");
@@ -97,6 +97,21 @@ public class LedgerCategoryControllerTest {
         }
     }
 
+    @Test
+    public void testCreate_Failure() {
+        assertNull(ledgerCategoryController.createCategory(null, testLedger, CategoryType.EXPENSE));
+        assertNull(ledgerCategoryController.createCategory("", testLedger, CategoryType.EXPENSE));
+        assertNull(ledgerCategoryController.createCategory("Food", null, CategoryType.EXPENSE));
+        assertNull(ledgerCategoryController.createCategory("Salary", testLedger, null));
+        //duplicate name
+        assertNull(ledgerCategoryController.createCategory("Food", testLedger, CategoryType.EXPENSE));
+        LedgerCategory breakfast=testCategories.stream()
+                .filter(cat->cat.getName().equals("Breakfast"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(breakfast);
+        assertNull(ledgerCategoryController.createSubCategory("Snack", breakfast));
+    }
 
     //create category of first-level
     @Test
@@ -114,24 +129,24 @@ public class LedgerCategoryControllerTest {
     //create sub-category
     @Test
     public void testCreateSubCategory_Success() {
-        LedgerCategory parentCategory=testCategories.stream()
+        LedgerCategory food=testCategories.stream()
                 .filter(cat->cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
-        assertNotNull(parentCategory);
+        assertNotNull(food);
 
-        LedgerCategory subCategory=ledgerCategoryController.createSubCategory("Test", parentCategory, testLedger);
+        LedgerCategory subCategory=ledgerCategoryController.createSubCategory("Test", food);
         assertNotNull(subCategory); //created successfully
         assertNotNull(ledgerCategoryDAO.getById(subCategory.getId())); //exists in DB
 
-        assertEquals(parentCategory.getId(), subCategory.getParent().getId());
+        assertEquals(food.getId(), subCategory.getParent().getId());
 
         Budget monthlyBudget=budgetDAO.getBudgetByCategory(subCategory, Period.MONTHLY);
         Budget yearlyBudget=budgetDAO.getBudgetByCategory(subCategory, Period.YEARLY);
         assertNotNull(monthlyBudget);
         assertNotNull(yearlyBudget);
 
-        List<LedgerCategory> categories=ledgerCategoryDAO.getCategoriesByParentId(parentCategory.getId(), testLedger);
+        List<LedgerCategory> categories=ledgerCategoryDAO.getCategoriesByParentId(food.getId(), testLedger);
         assertEquals(4, categories.size()); //exists in DB under parent
         assertTrue(categories.stream().anyMatch(cat->cat.getId() == subCategory.getId()));
     }
@@ -175,8 +190,7 @@ public class LedgerCategoryControllerTest {
         Income tx1=transactionController.createIncome(testLedger, account, salary, null, LocalDate.now(), BigDecimal.valueOf(1000.00));
         Income tx2=transactionController.createIncome(testLedger, account, salary, null, LocalDate.now(), BigDecimal.valueOf(500.00));
 
-        boolean result = ledgerCategoryController.deleteCategory(salary);
-        assertTrue(result);
+        assertTrue( ledgerCategoryController.deleteCategory(salary));
         assertNull(ledgerCategoryDAO.getById(salary.getId())); //category deleted from DB
         assertNull(transactionDAO.getById(tx1.getId())); //transaction deleted from DB
         assertNull(transactionDAO.getById(tx2.getId())); //transaction deleted from DB
@@ -293,14 +307,15 @@ public class LedgerCategoryControllerTest {
     //delete category with sub-categories
     @Test
     public void testDeleteCategory_Failure() {
-        LedgerCategory foodCategory = testCategories.stream()
+        LedgerCategory food = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Food"))
                 .findFirst()
                 .orElse(null);
-        assertNotNull(foodCategory);
+        assertNotNull(food);
 
-        assertFalse( ledgerCategoryController.deleteCategory(foodCategory)); //should fail because it has sub-categories
-        assertNotNull(ledgerCategoryDAO.getById(foodCategory.getId())); //category should still exist in DB
+        assertFalse(ledgerCategoryController.deleteCategory(food)); //should fail because it has sub-categories
+        assertNotNull(ledgerCategoryDAO.getById(food.getId())); //category should still exist in DB
+        assertFalse(ledgerCategoryController.deleteCategory(null)); //null category
     }
 
     //rename category successfully
@@ -322,7 +337,7 @@ public class LedgerCategoryControllerTest {
 
     @Test
     public void testRenameLedgerCategory_Failure() {
-        assertFalse( ledgerCategoryController.rename(null, "New Category Name"));
+        assertFalse(ledgerCategoryController.rename(null, "New Category Name"));
         assertFalse(ledgerCategoryController.rename(testCategories.getFirst(), null));
         assertFalse(ledgerCategoryController.rename(testCategories.getFirst(), ""));
         assertFalse(ledgerCategoryController.rename(testCategories.getFirst(), "Salary"));

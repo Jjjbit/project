@@ -55,7 +55,7 @@ public class LedgerControllerTest {
         UserController userController = new UserController(userDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        AccountController accountController = new AccountController(accountDAO, transactionDAO);
+        AccountController accountController = new AccountController(accountDAO);
 
         userController.register("test user", "password123"); // create test user and insert into db
         testUser = userController.login("test user", "password123"); // login to set current user

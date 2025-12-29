@@ -43,26 +43,34 @@ public class LedgerCategoryController {
             return null;
         }
         LedgerCategory category = new LedgerCategory(name, type, ledger);
+        Connection connection = ConnectionManager.getInstance().getConnection();
         try {
-            boolean insert = ledgerCategoryDAO.insert(category);
-            if (!insert) {
-                return null;
-            }
+            connection.setAutoCommit(false);
+            if (!ledgerCategoryDAO.insert(category)) return null;
             //create budget for ledgerCategory
             for (Period period : Period.values()) {
                 Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
-                if (!budgetDAO.insert(budget)) {
-                    throw new SQLException("Failed to create budget for category");
-                }
+                if (!budgetDAO.insert(budget)) throw new SQLException("Failed to create budget for category");
             }
+            connection.commit();
             return category;
         }catch (SQLException e){
-            ledgerCategoryDAO.delete(category); //rollback
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Error during rollback: " + ex.getMessage());
+            }
             return null;
+        }finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException e) {
+                System.err.println("Error resetting auto-commit: " + e.getMessage());
+            }
         }
     }
 
-    public LedgerCategory createSubCategory(String name, LedgerCategory parentCategory, Ledger ledger) {
+    public LedgerCategory createSubCategory(String name, LedgerCategory parentCategory) {
         if(parentCategory == null){
             return null;
         }
@@ -72,28 +80,37 @@ public class LedgerCategoryController {
         if(name == null || name.isEmpty() || name.length() > 50) {
             return null;
         }
+        Ledger ledger= parentCategory.getLedger();
         LedgerCategory existingCategory = ledgerCategoryDAO.getByNameAndLedger(name, ledger);
         if (existingCategory != null && existingCategory.getType() == parentCategory.getType()) {
             return null;
         }
         LedgerCategory category = new LedgerCategory(name, parentCategory.getType(), ledger);
         category.setParent(parentCategory);
+        Connection connection = ConnectionManager.getInstance().getConnection();
         try {
-            boolean insert = ledgerCategoryDAO.insert(category);
-            if (!insert) {
-                return null;
-            }
+            connection.setAutoCommit(false);
+            if (!ledgerCategoryDAO.insert(category)) return null;
             //create budget for ledgerCategory
             for (Period period : Period.values()) {
                 Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
-                if (!budgetDAO.insert(budget)) {
-                    throw new SQLException("Failed to create budget for sub-category");
-                }
+                if (!budgetDAO.insert(budget)) throw new SQLException("Failed to create budget for sub-category");
             }
+            connection.commit();
             return category;
         }catch (SQLException e){
-            ledgerCategoryDAO.delete(category); //rollback
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Error during rollback: " + ex.getMessage());
+            }
             return null;
+        }finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException e) {
+                System.err.println("Error resetting auto-commit: " + e.getMessage());
+            }
         }
     }
 
