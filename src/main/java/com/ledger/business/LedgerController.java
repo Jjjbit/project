@@ -5,6 +5,8 @@ import com.ledger.orm.*;
 import com.ledger.session.UserSession;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,27 +44,74 @@ public class LedgerController {
             return null;
         }
         Ledger ledger = new Ledger(name, owner);
-        ledgerDAO.insert(ledger); //insert to db
-        List<Category> templateCategories = new ArrayList<>(categoryDAO.getParentCategories()); //get only parents
-        List<LedgerCategory> allCategories = new ArrayList<>();
-        for (Category template : templateCategories) {
-            allCategories.addAll(copyCategoryTree(template, ledger));
-        }
-        //create Budget for ledger level for each Period
-        for (Period period : Period.values()) {
-            Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, ledger);
-            budgetDAO.insert(ledgerBudget);
-        }
-        //create Budget for each default category
-        for (LedgerCategory cat : allCategories) {
-            if (cat.getType() == CategoryType.EXPENSE) {
-                for (Period period : Period.values()) {
-                    Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, ledger);
-                    budgetDAO.insert(categoryBudget);
+        Connection connection = ConnectionManager.getInstance().getConnection();
+        try{
+            connection.setAutoCommit(false);
+            if(!ledgerDAO.insert(ledger)){
+                throw new SQLException("Failed to create ledger");
+            }
+            List<Category> templateCategories = new ArrayList<>(categoryDAO.getParentCategories()); //get only parents
+            List<LedgerCategory> allCategories = new ArrayList<>();
+            for (Category template : templateCategories) {
+                //allCategories.addAll(copyCategoryTree(template, ledger));
+                allCategories.addAll(copyCategoryTree(template, ledger, null));
+            }
+            //create Budget for ledger level for each Period
+            for (Period period : Period.values()) {
+                Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, ledger);
+                if(!budgetDAO.insert(ledgerBudget)){
+                    throw new SQLException("Failed to create ledger budget");
                 }
             }
+            //create Budget for each default category
+            for (LedgerCategory cat : allCategories) {
+                if (cat.getType() == CategoryType.EXPENSE) {
+                    for (Period period : Period.values()) {
+                        Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, ledger);
+                        if(!budgetDAO.insert(categoryBudget)){
+                            throw new SQLException("Failed to create category budget");
+                        }
+                    }
+                }
+            }
+            connection.commit();
+            return ledger;
+        }catch (SQLException e){
+            System.err.println("Error creating ledger: " + e.getMessage());
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Error during rollback: " + ex.getMessage());
+            }
+            return null;
+        }finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException e) {
+                System.err.println("Error resetting auto-commit: " + e.getMessage());
+            }
         }
-        return ledger;
+    }
+
+    private List<LedgerCategory> copyCategoryTree(Category template, Ledger ledger, LedgerCategory parent) {
+        List<LedgerCategory> result = new ArrayList<>();
+
+        LedgerCategory copy = new LedgerCategory();
+        copy.setName(template.getName());
+        copy.setType(template.getType());
+        copy.setLedger(ledger);
+        copy.setParent(parent);
+
+        if (!ledgerCategoryDAO.insert(copy)) {
+            throw new RuntimeException("cannot insert category: " + template.getName());
+        }
+        result.add(copy);
+
+        for (Category childTemplate : categoryDAO.getCategoriesByParentId(template.getId())) {
+            List<LedgerCategory> childCopies = copyCategoryTree(childTemplate, ledger, copy);
+            result.addAll(childCopies);
+        }
+        return result;
     }
 
     private List<LedgerCategory> copyCategoryTree(Category template, Ledger ledger) {
@@ -73,13 +122,19 @@ public class LedgerController {
         copy.setType(template.getType());
         copy.setLedger(ledger);
         result.add(copy);
-        ledgerCategoryDAO.insert(copy);
+        boolean insert=ledgerCategoryDAO.insert(copy);
+        if(!insert){
+            return new ArrayList<>();
+        }
 
         for (Category childTemplate : categoryDAO.getCategoriesByParentId(template.getId())) {
             List<LedgerCategory> childCopies = copyCategoryTree(childTemplate, ledger);
             for (LedgerCategory childCopy : childCopies) {
                 childCopy.setParent(copy);
-                ledgerCategoryDAO.update(childCopy);
+                boolean insertParent=ledgerCategoryDAO.update(childCopy);
+                if(!insertParent){
+                    return new ArrayList<>();
+                }
             }
             result.addAll(childCopies);
         }
@@ -87,95 +142,77 @@ public class LedgerController {
     }
 
     public boolean deleteLedger(Ledger ledger) {
-        //delete ledger categories (cascade delete transactions and ledger categories -> delete budgets)
         if(ledger == null){
             return false;
         }
-        List<Transaction> transactionsToDelete = transactionDAO.getByLedgerId(ledger.getId());
-        for (Transaction tx : transactionsToDelete) {
-            Account to = tx.getToAccount();
-            Account from = tx.getFromAccount();
+        Connection connection = ConnectionManager.getInstance().getConnection();
+        try {
+            connection.setAutoCommit(false);
+            List<Transaction> transactionsToDelete = transactionDAO.getByLedgerId(ledger.getId());
+            for (Transaction tx : transactionsToDelete) {
+                Account to = null;
+                Account from = null;
+                if (tx.getToAccount() != null) {
+                    to = accountDAO.getAccountById(tx.getToAccount().getId());
+                }
+                if (tx.getFromAccount() != null) {
+                    from = accountDAO.getAccountById(tx.getFromAccount().getId());
+                }
 
-            switch(tx.getType()) {
-                case INCOME:
-                    if (to != null) {
-                        to.debit(tx.getAmount()); //modifica bilancio account
-                        accountDAO.update(to); //update balance in db
-                    }
-                    break;
-                case EXPENSE:
-                    if (from != null) {
-                        from.credit(tx.getAmount());
-                        accountDAO.update(from);
-                    }
-                    break;
-                case TRANSFER:
-                    if (from != null) {
-                        from.credit(tx.getAmount());
-                        accountDAO.update(from);
-                    }
-                    if (to != null) {
-                        to.debit(tx.getAmount());
-                        accountDAO.update(to);
-                    }
-                    break;
+                switch (tx.getType()) {
+                    case INCOME:
+                        if (to != null) {
+                            to.debit(tx.getAmount());
+                            if(!accountDAO.update(to)){
+                                throw new SQLException("Failed to update account during ledger deletion");
+                            }
+                        }
+                        break;
+                    case EXPENSE:
+                        if (from != null) {
+                            from.credit(tx.getAmount());
+                            if(!accountDAO.update(from)){
+                                throw new SQLException("Failed to update account during ledger deletion");
+                            }
+                        }
+                        break;
+                    case TRANSFER:
+                        if (from != null) {
+                            from.credit(tx.getAmount());
+                            if(!accountDAO.update(from)){
+                                throw new SQLException("Failed to update account during ledger deletion");
+                            }
+                        }
+                        if (to != null) {
+                            to.debit(tx.getAmount());
+                            if(!accountDAO.update(to)){
+                                throw new SQLException("Failed to update account during ledger deletion");
+                            }
+                        }
+                        break;
+                }
+            }
+            connection.commit();
+            if(!ledgerDAO.delete(ledger)){
+                throw new SQLException("Failed to delete ledger");
+            }
+            return true;
+        }catch (SQLException e){
+            System.err.println("Error deleting ledger: " + e.getMessage());
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Error during rollback: " + ex.getMessage());
+            }
+            return false;
+        }finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException e) {
+                System.err.println("Error resetting auto-commit: " + e.getMessage());
             }
         }
-        return ledgerDAO.delete(ledger);
     }
-
-//    public Ledger copyLedger(Ledger original, User user) {
-//        if(original == null){
-//            return null;
-//        }
-//        String newName = original.getName() + " Copy";
-//        Ledger copy = new Ledger(newName, user);
-//        ledgerDAO.insert(copy); // insert to db
-//
-//        List<LedgerCategory> parents = new ArrayList<>(ledgerCategoryDAO.getCategoriesNullParent(original.getId()));
-//        List<LedgerCategory> categoryCopies = new ArrayList<>();
-//        for (LedgerCategory originalCat : parents) {
-//            categoryCopies.addAll(copyLedgerCategoryTree(originalCat, copy));
-//        }
-//
-//        //create Budget for ledger for each Period
-//        for (Period period : Period.values()) {
-//            Budget ledgerBudget = new Budget(BigDecimal.ZERO, period, null, copy);
-//            budgetDAO.insert(ledgerBudget);
-//        }
-//
-//        //create Budgets for each category
-//        for (LedgerCategory cat : categoryCopies) {
-//            if (cat.getType() == CategoryType.EXPENSE) {
-//                for (Period period : Period.values()) {
-//                    Budget categoryBudget = new Budget(BigDecimal.ZERO, period, cat, copy);
-//                    budgetDAO.insert(categoryBudget);
-//                }
-//            }
-//        }
-//        return copy;
-//    }
-//
-//    private List<LedgerCategory> copyLedgerCategoryTree(LedgerCategory oldCategory, Ledger newLedger) {
-//        List<LedgerCategory> result = new ArrayList<>();
-//
-//        LedgerCategory copy = new LedgerCategory();
-//        copy.setName(oldCategory.getName());
-//        copy.setType(oldCategory.getType());
-//        copy.setLedger(newLedger);
-//        result.add(copy);
-//        ledgerCategoryDAO.insert(copy);
-//
-//        for(LedgerCategory child : ledgerCategoryDAO.getCategoriesByParentId(oldCategory.getId())) {
-//            List<LedgerCategory> childCategories = copyLedgerCategoryTree(child, newLedger);
-//            for (LedgerCategory childCategory : childCategories) {
-//                childCategory.setParent(copy);
-//                ledgerCategoryDAO.update(childCategory);
-//            }
-//            result.addAll(childCategories);
-//        }
-//        return result;
-//    }
 
     public boolean renameLedger(Ledger ledger, String newName) {
         if(ledger == null){

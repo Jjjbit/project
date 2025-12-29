@@ -27,6 +27,7 @@ public class LedgerControllerTest {
     private TransactionDAO transactionDAO;
     private LedgerDAO ledgerDAO;
     private BudgetDAO budgetDAO;
+    private AccountDAO accountDAO;
 
     private LedgerController ledgerController;
     private TransactionController  transactionController;
@@ -44,7 +45,7 @@ public class LedgerControllerTest {
 
         UserDAO userDAO = new UserDAO(connection);
         ledgerDAO = new LedgerDAO(connection);
-        AccountDAO accountDAO = new AccountDAO(connection);
+        accountDAO = new AccountDAO(connection);
         ledgerCategoryDAO = new LedgerCategoryDAO(connection);
         transactionDAO = new TransactionDAO(connection);
         CategoryDAO categoryDAO = new CategoryDAO(connection);
@@ -102,12 +103,8 @@ public class LedgerControllerTest {
 
         assertNotNull(ledgerDAO.getById(ledger.getId()));
         assertEquals(1, ledgerDAO.getLedgersByUserId(testUser.getId()).size());
-
-        Budget monthlyLedgerBudget = budgetDAO.getBudgetByLedger(ledger, Period.MONTHLY);
-        Budget yearlyLedgerBudget = budgetDAO.getBudgetByLedger(ledger, Period.YEARLY);
-        assertNotNull(monthlyLedgerBudget);
-        assertNotNull(yearlyLedgerBudget);
-
+        assertNotNull( budgetDAO.getBudgetByLedger(ledger, Period.MONTHLY));
+        assertNotNull(budgetDAO.getBudgetByLedger(ledger, Period.YEARLY));
         assertEquals(17, ledgerCategoryDAO.getTreeByLedger(ledger).size());
         List<LedgerCategory> categories= ledgerCategoryDAO.getTreeByLedger(ledger);
 
@@ -164,15 +161,14 @@ public class LedgerControllerTest {
     }
 
     @Test
-    public void testCreateLedger_DuplicateName_Failure() {
+    public void testCreateLedger_Failure() {
         Ledger ledger = ledgerController.createLedger("Duplicate Ledger");
         assertNotNull(ledger);
-
         assertNull(ledgerController.createLedger("Duplicate Ledger"));
     }
 
     @Test
-    public void testDeleteLedger_WithTransactions() {
+    public void testDeleteLedger() {
         Ledger ledger = ledgerController.createLedger("Ledger With Transactions");
         assertNotNull(ledger);
 
@@ -204,83 +200,19 @@ public class LedgerControllerTest {
         assertEquals(0, ledgerCategoryDAO.getTreeByLedger(ledger).size()); //all categories should be deleted
         assertEquals(0, transactionDAO.getByAccountId(account.getId()).size()); //transactions should be deleted
 
+        //verify balance of account
+        Account updatedAccount = accountDAO.getAccountById(account.getId());
+        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
+
         //delete budgets
         assertNull(budgetDAO.getBudgetByLedger(ledger, Period.MONTHLY));
         assertNull(budgetDAO.getBudgetByLedger(ledger, Period.YEARLY));
-
         for(LedgerCategory category : categories){
             assertNull(ledgerCategoryDAO.getById(category.getId()));
             assertNull(budgetDAO.getBudgetByCategory(category, Period.MONTHLY));
             assertNull(budgetDAO.getBudgetByCategory(category, Period.YEARLY));
         }
     }
-
-//    @Test
-//    public void testCopyLedger() {
-//        Ledger originalLedger = ledgerController.createLedger("Original Ledger", testUser);
-//        assertNotNull(originalLedger);
-//
-//        Ledger copiedLedger = ledgerController.copyLedger(originalLedger, testUser);
-//        assertNotNull(copiedLedger);
-//
-//        Ledger fetchedCopiedLedger = ledgerDAO.getById(copiedLedger.getId());
-//        assertNotNull(fetchedCopiedLedger);
-//        assertEquals(copiedLedger.getName(), fetchedCopiedLedger.getName());
-//
-//        assertEquals(2, ledgerDAO.getLedgersByUserId(testUser.getId()).size());
-//        assertNotNull(budgetDAO.getBudgetByLedger(copiedLedger, Period.MONTHLY));
-//        assertNotNull(budgetDAO.getBudgetByLedger(copiedLedger, Period.YEARLY));
-//        assertEquals(17, ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId()).size());
-//
-//        List<LedgerCategory> originalCategories = ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId());
-//        List<LedgerCategory> copiedCategories = ledgerCategoryDAO.getTreeByLedgerId(copiedLedger.getId());
-//        assertEquals(originalCategories.size(), copiedCategories.size());
-//
-//        List<LedgerCategory> rootCategories = copiedCategories.stream()
-//                .filter(cat -> cat.getParent() == null)
-//                .toList();
-//
-//        List<LedgerCategory> incomeCategories = rootCategories.stream()
-//                .filter(cat -> cat.getType() == CategoryType.INCOME)
-//                .toList();
-//        List<LedgerCategory> expenseCategories = rootCategories.stream()
-//                .filter(cat -> cat.getType() == CategoryType.EXPENSE)
-//                .toList();
-//
-//        for(LedgerCategory incomeCat : incomeCategories) {
-//            System.out.println("Income Category: " + incomeCat.getName());
-//            assertNull(budgetDAO.getBudgetByCategory(incomeCat, Period.MONTHLY));
-//            assertNull(budgetDAO.getBudgetByCategory(incomeCat, Period.YEARLY));
-//            for(LedgerCategory subCat : copiedCategories.stream()
-//                    .filter(c -> c.getParent() != null && c.getParent().getId() == incomeCat.getId())
-//                    .toList()) {
-//                System.out.println("  Subcategory: " + subCat.getName());
-//                assertNull(budgetDAO.getBudgetByCategory(subCat, Period.MONTHLY));
-//                assertNull(budgetDAO.getBudgetByCategory(subCat, Period.YEARLY));
-//            }
-//        }
-//
-//        for(LedgerCategory expenseCat : expenseCategories) {
-//            System.out.println("Expense Category: " + expenseCat.getName());
-//            Budget monthlyBudget = budgetDAO.getBudgetByCategory(expenseCat, Period.MONTHLY);
-//            Budget yearlyBudget = budgetDAO.getBudgetByCategory(expenseCat, Period.YEARLY);
-//            assertNotNull(monthlyBudget);
-//            assertNotNull(yearlyBudget);
-//            System.out.println(" Monthly Budget: " + monthlyBudget.getAmount());
-//            System.out.println(" Yearly Budget: " + yearlyBudget.getAmount());
-//            for(LedgerCategory subCat : copiedCategories.stream()
-//                    .filter(c -> c.getParent() != null && c.getParent().getId() == expenseCat.getId())
-//                    .toList()) {
-//                System.out.println("  Subcategory: " + subCat.getName());
-//                Budget subMonthlyBudget = budgetDAO.getBudgetByCategory(subCat, Period.MONTHLY);
-//                Budget subYearlyBudget = budgetDAO.getBudgetByCategory(subCat, Period.YEARLY);
-//                assertNotNull(subMonthlyBudget);
-//                assertNotNull(subYearlyBudget);
-//                System.out.println("  Monthly Budget: " + subMonthlyBudget.getAmount());
-//                System.out.println("  Yearly Budget: " + subYearlyBudget.getAmount());
-//            }
-//        }
-//    }
 
     @Test
     public void testRenameLedger_Success() {
@@ -294,32 +226,15 @@ public class LedgerControllerTest {
     }
 
     @Test
-    public void testRenameLedger_DuplicateName_Failure() {
+    public void testRenameLedger_Failure() {
         Ledger ledger1 = ledgerController.createLedger("Ledger One");
         assertNotNull(ledger1);
         Ledger ledger2 = ledgerController.createLedger("Ledger Two");
         assertNotNull(ledger2);
-
-        boolean renamed = ledgerController.renameLedger(ledger2, "Ledger One");
-        assertFalse(renamed);
-    }
-
-    @Test
-    public void testRenameLedger_SameName() {
-        Ledger ledger = ledgerController.createLedger("Ledger Same Name");
-        assertNotNull(ledger);
-
-        boolean renamed = ledgerController.renameLedger(ledger, "Ledger Same Name");
-        assertTrue(renamed);
-    }
-
-    @Test
-    public void testRenameLedger_NullName_Failure() {
-        Ledger ledger = ledgerController.createLedger("Ledger Null Name");
-        assertNotNull(ledger);
-
-        boolean renamed = ledgerController.renameLedger(ledger, "");
-        assertFalse(renamed);
+        assertFalse(ledgerController.renameLedger(ledger2, "Ledger One"));
+        assertFalse(ledgerController.renameLedger(ledger2, "")); //empty name
+        assertFalse(ledgerController.renameLedger(ledger2, null)); //null name
+        assertFalse(ledgerController.renameLedger(null, "New Name"));
     }
 
     //test getLedger
@@ -332,9 +247,8 @@ public class LedgerControllerTest {
         //create ledger and delete it
         Ledger deletedLedger = ledgerController.createLedger("Deleted Ledger");
         assertNotNull(deletedLedger);
-        ledgerController.deleteLedger(deletedLedger);
-
-        List<Ledger> ledgers = ledgerController.getLedgersByUser(testUser);
-        assertEquals(1, ledgers.size());
+        assertEquals(2, ledgerController.getLedgersByUser(testUser).size());
+        assertTrue(ledgerController.deleteLedger(deletedLedger)); //delete ledger
+        assertEquals(1, ledgerController.getLedgersByUser(testUser).size());
     }
 }
