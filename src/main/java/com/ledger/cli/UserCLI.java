@@ -33,13 +33,7 @@ public class UserCLI {
             return;
         }
         System.out.println(" Registration successful! You can now login with your credentials.");
-
-        System.out.print("Do you want to login now? (y/n): ");
-        String choice = scanner.nextLine().trim().toLowerCase();
-
-        if (choice.equals("y") || choice.equals("yes")) {
-            login();
-        }
+        login();
     }
 
     public void login() {
@@ -69,23 +63,22 @@ public class UserCLI {
         User user = userController.getCurrentUser();
 
         BigDecimal totalAssets = reportController.getTotalAssets(user);
-        BigDecimal totalLiabilities = reportController.getTotalLiabilities(user);
-        BigDecimal netWorth = totalAssets.subtract(totalLiabilities);
-        BigDecimal totalBorrowing = reportController.getTotalBorrowingAmount(user);
-        BigDecimal totalLending = reportController.getTotalLendingAmount(user);
+        //BigDecimal totalLiabilities = reportController.getTotalLiabilities(user);
+//        BigDecimal netWorth = totalAssets.subtract(totalLiabilities);
+//        BigDecimal totalBorrowing = reportController.getTotalBorrowingAmount(user);
+//        BigDecimal totalLending = reportController.getTotalLendingAmount(user);
 
         System.out.println("\n=== Current User ===");
         System.out.print("\nUsername: " + user.getUsername());
-        System.out.print(" | Net Worth: " + netWorth);
+//        System.out.print(" | Net Worth: " + netWorth);
         System.out.print(" | Total Worth: " + totalAssets);
-        System.out.print(" | Total Liabilities: " + totalLiabilities);
-        System.out.print(" | Total Borrowing: " + totalBorrowing);
-        System.out.print(" | Total Lending: " + totalLending);
+//        System.out.print(" | Total Liabilities: " + totalLiabilities);
+//        System.out.print(" | Total Borrowing: " + totalBorrowing);
+//        System.out.print(" | Total Lending: " + totalLending);
     }
 
 
     public void changePassword() {
-
         System.out.println("\n=== Change Password ===");
 
         System.out.print("Enter new password: ");
@@ -100,7 +93,6 @@ public class UserCLI {
     }
 
     public void changeUsername() {
-
         System.out.println("\n=== Change Username ===");
         System.out.println("Current username: " + userController.getCurrentUser().getUsername());
         System.out.print("Enter new username: ");
