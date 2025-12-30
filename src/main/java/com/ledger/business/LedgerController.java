@@ -6,7 +6,6 @@ import com.ledger.service.TransactionManager;
 import com.ledger.session.UserSession;
 
 import java.math.BigDecimal;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
