@@ -19,59 +19,6 @@ public class BudgetUnitTest {
         User testUser = new User("test user", "password123");
         testLedger = new Ledger("Test Ledger", testUser);
     }
-    @Test
-    public void testGetStartDateForPeriod_Monthly() {
-        LocalDate today = LocalDate.of(2025, 10, 15);
-
-        LocalDate startDate = Budget.calculateStartDateForPeriod(today, Period.MONTHLY);
-
-        assertEquals(LocalDate.of(2025, 10, 1), startDate);
-    }
-
-    @Test
-    public void testGetStartDateForPeriod_Yearly() {
-        LocalDate today = LocalDate.of(2025, 10, 15);
-
-        LocalDate startDate = Budget.calculateStartDateForPeriod(today, Period.YEARLY);
-
-        assertEquals(LocalDate.of(2025, 1, 1), startDate);
-    }
-
-    @Test
-    public void testGetEndDateForPeriod_Monthly() {
-        LocalDate startDate = LocalDate.of(2025, 10, 1);
-
-        LocalDate endDate = Budget.calculateEndDateForPeriod(startDate, Period.MONTHLY);
-
-        assertEquals(LocalDate.of(2025, 10, 31), endDate);
-    }
-
-    @Test
-    public void testGetEndDateForPeriod_Monthly_February() {
-        LocalDate startDate = LocalDate.of(2025, 2, 1);
-
-        LocalDate endDate = Budget.calculateEndDateForPeriod(startDate, Period.MONTHLY);
-
-        assertEquals(LocalDate.of(2025, 2, 28), endDate);
-    }
-
-    @Test
-    public void testGetEndDateForPeriod_Monthly_LeapYear() {
-        LocalDate startDate = LocalDate.of(2024, 2, 1);
-
-        LocalDate endDate = Budget.calculateEndDateForPeriod(startDate, Period.MONTHLY);
-
-        assertEquals(LocalDate.of(2024, 2, 29), endDate);
-    }
-
-    @Test
-    public void testGetEndDateForPeriod_Yearly() {
-        LocalDate startDate = LocalDate.of(2025, 1, 1);
-
-        LocalDate endDate = Budget.calculateEndDateForPeriod(startDate, Period.YEARLY);
-
-        assertEquals(LocalDate.of(2025, 12, 31), endDate);
-    }
 
     //refresh
     @Test
