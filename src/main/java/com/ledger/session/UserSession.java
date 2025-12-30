@@ -3,23 +3,30 @@ package com.ledger.session;
 import com.ledger.domain.User;
 
 public final class UserSession { //prevent extension
-    private static User currentUser;
+    private User currentUser;
+    private static UserSession instance;
 
     private UserSession() {} // Prevent instantiation
+    public static UserSession getInstance() {
+        if (instance == null) {
+            instance = new UserSession();
+        }
+        return instance;
+    }
 
-    public static void login(User user) {
+    public void login(User user) {
         currentUser = user;
     }
 
-    public static void logout() {
+    public void logout() {
         currentUser = null;
     }
 
-    public static User getCurrentUser() {
+    public User getCurrentUser() {
         return currentUser;
     }
 
-    public static boolean isLoggedIn() {
+    public boolean isLoggedIn() {
         return currentUser != null;
     }
 }

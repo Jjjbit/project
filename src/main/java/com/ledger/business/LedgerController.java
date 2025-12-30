@@ -117,10 +117,10 @@ public class LedgerController {
         if(name == null || name.isEmpty() || name.length() > 50) {
             return null;
         }
-        if(!UserSession.isLoggedIn()){
+        if(!UserSession.getInstance().isLoggedIn()){
             return null;
         }
-        User owner = UserSession.getCurrentUser();
+        User owner = UserSession.getInstance().getCurrentUser();
         if (ledgerDAO.getByNameAndOwnerId(name, owner.getId()) != null) {
             return null;
         }
@@ -312,10 +312,10 @@ public class LedgerController {
         if(newName == null || newName.isEmpty()) {
             return false;
         }
-        if(!UserSession.isLoggedIn()){
+        if(!UserSession.getInstance().isLoggedIn()){
             return false;
         }
-        User user = UserSession.getCurrentUser();
+        User user = UserSession.getInstance().getCurrentUser();
         Ledger existingLedger = ledgerDAO.getByNameAndOwnerId(newName, user.getId());
         if (existingLedger != null && existingLedger.getId() != ledger.getId()) {
             return false;

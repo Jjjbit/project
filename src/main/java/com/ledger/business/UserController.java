@@ -7,7 +7,6 @@ import com.ledger.session.UserSession;
 
 public class UserController {
     private final UserDAO userDAO;
-    //private static User currentUser;
 
     public UserController(UserDAO userDAO) {
         this.userDAO = userDAO;
@@ -16,8 +15,7 @@ public class UserController {
     public User login(String username, String password) {
         User user = userDAO.getUserByUsername(username);
         if (user != null && PasswordUtils.verify(password, user.getPassword())) {
-            UserSession.login(user);
-            //currentUser = user;
+            UserSession.getInstance().login(user);
             return user;
         }
         return null;
@@ -44,13 +42,10 @@ public class UserController {
     }
 
      public boolean updateUsername(String newUsername) {
-//        if(currentUser == null ){
-//            return false;
-//        }
-        if(!UserSession.isLoggedIn()){
+        if(!UserSession.getInstance().isLoggedIn()){
             return false;
         }
-        User currentUser = UserSession.getCurrentUser();
+        User currentUser = UserSession.getInstance().getCurrentUser();
         if(newUsername.isEmpty()) {
             return false;
         }
@@ -65,13 +60,10 @@ public class UserController {
      }
 
     public boolean updatePassword(String newPassword) {
-//        if(currentUser == null ){
-//            return false;
-//        }
-        if(!UserSession.isLoggedIn()){
+        if(!UserSession.getInstance().isLoggedIn()){
             return false;
         }
-        User currentUser = UserSession.getCurrentUser();
+        User currentUser = UserSession.getInstance().getCurrentUser();
         if(newPassword.isEmpty()) {
             return false;
         }
@@ -84,11 +76,11 @@ public class UserController {
     }
 
     public User getCurrentUser(){
-        return UserSession.getCurrentUser();
+        return UserSession.getInstance().getCurrentUser();
     }
 
     public void logout() {
-        UserSession.logout();
+        UserSession.getInstance().logout();
     }
 
 }
