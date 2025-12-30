@@ -2,7 +2,7 @@ package com.ledger.business;
 
 import com.ledger.domain.*;
 import com.ledger.orm.*;
-import com.ledger.service.TransactionManager;
+import com.ledger.transaction.DbTransactionManager;
 import com.ledger.session.UserSession;
 
 import java.math.BigDecimal;
@@ -126,7 +126,7 @@ public class LedgerController {
         }
         Ledger ledger = new Ledger(name, owner);
 
-        return TransactionManager.getInstance().execute(() -> {
+        return DbTransactionManager.getInstance().execute(() -> {
             if(!ledgerDAO.insert(ledger)) throw new Exception("Failed to create ledger");
             List<Category> templateCategories = new ArrayList<>(categoryDAO.getParentCategories()); //get only parents
             List<LedgerCategory> allCategories = new ArrayList<>();
@@ -262,7 +262,7 @@ public class LedgerController {
         if(ledger == null){
             return false;
         }
-        Boolean deleted = TransactionManager.getInstance().execute(() -> {
+        Boolean deleted = DbTransactionManager.getInstance().execute(() -> {
             List<Transaction> transactionsToDelete = transactionDAO.getByLedgerId(ledger.getId());
             for (Transaction tx : transactionsToDelete) {
                 Account to = null;

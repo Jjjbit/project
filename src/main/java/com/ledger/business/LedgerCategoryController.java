@@ -5,7 +5,7 @@ import com.ledger.orm.AccountDAO;
 import com.ledger.orm.BudgetDAO;
 import com.ledger.orm.LedgerCategoryDAO;
 import com.ledger.orm.TransactionDAO;
-import com.ledger.service.TransactionManager;
+import com.ledger.transaction.DbTransactionManager;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -52,7 +52,7 @@ public class LedgerCategoryController {
 //            budgetDAO.insert(budget);
 //        }
 //        return category;
-        return TransactionManager.getInstance().execute(() -> {
+        return DbTransactionManager.getInstance().execute(() -> {
             if (!ledgerCategoryDAO.insert(category)) throw new Exception("Failed to insert category");
             //create budget for ledgerCategory
             for (Period period : Period.values()) {
@@ -81,7 +81,7 @@ public class LedgerCategoryController {
         LedgerCategory category = new LedgerCategory(name, parentCategory.getType(), ledger);
         category.setParent(parentCategory);
 
-        return  TransactionManager.getInstance().execute(() -> {
+        return  DbTransactionManager.getInstance().execute(() -> {
             if (!ledgerCategoryDAO.insert(category)) throw new Exception("Failed to insert sub-category");
             //create budget for ledgerCategory
             for (Period period : Period.values()) {
@@ -161,7 +161,7 @@ public class LedgerCategoryController {
             return false;
         }
         Ledger ledger = category.getLedger();
-        Boolean deleted = TransactionManager.getInstance().execute(() -> {
+        Boolean deleted = DbTransactionManager.getInstance().execute(() -> {
             List<Transaction> transactionsToDelete = transactionDAO.getByLedgerId(ledger.getId());
             for (Transaction tx : transactionsToDelete) {
                 Account to = null;

@@ -3,7 +3,7 @@ package com.ledger.business;
 import com.ledger.domain.*;
 import com.ledger.orm.AccountDAO;
 import com.ledger.orm.TransactionDAO;
-import com.ledger.service.TransactionManager;
+import com.ledger.transaction.DbTransactionManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -93,7 +93,7 @@ public class TransactionController {
         Income incomeTransaction = new Income(date != null ? date : LocalDate.now(), amount, note, toAccount,
                 ledger, category);
         toAccount.credit(amount);
-        return TransactionManager.getInstance().execute(() -> {
+        return DbTransactionManager.getInstance().execute(() -> {
             if (!transactionDAO.insert(incomeTransaction)) throw new Exception("Failed to insert income transaction");
             if(!accountDAO.update(toAccount)) throw new Exception("Account balance update failed");
             return incomeTransaction;
@@ -157,7 +157,7 @@ public class TransactionController {
         }
         Expense expenseTransaction = new Expense(date != null ? date : LocalDate.now(), amount, note, fromAccount, ledger, category);
         fromAccount.debit(amount);
-        return TransactionManager.getInstance().execute(() -> {
+        return DbTransactionManager.getInstance().execute(() -> {
             if(!transactionDAO.insert(expenseTransaction)) throw new Exception("Failed to insert expense transaction");
             if(!accountDAO.update(fromAccount)) throw new Exception("Account balance update failed");
             return expenseTransaction;
@@ -246,7 +246,7 @@ public class TransactionController {
         }
         Transfer transferTransaction = new Transfer(date != null ? date : LocalDate.now(), note, fromAccount, toAccount, finalAmount, ledger);
 
-        return TransactionManager.getInstance().execute(() -> {
+        return DbTransactionManager.getInstance().execute(() -> {
             if(!transactionDAO.insert(transferTransaction)) throw new Exception("Failed to insert transfer transaction");
 
             if (fromAccount != null) {
@@ -263,7 +263,7 @@ public class TransactionController {
 
     public boolean deleteTransaction(Transaction tx) {
         if (tx == null) return false;
-        Boolean deleted = TransactionManager.getInstance().execute(() -> {
+        Boolean deleted = DbTransactionManager.getInstance().execute(() -> {
             if (!transactionDAO.delete(tx)) throw new Exception("Delete transaction failed");
 
             Account toAccount = null;
@@ -392,7 +392,7 @@ public class TransactionController {
             income.setCategory(category);
         }
 
-        Boolean updated = TransactionManager.getInstance().execute(() -> {
+        Boolean updated = DbTransactionManager.getInstance().execute(() -> {
             oldToAccount.debit(oldAmount);
             if (!accountDAO.update(oldToAccount)) throw new Exception("Failed to rollback old account");
             toAccount.credit(amount);
@@ -480,7 +480,7 @@ public class TransactionController {
             }
             expense.setCategory(category);
         }
-        Boolean updated = TransactionManager.getInstance().execute(() -> {
+        Boolean updated = DbTransactionManager.getInstance().execute(() -> {
             oldFromAccount.credit(oldAmount);
             if (!accountDAO.update(oldFromAccount)) throw new Exception("Failed to rollback old account");
             fromAccount.debit(amount);
@@ -646,7 +646,7 @@ public class TransactionController {
         if (ledger.getId() != oldLedger.getId()) {
             transfer.setLedger(ledger);
         } //change ledger
-        Boolean updated = TransactionManager.getInstance().execute(() -> {
+        Boolean updated = DbTransactionManager.getInstance().execute(() -> {
             //rollback old accounts
             if (oldFromAccount != null) {
                 oldFromAccount.credit(oldAmount);

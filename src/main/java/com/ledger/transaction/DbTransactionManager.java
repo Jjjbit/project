@@ -1,22 +1,22 @@
-package com.ledger.service;
+package com.ledger.transaction;
 
 import com.ledger.orm.ConnectionManager;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 
-public final class TransactionManager {
-    private static TransactionManager instance;
-    private TransactionManager() {
+public final class DbTransactionManager {
+    private static DbTransactionManager instance;
+    private DbTransactionManager() {
     }
-    public static TransactionManager getInstance() {
+    public static DbTransactionManager getInstance() {
         if (instance == null) {
-            instance = new TransactionManager();
+            instance = new DbTransactionManager();
         }
         return instance;
     }
 
-    public <T> T execute(TransactionAction<T> action) {
+    public <T> T execute(DbTransactionAction<T> action) {
         Connection connection = ConnectionManager.getInstance().getConnection();
         try {
             connection.setAutoCommit(false);
@@ -31,7 +31,7 @@ public final class TransactionManager {
             } catch (SQLException rollbackEx) {
                 System.err.println("Critical Error: Rollback failed! " + rollbackEx.getMessage());
             }
-            System.err.println("Transaction rolled back due to: " + e.getMessage());
+            System.err.println("Transaction Database rolled back due to: " + e.getMessage());
             return null;
         } finally {
             try {
