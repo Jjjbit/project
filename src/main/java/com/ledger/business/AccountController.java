@@ -25,7 +25,7 @@ public class AccountController {
     }
 
     public Account createAccount(String name, BigDecimal balance, boolean includedInAsset, boolean selectable) {
-        if(!UserSession.isLoggedIn()){
+        if(!UserSession.getInstance().isLoggedIn()){
             return null;
         }
         if (name == null || name.isEmpty() || name.length() > 50) {
@@ -34,7 +34,7 @@ public class AccountController {
         if (balance == null || balance.compareTo(BigDecimal.ZERO) < 0) {
             balance = BigDecimal.ZERO;
         }
-        User owner = UserSession.getCurrentUser();
+        User owner = UserSession.getInstance().getCurrentUser();
         Account account = new Account(name, balance, owner, includedInAsset, selectable);
         if(accountDAO.insert(account)){
             return account;
