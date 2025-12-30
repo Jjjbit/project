@@ -1,11 +1,13 @@
 package com.ledger.business;
 
 import com.ledger.domain.*;
-import com.ledger.orm.*;
+import com.ledger.orm.AccountDAO;
+import com.ledger.orm.BudgetDAO;
+import com.ledger.orm.LedgerCategoryDAO;
+import com.ledger.orm.TransactionDAO;
+import com.ledger.service.TransactionManager;
 
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 public class LedgerCategoryController {
@@ -43,31 +45,22 @@ public class LedgerCategoryController {
             return null;
         }
         LedgerCategory category = new LedgerCategory(name, type, ledger);
-        Connection connection = ConnectionManager.getInstance().getConnection();
-        try {
-            connection.setAutoCommit(false);
-            if (!ledgerCategoryDAO.insert(category)) return null;
+//        if (!ledgerCategoryDAO.insert(category)) return null;
+//        //create budget for ledgerCategory
+//        for (Period period : Period.values()) {
+//            Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
+//            budgetDAO.insert(budget);
+//        }
+//        return category;
+        return TransactionManager.getInstance().execute(() -> {
+            if (!ledgerCategoryDAO.insert(category)) throw new Exception("Failed to insert category");
             //create budget for ledgerCategory
             for (Period period : Period.values()) {
                 Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
-                if (!budgetDAO.insert(budget)) throw new SQLException("Failed to create budget for category");
+                if(!budgetDAO.insert(budget)) throw new Exception("Failed to insert budget for category");
             }
-            connection.commit();
             return category;
-        }catch (SQLException e){
-            try {
-                connection.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Error during rollback: " + ex.getMessage());
-            }
-            return null;
-        }finally {
-            try {
-                connection.setAutoCommit(true);
-            } catch (SQLException e) {
-                System.err.println("Error resetting auto-commit: " + e.getMessage());
-            }
-        }
+        });
     }
 
     public LedgerCategory createSubCategory(String name, LedgerCategory parentCategory) {
@@ -87,31 +80,23 @@ public class LedgerCategoryController {
         }
         LedgerCategory category = new LedgerCategory(name, parentCategory.getType(), ledger);
         category.setParent(parentCategory);
-        Connection connection = ConnectionManager.getInstance().getConnection();
-        try {
-            connection.setAutoCommit(false);
-            if (!ledgerCategoryDAO.insert(category)) return null;
+
+        return  TransactionManager.getInstance().execute(() -> {
+            if (!ledgerCategoryDAO.insert(category)) throw new Exception("Failed to insert sub-category");
             //create budget for ledgerCategory
             for (Period period : Period.values()) {
                 Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
-                if (!budgetDAO.insert(budget)) throw new SQLException("Failed to create budget for sub-category");
+                if(!budgetDAO.insert(budget)) throw new Exception("Failed to insert budget for sub-category");
             }
-            connection.commit();
             return category;
-        }catch (SQLException e){
-            try {
-                connection.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Error during rollback: " + ex.getMessage());
-            }
-            return null;
-        }finally {
-            try {
-                connection.setAutoCommit(true);
-            } catch (SQLException e) {
-                System.err.println("Error resetting auto-commit: " + e.getMessage());
-            }
-        }
+        });
+//        if (!ledgerCategoryDAO.insert(category)) return null;
+//        //create budget for ledgerCategory
+//        for (Period period : Period.values()) {
+//            Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
+//            budgetDAO.insert(budget);
+//        }
+//        return category;
     }
 
     public boolean promoteSubCategory(LedgerCategory subCategory) {
@@ -176,72 +161,46 @@ public class LedgerCategoryController {
             return false;
         }
         Ledger ledger = category.getLedger();
-        Connection connection = ConnectionManager.getInstance().getConnection();
-        try {
-            connection.setAutoCommit(false);
+        Boolean deleted = TransactionManager.getInstance().execute(() -> {
             List<Transaction> transactionsToDelete = transactionDAO.getByLedgerId(ledger.getId());
             for (Transaction tx : transactionsToDelete) {
                 Account to = null;
                 Account from = null;
                 if(tx.getToAccount() != null){
-                     to = accountDAO.getAccountById(tx.getToAccount().getId());
+                    to = accountDAO.getAccountById(tx.getToAccount().getId());
                 }
                 if(tx.getFromAccount() != null) {
                     from = accountDAO.getAccountById(tx.getFromAccount().getId());
                 }
-
                 switch (tx.getType()) {
                     case INCOME:
                         if (to != null) {
                             to.debit(tx.getAmount());
-                            if (!accountDAO.update(to)) {
-                                throw new SQLException("Failed to update account during ledger deletion");
-                            }
+                            if (!accountDAO.update(to)) throw new Exception("Failed to update account during ledger deletion");
                         }
                         break;
                     case EXPENSE:
                         if (from != null) {
                             from.credit(tx.getAmount());
-                            if (!accountDAO.update(from)) {
-                                throw new SQLException("Failed to update account during ledger deletion");
-                            }
+                            if (!accountDAO.update(from)) throw new Exception("Failed to update account during ledger deletion");
                         }
                         break;
                     case TRANSFER:
                         if (from != null) {
                             from.credit(tx.getAmount());
-                            if (!accountDAO.update(from)) {
-                                throw new SQLException("Failed to update account during ledger deletion");
-                            }
+                            if (!accountDAO.update(from)) throw new Exception("Failed to update account during ledger deletion");
                         }
                         if (to != null) {
                             to.debit(tx.getAmount());
-                            if (!accountDAO.update(to)) {
-                                throw new SQLException("Failed to update account during ledger deletion");
-                            }
+                            if(!accountDAO.update(to)) throw new Exception("Failed to update account during ledger deletion");
+                            break;
                         }
-                        break;
                 }
             }
-            if(!ledgerCategoryDAO.delete(category)){
-                throw new SQLException("Failed to delete ledger category");
-            }
-            connection.commit();
+            if(!ledgerCategoryDAO.delete(category)) throw new Exception("Failed to delete category");
             return true;
-        }catch (SQLException e){
-            try {
-                connection.rollback();
-            } catch (SQLException ex) {
-                System.err.println("Error during rollback: " + ex.getMessage());
-            }
-            return false;
-        }finally {
-            try {
-                connection.setAutoCommit(true);
-            } catch (SQLException e) {
-                System.err.println("Error resetting auto-commit: " + e.getMessage());
-            }
-        }
+        });
+        return deleted != null && deleted;
     }
 
     public boolean changeParent (LedgerCategory category, LedgerCategory newParent) {

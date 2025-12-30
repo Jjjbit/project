@@ -36,8 +36,7 @@ public class AccountController {
         }
         User owner = UserSession.getCurrentUser();
         Account account = new Account(name, balance, owner, includedInAsset, selectable);
-        boolean result = accountDAO.insert(account);
-        if(result){
+        if(accountDAO.insert(account)){
             return account;
         } else {
             return null;
