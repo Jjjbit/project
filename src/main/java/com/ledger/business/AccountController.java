@@ -2,7 +2,6 @@ package com.ledger.business;
 
 import com.ledger.domain.Account;
 import com.ledger.domain.Transaction;
-import com.ledger.domain.TransactionType;
 import com.ledger.domain.User;
 import com.ledger.orm.AccountDAO;
 import com.ledger.orm.TransactionDAO;
@@ -49,16 +48,12 @@ public class AccountController {
             for (Transaction tx : linkedTransactions) {
                 Account fromAccount = tx.getFromAccount();
                 Account toAccount = tx.getToAccount();
-                if (tx.getType() == TransactionType.TRANSFER) {
                     if(fromAccount == null && toAccount.getId() == account.getId()){
                         if(!transactionDAO.delete(tx)) throw new Exception("Failed to delete linked transaction");
                     }
                     if(toAccount == null && fromAccount.getId() == account.getId()){
                         if(!transactionDAO.delete(tx)) throw new Exception("Failed to delete linked transaction");
                     }
-                } else {
-                    if (!transactionDAO.delete(tx)) throw new Exception("Failed to delete linked transaction");
-                }
             }
             if(!accountDAO.delete(account)) throw new Exception("Failed to delete account");
             return true;
@@ -70,13 +65,7 @@ public class AccountController {
         if(newName == null || newBalance == null) return false;
         if(newName.isEmpty() || newName.length() > 50) return false;
         account.setName(newName);
-
-        if(newBalance.compareTo(BigDecimal.ZERO) < 0){
-            account.setBalance(BigDecimal.ZERO);
-        }else{
-            account.setBalance(newBalance);
-        }
-
+        account.setBalance(newBalance);
         account.setIncludedInAsset(newIncludedInAsset);
         account.setSelectable(newSelectable);
         return accountDAO.update(account);
