@@ -52,7 +52,7 @@ public class AccountControllerTest {
         BudgetDAO budgetDAO = new BudgetDAO(connection);
 
         UserController userController = new UserController(userDAO);
-        accountController = new AccountController(accountDAO);
+        accountController = new AccountController(accountDAO, transactionDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
 
@@ -154,8 +154,12 @@ public class AccountControllerTest {
         assertNotNull(income);
         Expense expense = transactionController.createExpense(testLedger, account, food, null, LocalDate.now(), BigDecimal.valueOf(200));
         assertNotNull(expense);
-        Transfer transfer = transactionController.createTransfer(testLedger, account, toAccount, null, LocalDate.now(), BigDecimal.valueOf(100));
-        assertNotNull(transfer);
+        Transfer tx1 = transactionController.createTransfer(testLedger, account, toAccount, null, LocalDate.now(), BigDecimal.valueOf(100));
+        assertNotNull(tx1);
+        Transfer tx2 = transactionController.createTransfer(testLedger, null, account, null, LocalDate.now(), BigDecimal.valueOf(50));
+        assertNotNull(tx2);
+        Transfer tx3 = transactionController.createTransfer(testLedger, account, null, null, LocalDate.now(), BigDecimal.valueOf(25));
+        assertNotNull(tx3);
 
         assertTrue(accountController.deleteAccount(account));
         assertNull(accountDAO.getAccountById(account.getId()));

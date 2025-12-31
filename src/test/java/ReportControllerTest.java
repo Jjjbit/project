@@ -50,7 +50,7 @@ public class ReportControllerTest {
         budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
         UserController userController = new UserController(userDAO);
-        AccountController accountController = new AccountController(accountDAO);
+        AccountController accountController = new AccountController(accountDAO, transactionDAO);
         reportController = new ReportController(transactionDAO, accountDAO, budgetDAO, ledgerCategoryDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO,
                 accountDAO, budgetDAO);
