@@ -2,11 +2,11 @@ package com.ledger.session;
 
 import com.ledger.domain.User;
 
-public final class UserSession { //prevent extension
+public final class UserSession {
     private User currentUser;
     private static UserSession instance;
 
-    private UserSession() {} // Prevent instantiation
+    private UserSession() {}
     public static UserSession getInstance() {
         if (instance == null) {
             instance = new UserSession();

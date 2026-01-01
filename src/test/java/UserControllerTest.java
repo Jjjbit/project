@@ -71,9 +71,14 @@ public class UserControllerTest {
     }
 
     @Test
-    public void testRegister_DuplicateUsername() {
+    public void testRegister_Failure() {
         assertTrue(userController.register("duplicate user", "password1"));
         assertFalse(userController.register("duplicate user", "password2"));
+        assertFalse(userController.register("", "password")); //empty username
+        assertFalse(userController.register("a".repeat(51), "password")); //too long username
+        assertFalse(userController.register("validuser", "")); //empty password
+        assertFalse(userController.register("validuser", "short")); //too short password
+        assertFalse(userController.register("validuser", "a".repeat(51))); //too long password
     }
 
     @Test
@@ -83,20 +88,11 @@ public class UserControllerTest {
     }
 
     @Test
-    public void testLogin_Failure_WrongPassword() {
+    public void testLogin_Failure() {
         userController.register("login user", "loginpass"); //insert user to db
-        assertNull(userController.login("login user", "wrongpass"));
-    }
-
-    @Test
-    public void testLogin_Failure_WrongUsername()  {
-        userController.register("login user", "loginpass"); //insert user to db
-        assertNull(userController.login("wrong user", "loginpass"));
-    }
-
-    @Test
-    public void testLogin_Failure_NonExistentUser() {
-        assertNull(userController.login("nonexistentuser", "somepass"));
+        assertNull(userController.login("login user", "wrongpass")); //wrong password
+        assertNull(userController.login("wrong user", "loginpass")); //wrong username
+        assertNull(userController.login("nonexistentuser", "somepass")); //non existent user
     }
 
     @Test
@@ -110,10 +106,34 @@ public class UserControllerTest {
     }
 
     @Test
+    public void testUpdateUsername_Failure() {
+        userController.register("existinguser", "password1");
+        userController.register("oldusername", "password2");
+        userController.login("oldusername", "password2");
+        assertFalse(userController.updateUsername("existinguser")); //username already taken
+        assertFalse(userController.updateUsername("")); //empty username
+        assertFalse(userController.updateUsername("a".repeat(51))); //too long username
+        userController.logout();
+        assertFalse(userController.updateUsername("newusername")); //not logged in
+    }
+
+    @Test
     public void testUpdatePassword_Success() {
         userController.register("user2", "oldpassword");
         userController.login("user2", "oldpassword");
         assertTrue( userController.updatePassword("newpassword"));
         assertNotNull( userDAO.getUserByUsername("user2"));
     }
+
+    @Test
+    public void testUpdatePassword_Failure() {
+        userController.register("user3", "oldpassword");
+        userController.login("user3", "oldpassword");
+        assertFalse( userController.updatePassword("")); //empty password
+        assertFalse( userController.updatePassword("short")); //too short password
+        assertFalse( userController.updatePassword("a".repeat(51))); //too long password
+        userController.logout();
+        assertFalse( userController.updatePassword("newpassword")); //not logged in
+    }
+
 }
