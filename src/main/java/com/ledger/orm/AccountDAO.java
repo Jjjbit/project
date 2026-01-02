@@ -15,8 +15,7 @@ public class AccountDAO {
 
     @SuppressWarnings("SqlResolve")
     public boolean insert(Account account) {
-        String sql = "INSERT INTO accounts (name, balance, user_id, included_in_asset, selectable) " +
-                "VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO accounts (name, balance, user_id, included_in_asset, selectable) VALUES (?, ?, ?, ?, ?)";
         try(PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, account.getName());
             stmt.setBigDecimal(2, account.getBalance());
@@ -59,53 +58,6 @@ public class AccountDAO {
 
     private Account mapResultSetToAccount(ResultSet rs) throws SQLException {
         Account account= new Account();
-//        switch (dtype) {
-//            case "BasicAccount":
-//                account = new BasicAccount();
-//                break;
-//            case "CreditAccount":
-//                CreditAccount creditAccount = new CreditAccount();
-//                creditAccount.setCreditLimit(rs.getBigDecimal("credit_limit"));
-//                creditAccount.setCurrentDebt(rs.getBigDecimal("current_debt"));
-//                creditAccount.setBillDay(rs.getInt("bill_date"));
-//                creditAccount.setDueDay(rs.getInt("due_date"));
-//                account = creditAccount;
-//                break;
-//            case "LoanAccount":
-//                LoanAccount loanAccount = new LoanAccount();
-//                loanAccount.setTotalPeriods(rs.getInt("total_periods"));
-//                loanAccount.setRepaidPeriods(rs.getInt("repaid_periods"));
-//                loanAccount.setAnnualInterestRate(rs.getBigDecimal("annual_interest_rate"));
-//                loanAccount.setLoanAmount(rs.getBigDecimal("loan_amount"));
-//                loanAccount.setRepaymentDate(rs.getDate("repayment_date") != null ?
-//                        rs.getDate("repayment_date").toLocalDate() : null);
-//                loanAccount.setRepaymentType(rs.getString("repayment_type") != null ?
-//                        LoanAccount.RepaymentType.valueOf(rs.getString("repayment_type")) : null);
-//                loanAccount.setRemainingAmount(rs.getBigDecimal("loan_remaining_amount"));
-//                loanAccount.setEnded(rs.getBoolean("is_ended"));
-//                account = loanAccount;
-//                break;
-//            case "BorrowingAccount":
-//                BorrowingAccount borrowingAccount = new BorrowingAccount();
-//                borrowingAccount.setIsEnded(rs.getBoolean("borrowing_ended"));
-//                borrowingAccount.setBorrowingDate(rs.getDate("borrowing_date") != null ?
-//                        rs.getDate("borrowing_date").toLocalDate() : null);
-//                borrowingAccount.setBorrowingAmount(rs.getBigDecimal("borrowing_amount"));
-//                borrowingAccount.setRemainingAmount(rs.getBigDecimal("borrowing_remaining_amount"));
-//                account = borrowingAccount;
-//                break;
-//            case "LendingAccount":
-//                LendingAccount lendingAccount = new LendingAccount();
-//                lendingAccount.setIsEnded(rs.getBoolean("lending_ended"));
-//                lendingAccount.setDate(rs.getDate("lending_date") != null ?
-//                        rs.getDate("lending_date").toLocalDate() : null);
-//                account = lendingAccount;
-//                break;
-//            default:
-//                throw new SQLException("Unknown account type: " + dtype);
-//        }
-
-        // Common fields
         account.setId(rs.getLong("id"));
         account.setName(rs.getString("name"));
         account.setBalance(rs.getBigDecimal("balance"));
@@ -138,7 +90,6 @@ public class AccountDAO {
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, account.getName());
             stmt.setBigDecimal(2, account.getBalance());
-            //stmt.setString(3, account.getNotes());
             stmt.setBoolean(3, account.getIncludedInAsset());
             stmt.setBoolean(4, account.getSelectable());
             stmt.setLong(5, account.getId());

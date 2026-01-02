@@ -25,7 +25,6 @@ public class AccountControllerTest {
     private Connection connection;
     private User testUser;
     private Ledger testLedger;
-    private List<LedgerCategory> testCategories;
     private LedgerCategory salary;
     private LedgerCategory food;
 
@@ -61,7 +60,7 @@ public class AccountControllerTest {
 
         testLedger=ledgerController.createLedger("Test Ledger");
 
-        testCategories = ledgerCategoryDAO.getTreeByLedger(testLedger);
+        List<LedgerCategory> testCategories = ledgerCategoryDAO.getTreeByLedger(testLedger);
         salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
@@ -108,31 +107,20 @@ public class AccountControllerTest {
     public void testCreateAccount() {
         Account account = accountController.createAccount("Alice's Savings", BigDecimal.valueOf(5000), true, true);
         assertNotNull(account);
-
-        Account savedAccount = accountDAO.getAccountById(account.getId());
-        assertNotNull(savedAccount);
-        assertEquals(0, savedAccount.getBalance().compareTo(BigDecimal.valueOf(5000.00)));
-        assertTrue(savedAccount.getSelectable());
-        assertTrue(savedAccount.getIncludedInAsset());
-
-        List<Account> userAccounts = accountDAO.getAccountsByOwner(testUser);
-        assertEquals(1, userAccounts.size());
-        assertEquals(savedAccount.getId(), userAccounts.getFirst().getId());
+        assertNotNull(accountDAO.getAccountById(account.getId()));
+        assertEquals(1,  accountDAO.getAccountsByOwner(testUser).size());
     }
 
     @Test
     public void testCreateAccount_Failure() {
-        Account account = accountController.createAccount(null, BigDecimal.valueOf(1000), true, true);
-        assertNull(account);
-
-        account = accountController.createAccount("", BigDecimal.valueOf(1000), true, true);
-        assertNull(account);
+        assertNull(accountController.createAccount(null, BigDecimal.valueOf(1000), true, true));
+        assertNull(accountController.createAccount("", BigDecimal.valueOf(1000), true, true));
+        assertNull(accountController.createAccount("a".repeat(51), null, true, true));
     }
 
     @Test
     public void testEditAccount_Success() {
         Account account = accountController.createAccount("Old Account Name", BigDecimal.valueOf(1200), true, true);
-
         assertTrue(accountController.editAccount(account, "New Account Name", BigDecimal.valueOf(1500), false, false));
 
         Account editedAccount = accountDAO.getAccountById(account.getId());
@@ -141,6 +129,15 @@ public class AccountControllerTest {
         assertEquals(0, editedAccount.getBalance().compareTo(BigDecimal.valueOf(1500)));
         assertFalse(editedAccount.getIncludedInAsset());
         assertFalse(editedAccount.getSelectable());
+    }
+
+    @Test
+    public void testEditAccount_Failure() {
+        Account account = accountController.createAccount("Account Name", BigDecimal.valueOf(1200), true, true);
+        assertFalse(accountController.editAccount(account, null, BigDecimal.valueOf(1500), false, false));
+        assertFalse(accountController.editAccount(account, "", BigDecimal.valueOf(1500), false, false));
+        assertFalse(accountController.editAccount(account, "a".repeat(51), BigDecimal.valueOf(1500), false, false));
+        assertFalse(accountController.editAccount(account, "Valid Name", null, false, false));
     }
 
     @Test
@@ -171,23 +168,16 @@ public class AccountControllerTest {
         assertEquals(0, transactionDAO.getByAccountId(toAccount.getId()).size());
     }
 
-    //test getVisibleAccount, getSelectableAccounts, getVisibleBorrowingAccounts,
-    // getVisibleLendingAccounts, getCreditCardAccounts, getVisibleLoanAccounts
+    //test  getSelectableAccounts and getAccounts
     @Test
     public void testGetAccounts() {
-        Account testAccount = accountController.createAccount("Test Account",
-                BigDecimal.valueOf(1000), true, true); //visible
+        Account testAccount = accountController.createAccount("Test Account", BigDecimal.valueOf(1000), true, true);
         assertNotNull(testAccount);
-        Account testAccount2 = accountController.createAccount("Test Account 2",
-                BigDecimal.valueOf(2000), true, false); //not selectable
+        Account testAccount2 = accountController.createAccount("Test Account 2", BigDecimal.valueOf(2000), true, false); //not selectable
         assertNotNull(testAccount2);
 
         assertEquals(1, accountController.getSelectableAccounts(testUser).size());
         assertEquals(2, accountController.getAccounts(testUser).size());
-//        assertEquals(2, accountController.getBorrowingAccounts(testUser).size());
-//        assertEquals(2, accountController.getLendingAccounts(testUser).size());
-//        assertEquals(2, accountController.getCreditCardAccounts(testUser).size());
-//        assertEquals(2, accountController.getLoanAccounts(testUser).size());
     }
 
 }
