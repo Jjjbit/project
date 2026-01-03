@@ -10,11 +10,9 @@ import java.util.List;
 
 public class LedgerCategoryDAO {
     private final Connection connection;
-    //private final LedgerDAO ledgerDAO;
 
     public LedgerCategoryDAO(Connection connection) {
         this.connection = connection;
-        //this.ledgerDAO = ledgerDAO;
     }
 
     @SuppressWarnings("SqlResolve")
@@ -105,7 +103,6 @@ public class LedgerCategoryDAO {
                     category.setType(CategoryType.valueOf(rs.getString("type")));
                     category.setParent(null);
                     category.setLedger(ledger);
-                    //category.setLedger(ledgerDAO.getById(rs.getLong("ledger_id")));
                     categories.add(category);
                 }
             }
@@ -128,7 +125,6 @@ public class LedgerCategoryDAO {
                     category.setName(rs.getString("name"));
                     category.setType(CategoryType.valueOf(rs.getString("type")));
                     category.setLedger(ledger);
-                    //category.setLedger( ledgerDAO.getById(rs.getLong("ledger_id")));
                     categories.add(category);
                 }
             }

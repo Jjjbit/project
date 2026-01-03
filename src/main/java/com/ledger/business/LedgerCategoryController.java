@@ -31,27 +31,12 @@ public class LedgerCategoryController {
     }
 
     public LedgerCategory createCategory(String name, Ledger ledger, CategoryType type) {
-        if(ledger == null){
-            return null;
-        }
-        if(name == null || name.isEmpty() || name.length() > 50) {
-            return null;
-        }
-        if(type == null){
-            return null;
-        }
+        if(ledger == null) return null;
+        if(name == null || name.isEmpty() || name.length() > 50) return null;
+        if(type == null) return null;
         LedgerCategory existingCategory = ledgerCategoryDAO.getByNameAndLedger(name, ledger);
-        if(existingCategory!= null && existingCategory.getType() == type) {
-            return null;
-        }
+        if(existingCategory!= null && existingCategory.getType() == type) return null;
         LedgerCategory category = new LedgerCategory(name, type, ledger);
-//        if (!ledgerCategoryDAO.insert(category)) return null;
-//        //create budget for ledgerCategory
-//        for (Period period : Period.values()) {
-//            Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
-//            budgetDAO.insert(budget);
-//        }
-//        return category;
         return DbTransactionManager.getInstance().execute(() -> {
             if (!ledgerCategoryDAO.insert(category)) throw new Exception("Failed to insert category");
             //create budget for ledgerCategory
@@ -64,23 +49,14 @@ public class LedgerCategoryController {
     }
 
     public LedgerCategory createSubCategory(String name, LedgerCategory parentCategory) {
-        if(parentCategory == null){
-            return null;
-        }
-        if(parentCategory.getParent()!=null){
-            return null;
-        }
-        if(name == null || name.isEmpty() || name.length() > 50) {
-            return null;
-        }
+        if(parentCategory == null) return null;
+        if(parentCategory.getParent() != null) return null;
+        if(name == null || name.isEmpty() || name.length() > 50) return null;
         Ledger ledger= parentCategory.getLedger();
         LedgerCategory existingCategory = ledgerCategoryDAO.getByNameAndLedger(name, ledger);
-        if (existingCategory != null && existingCategory.getType() == parentCategory.getType()) {
-            return null;
-        }
+        if (existingCategory != null && existingCategory.getType() == parentCategory.getType()) return null;
         LedgerCategory category = new LedgerCategory(name, parentCategory.getType(), ledger);
         category.setParent(parentCategory);
-
         return  DbTransactionManager.getInstance().execute(() -> {
             if (!ledgerCategoryDAO.insert(category)) throw new Exception("Failed to insert sub-category");
             //create budget for ledgerCategory
@@ -90,13 +66,6 @@ public class LedgerCategoryController {
             }
             return category;
         });
-//        if (!ledgerCategoryDAO.insert(category)) return null;
-//        //create budget for ledgerCategory
-//        for (Period period : Period.values()) {
-//            Budget budget = new Budget(BigDecimal.ZERO, period, category, ledger);
-//            budgetDAO.insert(budget);
-//        }
-//        return category;
     }
 
     public boolean promoteSubCategory(LedgerCategory subCategory) {
@@ -111,27 +80,13 @@ public class LedgerCategoryController {
     }
 
     public boolean demoteCategory(LedgerCategory category, LedgerCategory parent) {
-        if (category == null) {
-            return false;
-        }
-        if (parent == null) {
-            return false;
-        }
-        if (parent.getParent() != null) {
-            return false;
-        }
-        if (category.getId() == parent.getId()) {
-            return false;
-        }
-        if (category.getParent() != null) {
-            return false;
-        }
-        if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId(), category.getLedger()).isEmpty()){
-            return false;
-        }
-        if (category.getType() != parent.getType()) {
-            return false;
-        }
+        if (category == null) return false;
+        if (parent == null) return false;
+        if (parent.getParent() != null) return false;
+        if (category.getId() == parent.getId()) return false;
+        if (category.getParent() != null) return false;
+        if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId(), category.getLedger()).isEmpty()) return false;
+        if (category.getType() != parent.getType()) return false;
         category.setParent(parent);
         return ledgerCategoryDAO.update(category); //update parent_id in database
     }
@@ -154,24 +109,16 @@ public class LedgerCategoryController {
     }
 
     public boolean deleteCategory(LedgerCategory category) {
-        if(category == null){
-            return false;
-        }
-        if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId(), category.getLedger()).isEmpty()){
-            return false;
-        }
+        if(category == null) return false;
+        if(!ledgerCategoryDAO.getCategoriesByParentId(category.getId(), category.getLedger()).isEmpty()) return false;
         Ledger ledger = category.getLedger();
         Boolean deleted = DbTransactionManager.getInstance().execute(() -> {
             List<Transaction> transactionsToDelete = transactionDAO.getByLedgerId(ledger.getId());
             for (Transaction tx : transactionsToDelete) {
                 Account to = null;
                 Account from = null;
-                if(tx.getToAccount() != null){
-                    to = accountDAO.getAccountById(tx.getToAccount().getId());
-                }
-                if(tx.getFromAccount() != null) {
-                    from = accountDAO.getAccountById(tx.getFromAccount().getId());
-                }
+                if(tx.getToAccount() != null) to = accountDAO.getAccountById(tx.getToAccount().getId());
+                if(tx.getFromAccount() != null) from = accountDAO.getAccountById(tx.getFromAccount().getId());
                 switch (tx.getType()) {
                     case INCOME:
                         if (to != null) {
@@ -204,23 +151,12 @@ public class LedgerCategoryController {
     }
 
     public boolean changeParent (LedgerCategory category, LedgerCategory newParent) {
-        if (category == null) {
-            return false;
-        }
-        if (category.getParent() == null) {
-            return false;
-        }
-
+        if (category == null) return false;
+        if (category.getParent() == null) return false;
         if (newParent != null) {
-            if (newParent.getParent() != null) {
-                return false;
-            }
-            if (category.getId() == newParent.getId()) {
-                return false;
-            }
-            if (category.getType() != newParent.getType()) {
-                return false;
-            }
+            if (newParent.getParent() != null) return false;
+            if (category.getId() == newParent.getId()) return false;
+            if (category.getType() != newParent.getType()) return false;
         } else {
             return false; //cannot set parent to null with this method
         }

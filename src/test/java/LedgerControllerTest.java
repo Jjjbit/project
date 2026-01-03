@@ -141,8 +141,7 @@ public class LedgerControllerTest {
 
     @Test
     public void testCreateLedger_Failure() {
-        assertNotNull(ledgerController.createLedger("Duplicate Ledger")); //first creation should succeed
-        assertNull(ledgerController.createLedger("Duplicate Ledger")); //duplicate name should fail
+        assertNull(ledgerController.createLedger("Test Ledger")); //duplicate name should fail
         assertNull(ledgerController.createLedger("")); //empty name should fail
         assertNull(ledgerController.createLedger(null)); //null name should fail
     }
@@ -157,11 +156,12 @@ public class LedgerControllerTest {
         //delete ledger
         assertTrue(ledgerController.deleteLedger(testLedger));
         assertNull(ledgerDAO.getById(testLedger.getId()));
+        //transactions should be deleted
         assertNull(transactionDAO.getById(tx1.getId()));
         assertNull(transactionDAO.getById(tx2.getId()));
         assertNull(transactionDAO.getById(tx3.getId()));
+        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size());
         assertEquals(0, ledgerCategoryDAO.getTreeByLedger(testLedger).size()); //all categories should be deleted
-        assertEquals(0, transactionDAO.getByAccountId(account.getId()).size()); //transactions should be deleted
 
         //verify balance of account
         Account updatedAccount = accountDAO.getAccountById(account.getId());
