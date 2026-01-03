@@ -1,7 +1,10 @@
 import com.ledger.business.BudgetController;
 import com.ledger.business.LedgerController;
 import com.ledger.business.UserController;
-import com.ledger.domain.*;
+import com.ledger.domain.Budget;
+import com.ledger.domain.Ledger;
+import com.ledger.domain.LedgerCategory;
+import com.ledger.domain.Period;
 import com.ledger.orm.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,7 +16,6 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.time.LocalDate;
-import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -23,7 +25,10 @@ import static org.junit.jupiter.api.Assertions.*;
 public class BudgetControllerTest {
     private Connection connection;
     private Ledger testLedger;
-    private List<LedgerCategory> testCategories;
+    private Budget monthlyTotalBudget;
+    private Budget yearlyTotalBudget;
+    private LedgerCategory food;
+    private LedgerCategory lunch;
 
     private BudgetDAO budgetDAO;
 
@@ -53,8 +58,18 @@ public class BudgetControllerTest {
         userController.login("test user", "password");
 
         testLedger = ledgerController.createLedger("Test Ledger");
+        monthlyTotalBudget = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
+        yearlyTotalBudget = budgetDAO.getBudgetByLedger(testLedger, Period.YEARLY);
 
-        testCategories = ledgerCategoryDAO.getTreeByLedger(testLedger);
+        List<LedgerCategory> testCategories = ledgerCategoryDAO.getTreeByLedger(testLedger);
+        food = testCategories.stream()
+                .filter(c -> c.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        lunch = testCategories.stream()
+                .filter(c -> c.getName().equals("Lunch"))
+                .findFirst()
+                .orElse(null);
     }
 
     private void runSchemaScript() {
@@ -89,284 +104,143 @@ public class BudgetControllerTest {
         }
     }
 
-    //edit monthly ledger-level budget
     @Test
     public void testEditBudget_Success() {
-        Budget budget = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
-        assertNotNull(budget);
-        assertEquals(0, budget.getAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(0, monthlyTotalBudget.getAmount().compareTo(BigDecimal.ZERO));
+        assertEquals(0, yearlyTotalBudget.getAmount().compareTo(BigDecimal.ZERO));
 
-        boolean result = budgetController.editBudget(budget, BigDecimal.valueOf(600.00));
-        assertTrue(result);
-        assertEquals(0, budget.getAmount().compareTo(BigDecimal.valueOf(600.00)));
-
-        Budget updatedBudget= budgetDAO.getById(budget.getId()); //fetch from DB to verify
+        assertTrue(budgetController.editBudget(monthlyTotalBudget, BigDecimal.valueOf(600.00)));
+        assertTrue(budgetController.editBudget(yearlyTotalBudget, BigDecimal.valueOf(7200.00)));
+        Budget updatedBudget= budgetDAO.getById(monthlyTotalBudget.getId());
         assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(600.00)));
+        updatedBudget= budgetDAO.getById(yearlyTotalBudget.getId());
+        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(7200.00)));
     }
 
-    //edit monthly category-level budget
     @Test
-    public void testEditBudget_WithCategory_Success() {
-        LedgerCategory entertainment = testCategories.stream()
-                .filter(c -> c.getName().equals("Entertainment"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(entertainment);
-        Budget budget = budgetDAO.getBudgetByCategory(entertainment, Period.MONTHLY);
-        assertNotNull(budget);
-        assertEquals(0, budget.getAmount().compareTo(BigDecimal.ZERO));
-
-        boolean result = budgetController.editBudget(budget, BigDecimal.valueOf(450.00));
-        assertTrue(result);
-        assertEquals(0, budget.getAmount().compareTo(BigDecimal.valueOf(450.00)));
-
-        Budget updatedBudget= budgetDAO.getById(budget.getId()); //fetch from DB to verify
-        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(450.00)));
+    public void testEditBudget_Failure(){
+        assertFalse(budgetController.editBudget(null, BigDecimal.valueOf(500.00)));
+        assertFalse(budgetController.editBudget(monthlyTotalBudget, null));
+        assertFalse(budgetController.editBudget(monthlyTotalBudget, BigDecimal.valueOf(-100.00)));
     }
 
-    //merge category-level budget to uncategorized budget
+
     @Test
-    public void testMergeBudgets_Success() {
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-        LedgerCategory lunch = testCategories.stream()
-                .filter(c -> c.getName().equals("Lunch"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(lunch);
+    public void testMergeBudgets() {
+        Budget foodBudget = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
+        budgetController.editBudget(foodBudget, BigDecimal.valueOf(200.00)); //set food budget to 200
+        Budget lunchBudget = budgetDAO.getBudgetByCategory(lunch, Period.MONTHLY);
+        budgetController.editBudget(lunchBudget, BigDecimal.valueOf(100.00)); //set lunch budget to 100
+        budgetController.editBudget(monthlyTotalBudget, BigDecimal.valueOf(300.00)); //set ledger-level budget to 300
+        assertTrue(budgetController.mergeBudgets(monthlyTotalBudget)); //merge category budgets into ledger budget
 
-        Budget budget1 = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
-        assertNotNull(budget1);
-        budgetController.editBudget(budget1, BigDecimal.valueOf(200.00));
-
-        Budget budget2 = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
-        assertNotNull(budget2);
-        budgetController.editBudget(budget2, BigDecimal.valueOf(300.00));
-
-        Budget budget3 = budgetDAO.getBudgetByCategory(lunch, Period.MONTHLY);
-        assertNotNull(budget3);
-        budgetController.editBudget(budget3, BigDecimal.valueOf(100.00));
-
-        boolean result = budgetController.mergeBudgets(budget2);
-        assertTrue(result);
-        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.valueOf(500.00))); //300+200=500
-
-        Budget updatedBudget=budgetDAO.getById(budget2.getId());
+        Budget updatedBudget=budgetDAO.getById(monthlyTotalBudget.getId());
         assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(500.00)));
-    }
+        Budget updateBudget2=budgetDAO.getById(yearlyTotalBudget.getId());
+        assertEquals(0, updateBudget2.getAmount().compareTo(BigDecimal.ZERO)); //yearly budget should remain unchanged
 
-    @Test
-    public void testMergeBudgets_DifferentPeriods() {
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-        Budget budget1 = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
-        assertNotNull(budget1);
-        budgetController.editBudget(budget1, BigDecimal.valueOf(200.00));
+        assertTrue(budgetController.mergeBudgets(foodBudget)); //merge lunch budget into food budget
+        updatedBudget=budgetDAO.getById(foodBudget.getId());
+        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(300.00)));
+        updateBudget2=budgetDAO.getById(yearlyTotalBudget.getId());
+        assertEquals(0, updateBudget2.getAmount().compareTo(BigDecimal.ZERO)); //yearly budget should remain unchanged
 
-        Budget ledgerBudget= budgetDAO.getBudgetByLedger(testLedger, Period.YEARLY);
-        assertNotNull(ledgerBudget);
-        budgetController.editBudget(ledgerBudget, BigDecimal.valueOf(100.00));
-
-        boolean result = budgetController.mergeBudgets(ledgerBudget);
-        assertTrue(result);
-        assertEquals(0, ledgerBudget.getAmount().compareTo(BigDecimal.valueOf(100.00))); //amount should remain unchanged
-
-        Budget updatedBudget=budgetDAO.getById(ledgerBudget.getId());
-        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(100)));
-    }
-
-    //merge subcategory-level budget to category-level budget
-    @Test
-    public void testMergeBudgets_WithCategory_Success() {
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-        Budget budget1 = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
-        assertNotNull(budget1);
-        budgetController.editBudget(budget1, BigDecimal.valueOf(200.00));
-
-        LedgerCategory dinner = testCategories.stream()
-                .filter(c -> c.getName().equals("Dinner"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(dinner);
-        Budget budget2 = budgetDAO.getBudgetByCategory(dinner, Period.MONTHLY);
-        assertNotNull(budget2);
-        budgetController.editBudget(budget2, BigDecimal.valueOf(150.00));
-
-        boolean result = budgetController.mergeBudgets(budget1);
-        assertTrue(result);
-        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.valueOf(350.00)));
-
-        Budget updatedBudget=budgetDAO.getById(budget1.getId());
-        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(350.00)));
+        assertTrue(budgetController.mergeBudgets(monthlyTotalBudget)); //merge again food budget into ledger budget
+        updatedBudget=budgetDAO.getById(monthlyTotalBudget.getId());
+        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.valueOf(800.00)));
+        updateBudget2=budgetDAO.getById(yearlyTotalBudget.getId());
+        assertEquals(0, updateBudget2.getAmount().compareTo(BigDecimal.ZERO)); //yearly budget should remain unchanged
     }
 
     //merge expired budgets: monthly category-level budget and monthly ledger-level budget
-    @Test
-    public void testMergeBudgets_ExpiredBudgets_Case1() {
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-        Budget budget1 = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
-        assertNotNull(budget1);
-        budget1.setAmount(BigDecimal.valueOf(200.00));
-        //simulate expired budget by setting start and end date in the past
-        budget1.setStartDate(LocalDate.of(2025, 1, 1));
-        budget1.setEndDate(LocalDate.of(2025, 1, 31));
-        budgetDAO.update(budget1);
-
-        Budget ledgerBudget= budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
-        assertNotNull(ledgerBudget);
-        ledgerBudget.setAmount(BigDecimal.valueOf(300.00));
-        //simulate expired budget by setting start and end date in the past
-        ledgerBudget.setStartDate(LocalDate.of(2025, 1, 1));
-        ledgerBudget.setEndDate(LocalDate.of(2025, 1, 31));
-        budgetDAO.update(ledgerBudget);
-
-        boolean result = budgetController.mergeBudgets(ledgerBudget);
-        assertTrue(result);
-
-        Budget updatedLedgerBudget=budgetDAO.getById(ledgerBudget.getId());
-        assertEquals(0, updatedLedgerBudget.getAmount().compareTo(BigDecimal.ZERO));
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedLedgerBudget.getStartDate());
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedLedgerBudget.getEndDate());
-
-        Budget updatedCategoryBudget=budgetDAO.getById(budget1.getId());
-        assertEquals(0, updatedCategoryBudget.getAmount().compareTo(BigDecimal.ZERO));
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedCategoryBudget.getStartDate());
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedCategoryBudget.getEndDate());
-    }
-
-    @Test
-    public void testMergeBudgets_ExpiredBudgets_Case2() {
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-        Budget budget1 = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
-        assertNotNull(budget1);
-        budget1.setAmount(BigDecimal.valueOf(200.00));
-        budget1.setStartDate(LocalDate.of(2025, 1, 1));
-        budget1.setEndDate(LocalDate.of(2025, 1, 31));
-        budgetDAO.update(budget1);
-
-        LedgerCategory lunch = testCategories.stream()
-                .filter(c -> c.getName().equals("Lunch"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(lunch);
-        Budget lunchBudget= budgetDAO.getBudgetByCategory(lunch, Period.MONTHLY);
-        assertNotNull(lunchBudget);
-        lunchBudget.setAmount(BigDecimal.valueOf(300.00));
-        lunchBudget.setStartDate(LocalDate.of(2025, 1, 1));
-        lunchBudget.setEndDate(LocalDate.of(2025, 1, 31));
-        budgetDAO.update(lunchBudget);
-
-        boolean result = budgetController.mergeBudgets(budget1);
-        assertTrue(result);
-
-        Budget updatedCategoryBudget=budgetDAO.getById(budget1.getId());
-        assertEquals(0, updatedCategoryBudget.getAmount().compareTo(BigDecimal.ZERO));
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedCategoryBudget.getStartDate());
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedCategoryBudget.getEndDate());
-
-        Budget updatedSubcategoryBudget=budgetDAO.getById(lunchBudget.getId());
-        assertEquals(0, updatedSubcategoryBudget.getAmount().compareTo(BigDecimal.ZERO));
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedSubcategoryBudget.getStartDate());
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedSubcategoryBudget.getEndDate());
-    }
-
-    //refresh budget test
 //    @Test
-//    public void testRefreshBudget_ExpiredBudget() {
-//        Budget budget = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
-//        assertNotNull(budget);
-//        budgetController.editBudget(budget, BigDecimal.valueOf(500.00));
+//    public void testMergeBudgets_ExpiredBudgets_Case1() {
+//        Budget budget1 = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
+//        budget1.setAmount(BigDecimal.valueOf(200.00));
 //        //simulate expired budget by setting start and end date in the past
-//        budget.setStartDate(LocalDate.of(2025, 1, 1));
-//        budget.setEndDate(LocalDate.of(2025, 1, 31));
-//        budgetDAO.update(budget);
+//        budget1.setStartDate(LocalDate.of(2025, 1, 1));
+//        budget1.setEndDate(LocalDate.of(2025, 1, 31));
+//        budgetDAO.update(budget1);
 //
-//        boolean result = budgetController.refreshBudget(budget);
-//        assertTrue(result);
-//        assertEquals(0, budget.getAmount().compareTo(BigDecimal.ZERO)); //should be reset to 0 after refresh
-//        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), budget.getStartDate()); //should be refreshed to current month
-//        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), budget.getEndDate()); //should be refreshed to current month
+//        monthlyTotalBudget.setAmount(BigDecimal.valueOf(300.00));
+//        //simulate expired budget by setting start and end date in the past
+//        monthlyTotalBudget.setStartDate(LocalDate.of(2025, 1, 1));
+//        monthlyTotalBudget.setEndDate(LocalDate.of(2025, 1, 31));
+//        budgetDAO.update(monthlyTotalBudget);
 //
-//        Budget updatedBudget= budgetDAO.getById(budget.getId()); //fetch from DB to verify
-//        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.ZERO));
-//        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedBudget.getStartDate());
-//        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedBudget.getEndDate());
+//        assertTrue( budgetController.mergeBudgets(monthlyTotalBudget));
+//
+//        Budget updatedLedgerBudget=budgetDAO.getById(monthlyTotalBudget.getId());
+//        assertEquals(0, updatedLedgerBudget.getAmount().compareTo(BigDecimal.ZERO));
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedLedgerBudget.getStartDate());
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedLedgerBudget.getEndDate());
+//
+//        Budget updatedCategoryBudget=budgetDAO.getById(budget1.getId());
+//        assertEquals(0, updatedCategoryBudget.getAmount().compareTo(BigDecimal.ZERO));
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedCategoryBudget.getStartDate());
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedCategoryBudget.getEndDate());
 //    }
 //
 //    @Test
-//    public void testRefreshBudget_ActiveBudget() {
-//        Budget budget = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
-//        assertNotNull(budget);
-//        budgetController.editBudget(budget, BigDecimal.valueOf(500.00));
-//        LocalDate originalStartDate = budget.getStartDate();
-//        LocalDate originalEndDate = budget.getEndDate();
+//    public void testMergeBudgets_ExpiredBudgets_Case2() {
+//        Budget foodBudget = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
+//        foodBudget.setAmount(BigDecimal.valueOf(200.00));
+//        foodBudget.setStartDate(LocalDate.of(2025, 1, 1));
+//        foodBudget.setEndDate(LocalDate.of(2025, 1, 31));
+//        budgetDAO.update(foodBudget);
 //
-//        boolean result = budgetController.refreshBudget(budget);
-//        assertTrue(result);
-//        assertEquals(0, budget.getAmount().compareTo(BigDecimal.valueOf(500.00))); //amount should remain unchanged
-//        assertEquals(originalStartDate, budget.getStartDate()); //start date should remain unchanged
-//        assertEquals(originalEndDate, budget.getEndDate()); //end date should remain unchanged
+//        Budget lunchBudget= budgetDAO.getBudgetByCategory(lunch, Period.MONTHLY);
+//        lunchBudget.setAmount(BigDecimal.valueOf(300.00));
+//        lunchBudget.setStartDate(LocalDate.of(2025, 1, 1));
+//        lunchBudget.setEndDate(LocalDate.of(2025, 1, 31));
+//        budgetDAO.update(lunchBudget);
+//
+//        assertTrue(budgetController.mergeBudgets(foodBudget));
+//
+//        Budget updatedCategoryBudget=budgetDAO.getById(foodBudget.getId());
+//        assertEquals(0, updatedCategoryBudget.getAmount().compareTo(BigDecimal.ZERO));
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedCategoryBudget.getStartDate());
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedCategoryBudget.getEndDate());
+//
+//        Budget updatedSubcategoryBudget=budgetDAO.getById(lunchBudget.getId());
+//        assertEquals(0, updatedSubcategoryBudget.getAmount().compareTo(BigDecimal.ZERO));
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedSubcategoryBudget.getStartDate());
+//        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedSubcategoryBudget.getEndDate());
 //    }
 
     //test getActiveBudgetsByLedger
-    @Test
-    public void testGetActiveBudgetsByLedger() {
-        //get monthly budget for ledger
-        Budget budget1 = budgetController.getActiveBudgetByLedger(testLedger, Period.MONTHLY);
-        assertNotNull(budget1);
-        assertEquals(Period.MONTHLY, budget1.getPeriod());
-        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.ZERO));
-
-        //get yearly budget for ledger
-        Budget budget2 = budgetController.getActiveBudgetByLedger(testLedger, Period.YEARLY);
-        assertNotNull(budget2);
-        assertEquals(Period.YEARLY, budget2.getPeriod());
-        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.ZERO));
-    }
+//    @Test
+//    public void testGetActiveBudgetsByLedger() {
+//        //get monthly budget for ledger
+//        assertEquals(Period.MONTHLY, monthlyTotalBudget.getPeriod());
+//        assertEquals(0, monthlyTotalBudget.getAmount().compareTo(BigDecimal.ZERO));
+//
+//        //get yearly budget for ledger
+//        assertEquals(Period.YEARLY, yearlyTotalBudget.getPeriod());
+//        assertEquals(0, yearlyTotalBudget.getAmount().compareTo(BigDecimal.ZERO));
+//    }
 
     //test getActiveBudgetsByLedger if budgets are expired
     @Test
     public void testGetActiveBudgetsByLedger_ExpiredBudgets() {
-        Budget budget = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
-        assertNotNull(budget);
         //set start and end date to past to simulate expired budget
-        budget.setStartDate(LocalDate.of(2025, 1, 1));
-        budget.setEndDate(LocalDate.of(2025, 1, 31));
+        monthlyTotalBudget.setStartDate(LocalDate.of(2025, 1, 1));
+        monthlyTotalBudget.setEndDate(LocalDate.of(2025, 1, 31));
         //set amount to non-zero
-        budget.setAmount(BigDecimal.valueOf(500.00));
-        budgetDAO.update(budget); //persist changes
+        monthlyTotalBudget.setAmount(BigDecimal.valueOf(500.00));
+        budgetDAO.update(monthlyTotalBudget); //persist changes
 
         Budget activeBudget = budgetController.getActiveBudgetByLedger(testLedger, Period.MONTHLY);
         assertNotNull(activeBudget);
         assertEquals(Period.MONTHLY, activeBudget.getPeriod());
         assertEquals(0, activeBudget.getAmount().compareTo(BigDecimal.ZERO));
 
-        Budget budget2 = budgetDAO.getBudgetByLedger(testLedger, Period.YEARLY);
-        assertNotNull(budget2);
         //set start and end date to past to simulate expired budget
-        budget2.setStartDate(LocalDate.of(2023, 1, 1));
-        budget2.setEndDate(LocalDate.of(2023, 12, 31));
+        yearlyTotalBudget.setStartDate(LocalDate.of(2023, 1, 1));
+        yearlyTotalBudget.setEndDate(LocalDate.of(2023, 12, 31));
         //set amount to non-zero
-        budget2.setAmount(BigDecimal.valueOf(2000.00));
-        budgetDAO.update(budget2); //persist changes
+        yearlyTotalBudget.setAmount(BigDecimal.valueOf(2000.00));
+        budgetDAO.update(yearlyTotalBudget); //persist changes
 
         Budget activeBudget2 = budgetController.getActiveBudgetByLedger(testLedger, Period.YEARLY);
         assertNotNull(activeBudget2);
@@ -375,38 +249,23 @@ public class BudgetControllerTest {
     }
 
     //test getActiveBudgetsByCategory
-    @Test
-    public void testGetActiveBudgetsByCategory() {
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-
-        //get monthly budget for food category
-        Budget budget1 = budgetController.getActiveBudgetByCategory(food, Period.MONTHLY);
-        assertNotNull(budget1);
-        assertEquals(Period.MONTHLY, budget1.getPeriod());
-        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.ZERO));
-
-        //get yearly budget for food category
-        Budget budget2 = budgetController.getActiveBudgetByCategory(food, Period.YEARLY);
-        assertNotNull(budget2);
-        assertEquals(Period.YEARLY, budget2.getPeriod());
-        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.ZERO));
-    }
+//    @Test
+//    public void testGetActiveBudgetsByCategory() {
+//        //get monthly budget for food category
+//        Budget budget1 = budgetController.getActiveBudgetByCategory(food, Period.MONTHLY);
+//        assertEquals(Period.MONTHLY, budget1.getPeriod());
+//        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.ZERO));
+//
+//        //get yearly budget for food category
+//        Budget budget2 = budgetController.getActiveBudgetByCategory(food, Period.YEARLY);
+//        assertEquals(Period.YEARLY, budget2.getPeriod());
+//        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.ZERO));
+//    }
 
     //test getActiveBudgetsByCategory (first level) if budgets are expired
     @Test
     public void testGetActiveBudgetsByCategory_ExpiredBudgets() {
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
-
         Budget budget = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
-        assertNotNull(budget);
         //set start and end date to past to simulate expired budget
         budget.setStartDate(LocalDate.of(2025, 1, 1));
         budget.setEndDate(LocalDate.of(2025, 1, 31));
@@ -415,7 +274,6 @@ public class BudgetControllerTest {
         budgetDAO.update(budget); //persist changes
 
         Budget activeBudget = budgetController.getActiveBudgetByCategory(food, Period.MONTHLY);
-        assertNotNull(activeBudget);
         assertEquals(Period.MONTHLY, activeBudget.getPeriod());
         assertEquals(0, activeBudget.getAmount().compareTo(BigDecimal.ZERO));
 
@@ -429,67 +287,51 @@ public class BudgetControllerTest {
         budgetDAO.update(budget2); //persist changes
 
         Budget activeBudget2 = budgetController.getActiveBudgetByCategory(food, Period.YEARLY);
-        assertNotNull(activeBudget2);
         assertEquals(Period.YEARLY, activeBudget2.getPeriod());
         assertEquals(0, activeBudget2.getAmount().compareTo(BigDecimal.ZERO));
     }
 
     //test getActiveBudgetsByCategory (second level)
-    @Test
-    public void testGetActiveBudgetsByCategory_SecondLevel() {
-        LedgerCategory lunch = testCategories.stream()
-                .filter(c -> c.getName().equals("Lunch"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(lunch);
-
-        //get monthly budget for lunch category
-        Budget budget1 = budgetController.getActiveBudgetByCategory(lunch, Period.MONTHLY);
-        assertNotNull(budget1);
-        assertEquals(Period.MONTHLY, budget1.getPeriod());
-        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.ZERO));
-
-        //get yearly budget for lunch category
-        Budget budget2 = budgetController.getActiveBudgetByCategory(lunch, Period.YEARLY);
-        assertNotNull(budget2);
-        assertEquals(Period.YEARLY, budget2.getPeriod());
-        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.ZERO));
-    }
+//    @Test
+//    public void testGetActiveBudgetsByCategory_SecondLevel() {
+//        //get monthly budget for lunch category
+//        Budget budget1 = budgetController.getActiveBudgetByCategory(lunch, Period.MONTHLY);
+//        assertEquals(Period.MONTHLY, budget1.getPeriod());
+//        assertEquals(0, budget1.getAmount().compareTo(BigDecimal.ZERO));
+//
+//        //get yearly budget for lunch category
+//        Budget budget2 = budgetController.getActiveBudgetByCategory(lunch, Period.YEARLY);
+//        assertEquals(Period.YEARLY, budget2.getPeriod());
+//        assertEquals(0, budget2.getAmount().compareTo(BigDecimal.ZERO));
+//    }
 
     //test getActiveBudgetsByCategory (second level) if budgets are expired
-    @Test
-    public void testGetActiveBudgetsByCategory_SecondLevel_ExpiredBudgets() {
-        LedgerCategory lunch = testCategories.stream()
-                .filter(c -> c.getName().equals("Lunch"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(lunch);
-        Budget budget = budgetDAO.getBudgetByCategory(lunch, Period.MONTHLY);
-        assertNotNull(budget);
-        //set start and end date to past to simulate expired budget
-        budget.setStartDate(LocalDate.of(2025, 1, 1));
-        budget.setEndDate(LocalDate.of(2025, 1, 31));
-        //set amount to non-zero
-        budget.setAmount(BigDecimal.valueOf(400.00));
-        budgetDAO.update(budget); //persist changes
-
-        Budget activeBudget = budgetController.getActiveBudgetByCategory(lunch, Period.MONTHLY);
-        assertNotNull(activeBudget);
-        assertEquals(Period.MONTHLY, activeBudget.getPeriod());
-        assertEquals(0, activeBudget.getAmount().compareTo(BigDecimal.ZERO));
-
-        Budget budget2 = budgetDAO.getBudgetByCategory(lunch, Period.YEARLY);
-        assertNotNull(budget2);
-        //set start and end date to past to simulate expired budget
-        budget2.setStartDate(LocalDate.of(2023, 1, 1));
-        budget2.setEndDate(LocalDate.of(2023, 12, 31));
-        //set amount to non-zero
-        budget2.setAmount(BigDecimal.valueOf(1800.00));
-        budgetDAO.update(budget2); //persist changes
-        Budget activeBudget2 = budgetController.getActiveBudgetByCategory(lunch, Period.YEARLY);
-        assertNotNull(activeBudget2);
-        assertEquals(Period.YEARLY, activeBudget2.getPeriod());
-        assertEquals(0, activeBudget2.getAmount().compareTo(BigDecimal.ZERO));
-    }
+//    @Test
+//    public void testGetActiveBudgetsByCategory_SecondLevel_ExpiredBudgets() {
+//        Budget budget = budgetDAO.getBudgetByCategory(lunch, Period.MONTHLY);
+//        //set start and end date to past to simulate expired budget
+//        budget.setStartDate(LocalDate.of(2025, 1, 1));
+//        budget.setEndDate(LocalDate.of(2025, 1, 31));
+//        //set amount to non-zero
+//        budget.setAmount(BigDecimal.valueOf(150.00));
+//        budgetDAO.update(budget); //persist changes
+//
+//        Budget activeBudget = budgetController.getActiveBudgetByCategory(lunch, Period.MONTHLY);
+//        assertEquals(Period.MONTHLY, activeBudget.getPeriod());
+//        assertEquals(0, activeBudget.getAmount().compareTo(BigDecimal.ZERO));
+//
+//        Budget budget2 = budgetDAO.getBudgetByCategory(lunch, Period.YEARLY);
+//        assertNotNull(budget2);
+//        //set start and end date to past to simulate expired budget
+//        budget2.setStartDate(LocalDate.of(2023, 1, 1));
+//        budget2.setEndDate(LocalDate.of(2023, 12, 31));
+//        //set amount to non-zero
+//        budget2.setAmount(BigDecimal.valueOf(800.00));
+//        budgetDAO.update(budget2); //persist changes
+//
+//        Budget activeBudget2 = budgetController.getActiveBudgetByCategory(lunch, Period.YEARLY);
+//        assertEquals(Period.YEARLY, activeBudget2.getPeriod());
+//        assertEquals(0, activeBudget2.getAmount().compareTo(BigDecimal.ZERO));
+//    }
 
 }

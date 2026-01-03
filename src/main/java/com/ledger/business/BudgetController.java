@@ -47,21 +47,9 @@ public class BudgetController {
         return budgetDAO.update(budget);
     }
 
-//    public boolean refreshBudget(Budget budget) {
-//        if(budget == null) {
-//            return false;
-//        }
-//        budget.refreshIfExpired();
-//        return budgetDAO.update(budget);
-//    }
-
     public boolean mergeBudgets(Budget targetBudget) {
-        if (targetBudget == null) {
-            return false;
-        }
-        //refreshBudget(targetBudget);
+        if (targetBudget == null) return false;
         targetBudget.refreshIfExpired();
-
         if (targetBudget.getCategory() != null) {
             if (targetBudget.getCategory().getParent() != null) {
                 return false; //targetBudget's category must be a top-level category or null
@@ -89,7 +77,6 @@ public class BudgetController {
                     .map(Budget::getAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             targetBudget.setAmount(targetBudget.getAmount().add(mergedAmount));
-
         } else { //merge subcategory budget into category budget
             if (targetBudget.getCategory().getParent() != null) {
                 return false; //targetBudget category must be a top-level category
@@ -101,7 +88,6 @@ public class BudgetController {
             for (LedgerCategory subcat : subcategories) {
                 Budget subcatBudget = budgetDAO.getBudgetByCategory(subcat, targetBudget.getPeriod());
                 if (subcatBudget != null) {
-                    //refreshBudget(subcatBudget);
                     subcatBudget.refreshIfExpired();
                     budgetDAO.update(subcatBudget);
                     sourceBudgets.add(subcatBudget);
