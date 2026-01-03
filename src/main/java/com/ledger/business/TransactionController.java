@@ -72,26 +72,13 @@ public class TransactionController {
 //        }
 //    }
     public Income createIncome(Ledger ledger, Account toAccount, LedgerCategory category, String note, LocalDate date, BigDecimal amount) {
-        if (ledger == null) {
-            return null;
-        }
-        if (category == null) {
-            return null;
-        }
-        if (category.getType() != CategoryType.INCOME) {
-            return null;
-        }
-        if (amount == null) {
-            amount = BigDecimal.ZERO;
-        }
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            return null;
-        }
-        if( toAccount == null || !toAccount.getSelectable()) {
-            return null;
-        }
-        Income incomeTransaction = new Income(date != null ? date : LocalDate.now(), amount, note, toAccount,
-                ledger, category);
+        if (ledger == null) return null;
+        if (category == null) return null;
+        if (category.getType() != CategoryType.INCOME) return null;
+        if (amount == null) amount = BigDecimal.ZERO;
+        if (amount.compareTo(BigDecimal.ZERO) < 0) return null;
+        if( toAccount == null || !toAccount.getSelectable()) return null;
+        Income incomeTransaction = new Income(date != null ? date : LocalDate.now(), amount, note, toAccount, ledger, category);
         toAccount.credit(amount);
         return DbTransactionManager.getInstance().execute(() -> {
             if (!transactionDAO.insert(incomeTransaction)) throw new Exception("Failed to insert income transaction");
@@ -137,24 +124,12 @@ public class TransactionController {
 //        }
 //    }
     public Expense createExpense(Ledger ledger, Account fromAccount, LedgerCategory category, String note, LocalDate date, BigDecimal amount) {
-        if (ledger == null) {
-            return null;
-        }
-        if (category == null) {
-            return null;
-        }
-        if (category.getType() != CategoryType.EXPENSE) {
-            return null;
-        }
-        if (amount == null) {
-            amount = BigDecimal.ZERO;
-        }
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            return null;
-        }
-        if( fromAccount == null || !fromAccount.getSelectable()) {
-            return null;
-        }
+        if (ledger == null) return null;
+        if (category == null) return null;
+        if (category.getType() != CategoryType.EXPENSE) return null;
+        if (amount == null) amount = BigDecimal.ZERO;
+        if (amount.compareTo(BigDecimal.ZERO) < 0) return null;
+        if( fromAccount == null || !fromAccount.getSelectable()) return null;
         Expense expenseTransaction = new Expense(date != null ? date : LocalDate.now(), amount, note, fromAccount, ledger, category);
         fromAccount.debit(amount);
         return DbTransactionManager.getInstance().execute(() -> {
@@ -225,30 +200,17 @@ public class TransactionController {
 //        }
 //    }
     public Transfer createTransfer(Ledger ledger, Account fromAccount, Account toAccount, String note, LocalDate date, BigDecimal amount) {
-        if( ledger == null) {
-            return null;
-        }
-        if (fromAccount != null && toAccount != null && fromAccount.getId() == toAccount.getId()) {
-            return null;
-        }
-        if( fromAccount == null && toAccount == null) {
-            return null;
-        }
-        if( fromAccount != null && !fromAccount.getSelectable()) {
-            return null;
-        }
-        if( toAccount != null && !toAccount.getSelectable()) {
-            return null;
-        }
+        if( ledger == null) return null;
+        if (fromAccount != null && toAccount != null && fromAccount.getId() == toAccount.getId()) return null;
+        if( fromAccount == null && toAccount == null) return null;
+        if( fromAccount != null && !fromAccount.getSelectable()) return null;
+        if( toAccount != null && !toAccount.getSelectable()) return null;
+        if (amount != null && amount.compareTo(BigDecimal.ZERO) < 0) return null;
         final BigDecimal finalAmount = (amount == null) ? BigDecimal.ZERO : amount;
-        if (amount != null && amount.compareTo(BigDecimal.ZERO) < 0) {
-            return null;
-        }
         Transfer transferTransaction = new Transfer(date != null ? date : LocalDate.now(), note, fromAccount, toAccount, finalAmount, ledger);
 
         return DbTransactionManager.getInstance().execute(() -> {
             if(!transactionDAO.insert(transferTransaction)) throw new Exception("Failed to insert transfer transaction");
-
             if (fromAccount != null) {
                 fromAccount.debit(finalAmount);
                 if(!accountDAO.update(fromAccount)) throw new Exception("Account balance update failed");
@@ -265,7 +227,6 @@ public class TransactionController {
         if (tx == null) return false;
         Boolean deleted = DbTransactionManager.getInstance().execute(() -> {
             if (!transactionDAO.delete(tx)) throw new Exception("Delete transaction failed");
-
             Account toAccount = null;
             Account fromAccount = null;
             if( tx.getToAccount() != null) {
@@ -374,24 +335,17 @@ public class TransactionController {
         if (income == null || toAccount == null || category == null || ledger == null || amount == null || date == null || !toAccount.getSelectable()) {
             return false;
         }
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            return false;
-        }
+        if (amount.compareTo(BigDecimal.ZERO) < 0) return false;
         BigDecimal oldAmount = income.getAmount();
         Account oldToAccount = income.getToAccount();
         LedgerCategory oldCategory = income.getCategory();
         Ledger oldLedger = income.getLedger();
 
-        if (ledger.getId() != oldLedger.getId()) { //change ledger
-            income.setLedger(ledger);
-        }
+        if (ledger.getId() != oldLedger.getId()) income.setLedger(ledger);
         if (category.getId() != oldCategory.getId()) { //change category
-            if (category.getType() != CategoryType.INCOME) {
-                return false;
-            }
+            if (category.getType() != CategoryType.INCOME) return false;
             income.setCategory(category);
         }
-
         Boolean updated = DbTransactionManager.getInstance().execute(() -> {
             oldToAccount.debit(oldAmount);
             if (!accountDAO.update(oldToAccount)) throw new Exception("Failed to rollback old account");
@@ -464,20 +418,14 @@ public class TransactionController {
         if (expense == null || fromAccount == null || ledger == null || date == null || category == null || amount == null || !fromAccount.getSelectable()) {
             return false;
         }
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            return false;
-        } //change amount and amount>0
+        if (amount.compareTo(BigDecimal.ZERO) < 0) return false;
         BigDecimal oldAmount = expense.getAmount();
         Account oldFromAccount = expense.getFromAccount();
         LedgerCategory oldCategory = expense.getCategory();
         Ledger oldLedger = expense.getLedger();
-        if (ledger.getId() != oldLedger.getId()) {
-            expense.setLedger(ledger);
-        }
+        if (ledger.getId() != oldLedger.getId()) expense.setLedger(ledger);
         if (category.getId() != oldCategory.getId()) {
-            if (category.getType() != CategoryType.EXPENSE) {
-                return false;
-            }
+            if (category.getType() != CategoryType.EXPENSE) return false;
             expense.setCategory(category);
         }
         Boolean updated = DbTransactionManager.getInstance().execute(() -> {
@@ -621,31 +569,17 @@ public class TransactionController {
 //    }
 
     public boolean updateTransfer(Transfer transfer, Account newFromAccount, Account newToAccount, String note, LocalDate date, BigDecimal amount, Ledger ledger) {
-        if (transfer == null || ledger == null || date == null) {
-            return false;
-        }
-        if( newFromAccount == null && newToAccount == null) {
-            return false;
-        }
-        if (newFromAccount != null && newToAccount != null && newFromAccount.getId() == newToAccount.getId()) {
-            return false;
-        }
-        if(newFromAccount != null && !newFromAccount.getSelectable()) {
-            return false;
-        }
-        if(newToAccount != null && !newToAccount.getSelectable()) {
-            return false;
-        }
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            return false;
-        } //change amount and amount>0
+        if (transfer == null || ledger == null || date == null) return false;
+        if( newFromAccount == null && newToAccount == null) return false;
+        if (newFromAccount != null && newToAccount != null && newFromAccount.getId() == newToAccount.getId()) return false;
+        if(newFromAccount != null && !newFromAccount.getSelectable()) return false;
+        if(newToAccount != null && !newToAccount.getSelectable()) return false;
+        if (amount.compareTo(BigDecimal.ZERO) < 0) return false;
         BigDecimal oldAmount = transfer.getAmount();
         Account oldFromAccount = transfer.getFromAccount();
         Account oldToAccount = transfer.getToAccount();
         Ledger oldLedger = transfer.getLedger();
-        if (ledger.getId() != oldLedger.getId()) {
-            transfer.setLedger(ledger);
-        } //change ledger
+        if (ledger.getId() != oldLedger.getId()) transfer.setLedger(ledger);
         Boolean updated = DbTransactionManager.getInstance().execute(() -> {
             //rollback old accounts
             if (oldFromAccount != null) {

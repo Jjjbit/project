@@ -174,7 +174,6 @@ public class LedgerCategoryControllerTest {
         assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
     }
 
-    //delete category with transactions
     @Test
     public void testDeleteCategory() {
         Income tx1=transactionController.createIncome(testLedger, account, salary, null, LocalDate.now(), BigDecimal.valueOf(1000.00));

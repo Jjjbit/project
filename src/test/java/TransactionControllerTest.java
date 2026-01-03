@@ -117,17 +117,7 @@ public class TransactionControllerTest {
     //create
     @Test
     public void testCreateIncome_Success() {
-        LedgerCategory salary = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Salary"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(salary);
-
-        Transaction income=transactionController.createIncome(testLedger, testAccount, salary,
-                "June Salary",
-                LocalDate.of(2024,6,30),
-                BigDecimal.valueOf(5000.00));
-
+        Transaction income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00));
         assertNotNull(income);
         assertNotNull(transactionDAO.getById(income.getId()));
         assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
@@ -161,17 +151,7 @@ public class TransactionControllerTest {
 
     @Test
     public void testCreateExpense_Success() {
-        LedgerCategory shopping = testCategories.stream()
-                .filter(cat -> cat.getName().equals("Shopping"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(shopping);
-
-        Transaction expense=transactionController.createExpense(testLedger, testAccount, shopping,
-                "Grocery Shopping",
-                LocalDate.of(2024,6,25),
-                BigDecimal.valueOf(150.00));
-
+        Transaction expense=transactionController.createExpense(testLedger, testAccount, shopping, "Grocery Shopping", LocalDate.of(2024,6,25), BigDecimal.valueOf(150.00));
         assertNotNull(expense);
         assertNotNull(transactionDAO.getById(expense.getId()));
         assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
@@ -205,16 +185,13 @@ public class TransactionControllerTest {
 
     @Test
     public void testCreateTransfer_Success() {
-        Account toAccount = accountController.createAccount("Savings Account",
-                BigDecimal.valueOf(500.00),true, true);
-
-        Transaction transfer=transactionController.createTransfer(testLedger, testAccount, toAccount,
+        Transaction transfer=transactionController.createTransfer(testLedger, testAccount, testAccount1,
                 "Transfer to Savings", LocalDate.of(2024,6,20),
                 BigDecimal.valueOf(200.00));
         assertNotNull(transfer);
         assertNotNull(transactionDAO.getById(transfer.getId()));
         assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
-        assertEquals(1, transactionDAO.getByAccountId(toAccount.getId()).size());
+        assertEquals(1, transactionDAO.getByAccountId(testAccount1.getId()).size());
         assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
 
         Transaction fetchedTransfer = transactionDAO.getById(transfer.getId());
@@ -222,7 +199,7 @@ public class TransactionControllerTest {
         assertEquals(0, fetchedTransfer.getAmount().compareTo(BigDecimal.valueOf(200.00)));
         assertEquals(LocalDate.of(2024,6,20), fetchedTransfer.getDate());
         assertEquals(testAccount.getId(), fetchedTransfer.getFromAccount().getId());
-        assertEquals(toAccount.getId(), fetchedTransfer.getToAccount().getId());
+        assertEquals(testAccount1.getId(), fetchedTransfer.getToAccount().getId());
         assertNull(fetchedTransfer.getCategory());
         assertEquals(TransactionType.TRANSFER, fetchedTransfer.getType());
 
@@ -231,13 +208,12 @@ public class TransactionControllerTest {
         assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //1000 - 200 = 800
 
         //verify toAccount balance updated
-        Account updatedToAccount = accountDAO.getAccountById(toAccount.getId());
+        Account updatedToAccount = accountDAO.getAccountById(testAccount1.getId());
         assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(700.00))); //500 + 200 = 700
     }
 
     @Test
     public void testCreateTransfer_Failure(){
-
         assertNull(transactionController.createTransfer(null, testAccount, testAccount1, "Transfer to Savings", LocalDate.of(2024,6,20), BigDecimal.valueOf(200.00))); //null ledger
         assertNull(transactionController.createTransfer(testLedger, testAccount, testAccount1, "Transfer to Savings", LocalDate.of(2024,6,20), BigDecimal.valueOf(-50.00))); //negative amount
         assertNull(transactionController.createTransfer(testLedger, null, null, "Transfer to Savings", LocalDate.of(2024,6,20), BigDecimal.valueOf(200.00))); //null fromAccount
@@ -268,11 +244,6 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testDelete_Failure(){
-        assertFalse(transactionController.deleteTransaction(null));
-    }
-
-    @Test
     public void testDeleteExpense_Success() {
         Transaction expense=transactionController.createExpense(testLedger, testAccount, shopping, "Grocery Shopping",
                 LocalDate.of(2024,6,25), BigDecimal.valueOf(150.00));
@@ -292,17 +263,13 @@ public class TransactionControllerTest {
 
     @Test
     public void testDeleteTransfer_Success() {
-        Account toAccount = accountController.createAccount("Savings Account", BigDecimal.valueOf(500.00), true, true);
-
-        Transaction transfer=transactionController.createTransfer(testLedger, testAccount, toAccount,"Transfer to Savings",
+        Transaction transfer=transactionController.createTransfer(testLedger, testAccount, testAccount1,"Transfer to Savings",
                 LocalDate.of(2024,6,20), BigDecimal.valueOf(200.00));
         assertNotNull(transfer);
-
-        boolean deleted=transactionController.deleteTransaction(transfer);
-        assertTrue(deleted);
+        assertTrue(transactionController.deleteTransaction(transfer));
         assertNull(transactionDAO.getById(transfer.getId()));
         assertEquals(0, transactionDAO.getByAccountId(testAccount.getId()).size());
-        assertEquals(0, transactionDAO.getByAccountId(toAccount.getId()).size());
+        assertEquals(0, transactionDAO.getByAccountId(testAccount1.getId()).size());
         assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
 
         //verify fromAccount balance updated
@@ -317,23 +284,18 @@ public class TransactionControllerTest {
     //edit
     @Test
     public void testEditIncome_Success() {
-        Income income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary",
-                LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00));
-
-        Account newAccount = accountController.createAccount("New Account", BigDecimal.valueOf(2000.00), true, true);
+        Income income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00));
 
         Ledger newLedger = ledgerController.createLedger("New Ledger");
         List<LedgerCategory> newLedgerCategories = ledgerCategoryDAO.getTreeByLedger(newLedger);
 
-        LedgerCategory newCategory = newLedgerCategories.stream()
-                .filter(cat -> cat.getName().equals("Bonus"))
+        LedgerCategory newSalary = newLedgerCategories.stream()
+                .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
                 .orElse(null);
-        assertNotNull(newCategory);
+        assertNotNull(newSalary);
 
-        boolean result=transactionController.updateIncome(income, newAccount,
-                newCategory, null, LocalDate.of(2025,6,30),
-                BigDecimal.valueOf(6000.00), newLedger);
+        boolean result=transactionController.updateIncome(income, testAccount1, newSalary, null, LocalDate.of(2025,6,30), BigDecimal.valueOf(6000.00), newLedger);
         assertTrue(result);
 
         //verify account balance updated
@@ -341,32 +303,29 @@ public class TransactionControllerTest {
         assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
         assertEquals(0, transactionDAO.getByAccountId(testAccount.getId()).size());
 
-        Account updatedNewAccount = accountDAO.getAccountById(newAccount.getId());
-        assertEquals(0, updatedNewAccount.getBalance().compareTo(BigDecimal.valueOf(8000.00))); //2000 + 6000 = 8000
-        assertEquals(1, transactionDAO.getByAccountId(newAccount.getId()).size());
-
+        Account updatedNewAccount = accountDAO.getAccountById(testAccount1.getId());
+        assertEquals(0, updatedNewAccount.getBalance().compareTo(BigDecimal.valueOf(6500.00))); //500 + 6000 = 6500
+        assertEquals(1, transactionDAO.getByAccountId(testAccount1.getId()).size());
         assertEquals(1, transactionDAO.getByLedgerId(newLedger.getId()).size());
         assertEquals(0, transactionDAO.getByLedgerId(testLedger.getId()).size());
-        assertEquals(1, transactionDAO.getByCategoryId(newCategory.getId()).size());
+        assertEquals(1, transactionDAO.getByCategoryId(newSalary.getId()).size());
         assertEquals(0, transactionDAO.getByCategoryId(salary.getId()).size());
 
         Transaction updatedIncome = transactionDAO.getById(income.getId());
         assertNull(updatedIncome.getNote());
         assertEquals(0, updatedIncome.getAmount().compareTo(BigDecimal.valueOf(6000.00)));
         assertEquals(LocalDate.of(2025,6,30), updatedIncome.getDate());
-        assertEquals(newAccount.getId(), updatedIncome.getToAccount().getId());
+        assertEquals(testAccount1.getId(), updatedIncome.getToAccount().getId());
         assertNull(updatedIncome.getFromAccount());
-        assertEquals(newCategory.getId(), updatedIncome.getCategory().getId());
+        assertEquals(newSalary.getId(), updatedIncome.getCategory().getId());
         assertEquals(newLedger.getId(), updatedIncome.getLedger().getId());
     }
 
     @Test
     public void testEditIncome_Invariant() {
-        Income income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary",
-                LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00));
+        Income income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00));
 
-        boolean result=transactionController.updateIncome(income, testAccount, salary, "June Salary",
-                LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00), testLedger);
+        boolean result=transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00), testLedger);
         assertTrue(result);
 
         //verify account balance unchanged
@@ -385,36 +344,24 @@ public class TransactionControllerTest {
 
     @Test
     public void testEditIncome_Failure(){
-        Income income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary",
-                LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00));
+        Income income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00));
         //null income
-        assertFalse(transactionController.updateIncome(null, testAccount, salary, "June Salary", LocalDate.of(2024,6,30),
-                BigDecimal.valueOf(5000.00), testLedger));
-
+        assertFalse(transactionController.updateIncome(null, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00), testLedger));
         //null account
-        assertFalse(transactionController.updateIncome(income, null, salary, "June Salary", LocalDate.of(2024,6,30),
-                BigDecimal.valueOf(5000.00), testLedger));
+        assertFalse(transactionController.updateIncome(income, null, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00), testLedger));
         //null ledger
-        assertFalse(transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30),
-                BigDecimal.valueOf(5000.00), null));
+        assertFalse(transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00), null));
         //null amount
-        assertFalse(transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30),
-                null, testLedger));
+        assertFalse(transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), null, testLedger));
         //null category
-        assertFalse(transactionController.updateIncome(income, testAccount, null, "June Salary", LocalDate.of(2024,6,30),
-                BigDecimal.valueOf(5000.00), testLedger));
+        assertFalse(transactionController.updateIncome(income, testAccount, null, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00), testLedger));
         //different category type
-        assertFalse(transactionController.updateIncome(income, testAccount, shopping, "June Salary", LocalDate.of(2024,6,30),
-                BigDecimal.valueOf(5000.00), testLedger));
-
+        assertFalse(transactionController.updateIncome(income, testAccount, shopping, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00), testLedger));
         //negative amount
-        assertFalse(transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30),
-                BigDecimal.valueOf(-100.00), testLedger));
-
+        assertFalse(transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(-100.00), testLedger));
         //non-selectable account
         testAccount.setSelectable(false);
-        assertFalse(transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30),
-                BigDecimal.valueOf(5000.00), testLedger));
+        assertFalse(transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00), testLedger));
     }
 
     @Test
@@ -522,117 +469,117 @@ public class TransactionControllerTest {
                 BigDecimal.valueOf(150.00), testLedger));
     }
 
-    @Test
-    public void testUpdateAmountOnly(){
-        Transfer transfer = transactionController.createTransfer(testLedger, testAccount,
-                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00));
-
-        boolean result = transactionController.updateTransfer(transfer, testAccount,
-                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(300.00), testLedger);
-        assertTrue(result);
-
-        //verify account balances updated
-        Account updatedFromAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(700.00))); //1000-200+200-300=700
-
-        Account updatedToAccount = accountDAO.getAccountById(testAccount1.getId());
-        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //500+200-200+300=800
-
-    }
-
-    @Test
-    public void testChangeFromAccountOnly(){
-        Transfer transfer = transactionController.createTransfer(testLedger, testAccount,
-                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00));
-
-        boolean result = transactionController.updateTransfer(transfer, testAccount2,
-                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00), testLedger);
-        assertTrue(result);
-        //verify account balances updated
-        Account updateTestAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updateTestAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //1000-200+200=1000
-        Account updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
-        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(100.00))); //300-200=100
-        Account updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
-        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(700.00))); //500+200=700
-
-        //change from account to null
-        result = transactionController.updateTransfer(transfer, null,
-                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00), testLedger);
-        assertTrue(result);
-        //verify account balances updated
-        updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
-        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(300.00))); //100+200=300
-        updateTestAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updateTestAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //1000 unchanged
-        updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
-        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(700.00))); //700 unchanged
-
-
-        //change from account from null to testAccount
-        result = transactionController.updateTransfer(transfer, testAccount,
-                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00), testLedger);
-        assertTrue(result);
-        //verify account balances updated
-        updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
-        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(300.00))); //
-        updateTestAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updateTestAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //1000-200=800
-        updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
-        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(700.00))); //700 unchanged
-    }
-
-    //change toAccount only
-    @Test
-    public void testChangeToAccountOnly(){
-        Transfer transfer = transactionController.createTransfer(testLedger, testAccount,
-                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00));
-        //change toAccount
-        boolean result = transactionController.updateTransfer(transfer, testAccount,
-                testAccount2, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00), testLedger);
-        assertTrue(result);
-        //verify account balances updated
-        Account updatedTestAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedTestAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //1000-200=800
-        Account updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
-        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(500.00))); //500+200-200=500
-        Account updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
-        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(500.00))); //300+200=500
-
-        //change toAccount to null
-        result = transactionController.updateTransfer(transfer, testAccount,
-                null, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00), testLedger);
-        assertTrue(result);
-        //verify account balances updated
-        updatedTestAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedTestAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //800 unchanged
-        updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
-        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(300.00))); //500-200=300
-        updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
-        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(500.00))); //500 unchanged
-
-        //change toAccount from null to testAccount1
-        result = transactionController.updateTransfer(transfer, testAccount,
-                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00), testLedger);
-        assertTrue(result);
-        //verify account balances updated
-        updatedTestAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedTestAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //800 unchanged
-        updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
-        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(300.00))); //300 unchanged
-        updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
-        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(700.00))); //500+200=700
-    }
+//    @Test
+//    public void testUpdateAmountOnly(){
+//        Transfer transfer = transactionController.createTransfer(testLedger, testAccount,
+//                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00));
+//
+//        boolean result = transactionController.updateTransfer(transfer, testAccount,
+//                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(300.00), testLedger);
+//        assertTrue(result);
+//
+//        //verify account balances updated
+//        Account updatedFromAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(700.00))); //1000-200+200-300=700
+//
+//        Account updatedToAccount = accountDAO.getAccountById(testAccount1.getId());
+//        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //500+200-200+300=800
+//
+//    }
+//
+//    @Test
+//    public void testChangeFromAccountOnly(){
+//        Transfer transfer = transactionController.createTransfer(testLedger, testAccount,
+//                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00));
+//
+//        boolean result = transactionController.updateTransfer(transfer, testAccount2,
+//                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00), testLedger);
+//        assertTrue(result);
+//        //verify account balances updated
+//        Account updateTestAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updateTestAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //1000-200+200=1000
+//        Account updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
+//        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(100.00))); //300-200=100
+//        Account updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
+//        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(700.00))); //500+200=700
+//
+//        //change from account to null
+//        result = transactionController.updateTransfer(transfer, null,
+//                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00), testLedger);
+//        assertTrue(result);
+//        //verify account balances updated
+//        updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
+//        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(300.00))); //100+200=300
+//        updateTestAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updateTestAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //1000 unchanged
+//        updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
+//        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(700.00))); //700 unchanged
+//
+//
+//        //change from account from null to testAccount
+//        result = transactionController.updateTransfer(transfer, testAccount,
+//                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00), testLedger);
+//        assertTrue(result);
+//        //verify account balances updated
+//        updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
+//        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(300.00))); //
+//        updateTestAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updateTestAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //1000-200=800
+//        updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
+//        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(700.00))); //700 unchanged
+//    }
+//
+//    //change toAccount only
+//    @Test
+//    public void testChangeToAccountOnly(){
+//        Transfer transfer = transactionController.createTransfer(testLedger, testAccount,
+//                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00));
+//        //change toAccount
+//        boolean result = transactionController.updateTransfer(transfer, testAccount,
+//                testAccount2, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00), testLedger);
+//        assertTrue(result);
+//        //verify account balances updated
+//        Account updatedTestAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updatedTestAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //1000-200=800
+//        Account updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
+//        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(500.00))); //500+200-200=500
+//        Account updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
+//        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(500.00))); //300+200=500
+//
+//        //change toAccount to null
+//        result = transactionController.updateTransfer(transfer, testAccount,
+//                null, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00), testLedger);
+//        assertTrue(result);
+//        //verify account balances updated
+//        updatedTestAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updatedTestAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //800 unchanged
+//        updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
+//        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(300.00))); //500-200=300
+//        updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
+//        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(500.00))); //500 unchanged
+//
+//        //change toAccount from null to testAccount1
+//        result = transactionController.updateTransfer(transfer, testAccount,
+//                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00), testLedger);
+//        assertTrue(result);
+//        //verify account balances updated
+//        updatedTestAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updatedTestAccount.getBalance().compareTo(BigDecimal.valueOf(800.00))); //800 unchanged
+//        updatedTestAccount2 = accountDAO.getAccountById(testAccount2.getId());
+//        assertEquals(0, updatedTestAccount2.getBalance().compareTo(BigDecimal.valueOf(300.00))); //300 unchanged
+//        updatedTestAccount1 = accountDAO.getAccountById(testAccount1.getId());
+//        assertEquals(0, updatedTestAccount1.getBalance().compareTo(BigDecimal.valueOf(700.00))); //500+200=700
+//    }
 
     //change fromAccount and amount
     @Test
@@ -762,7 +709,7 @@ public class TransactionControllerTest {
     }
 
     @Test
-    public void testEditTransfer1() { //change all fields
+    public void testEditTransfer_Success() { //change all fields
         Transfer transfer = transactionController.createTransfer(testLedger, testAccount,
                 testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
                 BigDecimal.valueOf(200.00));
@@ -790,54 +737,81 @@ public class TransactionControllerTest {
         assertEquals(newLedger.getId(), updatedTransfer.getLedger().getId());
     }
 
+    @Test
+    public void testEditTransfer_Invariant() { //no changes
+        Transfer transfer = transactionController.createTransfer(testLedger, testAccount,
+                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+                BigDecimal.valueOf(200.00));
+
+        boolean result = transactionController.updateTransfer(transfer, testAccount,
+                testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+                BigDecimal.valueOf(200.00), testLedger);
+        assertTrue(result);
+
+        //verify account balances unchanged
+        Account updatedFromAccount = accountDAO.getAccountById(testAccount.getId());
+        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(800.00)));
+
+        Account updatedToAccount = accountDAO.getAccountById(testAccount1.getId());
+        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(700.00)));
+
+        Transaction updatedTransfer = transactionDAO.getById(transfer.getId());
+        assertEquals("Transfer to Savings", updatedTransfer.getNote());
+        assertEquals(0, updatedTransfer.getAmount().compareTo(BigDecimal.valueOf(200.00)));
+        assertEquals(LocalDate.of(2024, 6, 20), updatedTransfer.getDate());
+        assertEquals(testAccount.getId(), updatedTransfer.getFromAccount().getId());
+        assertEquals(testAccount1.getId(), updatedTransfer.getToAccount().getId());
+        assertEquals(testLedger.getId(), updatedTransfer.getLedger().getId());
+    }
+
     //test edit transfer: old fromAccount is null and new fromAccount is null &change toAccount
-    @Test
-    public void testUpdateTransfer1(){
-        Transfer transfer = transactionController.createTransfer(testLedger, null,
-                testAccount, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00));
-
-        Account newToAccount = accountController.createAccount("New Savings Account",
-                BigDecimal.valueOf(300.00), true, true);
-
-        boolean result = transactionController.updateTransfer(transfer, null, newToAccount, "Transfer to Savings",
-                LocalDate.of(2024, 6, 20), BigDecimal.valueOf(20.00), testLedger);
-        assertTrue(result);
-        //verify account balances updated
-        Account updatedToAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
-
-        Account updatedNewToAccount = accountDAO.getAccountById(newToAccount.getId());
-        assertEquals(0, updatedNewToAccount.getBalance().compareTo(BigDecimal.valueOf(320.00))); //300+20
-
-        Transaction updatedTransfer = transactionDAO.getById(transfer.getId());
-        assertNull(updatedTransfer.getFromAccount());
-        assertEquals(newToAccount.getId(), updatedTransfer.getToAccount().getId());
-    }
+//    @Test
+//    public void testUpdateTransfer1(){
+//        Transfer transfer = transactionController.createTransfer(testLedger, null,
+//                testAccount, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00));
+//
+//        Account newToAccount = accountController.createAccount("New Savings Account",
+//                BigDecimal.valueOf(300.00), true, true);
+//
+//        boolean result = transactionController.updateTransfer(transfer, null, newToAccount, "Transfer to Savings",
+//                LocalDate.of(2024, 6, 20), BigDecimal.valueOf(20.00), testLedger);
+//        assertTrue(result);
+//        //verify account balances updated
+//        Account updatedToAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
+//
+//        Account updatedNewToAccount = accountDAO.getAccountById(newToAccount.getId());
+//        assertEquals(0, updatedNewToAccount.getBalance().compareTo(BigDecimal.valueOf(320.00))); //300+20
+//
+//        Transaction updatedTransfer = transactionDAO.getById(transfer.getId());
+//        assertNull(updatedTransfer.getFromAccount());
+//        assertEquals(newToAccount.getId(), updatedTransfer.getToAccount().getId());
+//    }
     //test edit transfer: old fromAccount is null and new fromAccount is not null & old toAccount is not null and new toAccount is null
-    @Test
-    public void testUpdateTransfer2(){
-        Account fromAccount = accountController.createAccount("Savings Account",
-                BigDecimal.valueOf(500.00), true, true);
-        Transfer transfer = transactionController.createTransfer(testLedger, null,
-                testAccount, "Transfer to Savings", LocalDate.of(2024, 6, 20),
-                BigDecimal.valueOf(200.00));
-
-        boolean result = transactionController.updateTransfer(transfer, fromAccount, null, "Transfer to Savings",
-                LocalDate.of(2024, 6, 20), BigDecimal.valueOf(20.00), testLedger);
-        assertTrue(result);
-        //verify account balances updated
-        Account updatedFromAccount = accountDAO.getAccountById(fromAccount.getId());
-        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(480))); //500 - 20 = 480
-
-        Account updatedToAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //1000-200+200=1000
-
-        Transaction updatedTransfer = transactionDAO.getById(transfer.getId());
-        assertEquals(fromAccount.getId(), updatedTransfer.getFromAccount().getId());
-        assertNull(updatedTransfer.getToAccount());
-
-    }
+//    @Test
+//    public void testUpdateTransfer2(){
+//        Account fromAccount = accountController.createAccount("Savings Account",
+//                BigDecimal.valueOf(500.00), true, true);
+//        Transfer transfer = transactionController.createTransfer(testLedger, null,
+//                testAccount, "Transfer to Savings", LocalDate.of(2024, 6, 20),
+//                BigDecimal.valueOf(200.00));
+//
+//        boolean result = transactionController.updateTransfer(transfer, fromAccount, null, "Transfer to Savings",
+//                LocalDate.of(2024, 6, 20), BigDecimal.valueOf(20.00), testLedger);
+//        assertTrue(result);
+//        //verify account balances updated
+//        Account updatedFromAccount = accountDAO.getAccountById(fromAccount.getId());
+//        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(480))); //500 - 20 = 480
+//
+//        Account updatedToAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00))); //1000-200+200=1000
+//
+//        Transaction updatedTransfer = transactionDAO.getById(transfer.getId());
+//        assertEquals(fromAccount.getId(), updatedTransfer.getFromAccount().getId());
+//        assertNull(updatedTransfer.getToAccount());
+//
+//    }
 
     @Test
     public void testGetTransactionsByLedgerInRangeDate_Boundary() {

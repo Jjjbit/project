@@ -9,14 +9,8 @@ import java.util.List;
 
 public class TransactionDAO {
     private final Connection connection;
-    //private final LedgerCategoryDAO categoryDAO;
-    //private final AccountDAO accountDAO;
-    //private final LedgerDAO ledgerDAO;
 
     public TransactionDAO(Connection connection) {
-        //this.accountDAO = accountDAO;
-        //this.ledgerDAO = ledgerDAO;
-        //this.categoryDAO = categoryDAO;
         this.connection = connection;
     }
 
@@ -152,7 +146,6 @@ public class TransactionDAO {
     @SuppressWarnings("SqlResolve")
     public List<Transaction> getByLedgerId(long ledgerId) {
         List<Transaction> transactions = new ArrayList<>();
-
         AccountDAO accountDAO = new AccountDAO(connection);
         LedgerDAO ledgerDAO = new LedgerDAO(connection);
         LedgerCategoryDAO ledgerCategoryDAO = new LedgerCategoryDAO(connection);
