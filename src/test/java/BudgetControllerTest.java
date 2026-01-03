@@ -152,6 +152,13 @@ public class BudgetControllerTest {
         assertEquals(0, updateBudget2.getAmount().compareTo(BigDecimal.ZERO)); //yearly budget should remain unchanged
     }
 
+    @Test
+    public void testMergeBudgets_Failure(){
+        Budget subcategoryBudget = budgetDAO.getBudgetByCategory(lunch, Period.MONTHLY);
+        assertFalse(budgetController.mergeBudgets(subcategoryBudget)); //cannot merge subcategory budget directly
+        assertFalse(budgetController.mergeBudgets(null)); //null budget
+    }
+
     //merge expired budgets: monthly category-level budget and monthly ledger-level budget
 //    @Test
 //    public void testMergeBudgets_ExpiredBudgets_Case1() {
