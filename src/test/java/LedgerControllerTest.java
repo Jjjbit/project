@@ -117,9 +117,9 @@ public class LedgerControllerTest {
         assertNotNull(ledger);
         assertNotNull(ledgerDAO.getById(ledger.getId()));
         assertEquals(2, ledgerDAO.getLedgersByUserId(testUser.getId()).size());
-        assertNotNull(budgetDAO.getBudgetByLedger(ledger, Period.MONTHLY));
+        assertNotNull(budgetDAO.getBudgetByLedger(ledger, Period.MONTHLY)); //ledger-level budgets
         assertNotNull(budgetDAO.getBudgetByLedger(ledger, Period.YEARLY));
-        assertEquals(17, ledgerCategoryDAO.getTreeByLedger(ledger).size());
+        assertEquals(17, ledgerCategoryDAO.getTreeByLedger(ledger).size()); //default categories
         List<LedgerCategory> categories= ledgerCategoryDAO.getTreeByLedger(ledger);
         List<LedgerCategory> expenseCategories= categories.stream()
                 .filter(cat -> cat.getType() == CategoryType.EXPENSE)
@@ -129,9 +129,13 @@ public class LedgerControllerTest {
                 .toList();
         assertEquals(3, incomeCategories.size());
         assertEquals(14, expenseCategories.size());
-        for(LedgerCategory cat : expenseCategories){
+        for(LedgerCategory cat : expenseCategories){ //all expense categories should have budgets
             assertNotNull(budgetDAO.getBudgetByCategory(cat, Period.MONTHLY));
             assertNotNull(budgetDAO.getBudgetByCategory(cat, Period.YEARLY));
+        }
+        for(LedgerCategory cat : incomeCategories){ //income categories should not have budgets
+            assertNull(budgetDAO.getBudgetByCategory(cat, Period.MONTHLY));
+            assertNull(budgetDAO.getBudgetByCategory(cat, Period.YEARLY));
         }
     }
 
