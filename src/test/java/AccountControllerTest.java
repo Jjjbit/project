@@ -113,8 +113,8 @@ public class AccountControllerTest {
 
     @Test
     public void testCreateAccount_Failure() {
-        assertNull(accountController.createAccount(null, BigDecimal.valueOf(1000), true, true));
-        assertNull(accountController.createAccount("", BigDecimal.valueOf(1000), true, true));
+        assertNull(accountController.createAccount(null, BigDecimal.valueOf(1000), true, true)); //null name
+        assertNull(accountController.createAccount("", BigDecimal.valueOf(1000), true, true)); //empty name
         assertNull(accountController.createAccount("a".repeat(51), null, true, true));
     }
 
@@ -168,15 +168,17 @@ public class AccountControllerTest {
         assertEquals(0, transactionDAO.getByAccountId(toAccount.getId()).size());
     }
 
-    //test  getSelectableAccounts and getAccounts
+    //test getSelectableAccounts and getAccounts
     @Test
-    public void testGetAccounts() {
+    public void testGet() {
         Account testAccount = accountController.createAccount("Test Account", BigDecimal.valueOf(1000), true, true);
         assertNotNull(testAccount);
         Account testAccount2 = accountController.createAccount("Test Account 2", BigDecimal.valueOf(2000), true, false); //not selectable
         assertNotNull(testAccount2);
-
         assertEquals(1, accountController.getSelectableAccounts(testUser).size());
+        assertEquals(2, accountController.getAccounts(testUser).size());
+        accountController.editAccount(testAccount, "Test Account", BigDecimal.valueOf(1000), true, false); //make not selectable
+        assertEquals(0, accountController.getSelectableAccounts(testUser).size());
         assertEquals(2, accountController.getAccounts(testUser).size());
     }
 
