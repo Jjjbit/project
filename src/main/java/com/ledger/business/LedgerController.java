@@ -114,18 +114,11 @@ public class LedgerController {
 //    }
 
     public Ledger createLedger(String name) {
-        if(name == null || name.isEmpty() || name.length() > 50) {
-            return null;
-        }
-        if(!UserSession.getInstance().isLoggedIn()){
-            return null;
-        }
+        if(name == null || name.isEmpty() || name.length() > 50) return null;
+        if(!UserSession.getInstance().isLoggedIn()) return null;
         User owner = UserSession.getInstance().getCurrentUser();
-        if (ledgerDAO.getByNameAndOwnerId(name, owner.getId()) != null) {
-            return null;
-        }
+        if (ledgerDAO.getByNameAndOwnerId(name, owner.getId()) != null) return null;
         Ledger ledger = new Ledger(name, owner);
-
         return DbTransactionManager.getInstance().execute(() -> {
             if(!ledgerDAO.insert(ledger)) throw new Exception("Failed to create ledger");
             List<Category> templateCategories = new ArrayList<>(categoryDAO.getParentCategories()); //get only parents
@@ -162,7 +155,6 @@ public class LedgerController {
 
         if (!ledgerCategoryDAO.insert(copy)) throw new RuntimeException("cannot insert category: " + template.getName());
         result.add(copy);
-
         for (Category childTemplate : categoryDAO.getCategoriesByParentId(template.getId())) {
             List<LedgerCategory> childCopies = copyCategoryTree(childTemplate, ledger, copy);
             result.addAll(childCopies);
@@ -170,26 +162,26 @@ public class LedgerController {
         return result;
     }
 
-    private List<LedgerCategory> copyCategoryTree(Category template, Ledger ledger) {
-        List<LedgerCategory> result = new ArrayList<>();
-
-        LedgerCategory copy = new LedgerCategory();
-        copy.setName(template.getName());
-        copy.setType(template.getType());
-        copy.setLedger(ledger);
-        result.add(copy);
-        ledgerCategoryDAO.insert(copy);
-
-        for (Category childTemplate : categoryDAO.getCategoriesByParentId(template.getId())) {
-            List<LedgerCategory> childCopies = copyCategoryTree(childTemplate, ledger);
-            for (LedgerCategory childCopy : childCopies) {
-                childCopy.setParent(copy);
-                ledgerCategoryDAO.update(childCopy);
-            }
-            result.addAll(childCopies);
-        }
-        return result;
-    }
+//    private List<LedgerCategory> copyCategoryTree(Category template, Ledger ledger) {
+//        List<LedgerCategory> result = new ArrayList<>();
+//
+//        LedgerCategory copy = new LedgerCategory();
+//        copy.setName(template.getName());
+//        copy.setType(template.getType());
+//        copy.setLedger(ledger);
+//        result.add(copy);
+//        ledgerCategoryDAO.insert(copy);
+//
+//        for (Category childTemplate : categoryDAO.getCategoriesByParentId(template.getId())) {
+//            List<LedgerCategory> childCopies = copyCategoryTree(childTemplate, ledger);
+//            for (LedgerCategory childCopy : childCopies) {
+//                childCopy.setParent(copy);
+//                ledgerCategoryDAO.update(childCopy);
+//            }
+//            result.addAll(childCopies);
+//        }
+//        return result;
+//    }
 
 //    public boolean deleteLedger(Ledger ledger) {
 //        if(ledger == null){
@@ -259,20 +251,14 @@ public class LedgerController {
 //    }
 
     public boolean deleteLedger(Ledger ledger) {
-        if(ledger == null){
-            return false;
-        }
+        if(ledger == null) return false;
         Boolean deleted = DbTransactionManager.getInstance().execute(() -> {
             List<Transaction> transactionsToDelete = transactionDAO.getByLedgerId(ledger.getId());
             for (Transaction tx : transactionsToDelete) {
                 Account to = null;
                 Account from = null;
-                if (tx.getToAccount() != null) {
-                    to = accountDAO.getAccountById(tx.getToAccount().getId());
-                }
-                if (tx.getFromAccount() != null) {
-                    from = accountDAO.getAccountById(tx.getFromAccount().getId());
-                }
+                if (tx.getToAccount() != null) to = accountDAO.getAccountById(tx.getToAccount().getId());
+                if (tx.getFromAccount() != null) from = accountDAO.getAccountById(tx.getFromAccount().getId());
                 switch (tx.getType()) {
                     case INCOME:
                         if (to != null) {
@@ -290,12 +276,10 @@ public class LedgerController {
                         if (from != null) {
                             from.credit(tx.getAmount());
                             if(!accountDAO.update(from)) throw new Exception("Failed to update account during ledger deletion");
-
                         }
                         if (to != null) {
                             to.debit(tx.getAmount());
                             if(!accountDAO.update(to)) throw new Exception("Failed to update account during ledger deletion");
-
                         }
                         break;
                 }
@@ -306,20 +290,12 @@ public class LedgerController {
     }
 
     public boolean renameLedger(Ledger ledger, String newName) {
-        if(ledger == null){
-            return false;
-        }
-        if(newName == null || newName.isEmpty()) {
-            return false;
-        }
-        if(!UserSession.getInstance().isLoggedIn()){
-            return false;
-        }
+        if(ledger == null) return false;
+        if(newName == null || newName.isEmpty()) return false;
+        if(!UserSession.getInstance().isLoggedIn()) return false;
         User user = UserSession.getInstance().getCurrentUser();
         Ledger existingLedger = ledgerDAO.getByNameAndOwnerId(newName, user.getId());
-        if (existingLedger != null && existingLedger.getId() != ledger.getId()) {
-            return false;
-        }
+        if (existingLedger != null && existingLedger.getId() != ledger.getId()) return false;
         ledger.setName(newName);
         return ledgerDAO.update(ledger);
     }
