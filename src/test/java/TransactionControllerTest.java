@@ -277,7 +277,7 @@ public class TransactionControllerTest {
         assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(1000.00)));
 
         //verify toAccount balance updated
-        Account updatedToAccount = accountDAO.getAccountById(toAccount.getId());
+        Account updatedToAccount = accountDAO.getAccountById(testAccount1.getId());
         assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(500.00)));
     }
 
