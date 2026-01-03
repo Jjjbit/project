@@ -24,7 +24,6 @@ public class TransactionControllerTest {
     private Account testAccount;
     private Account testAccount1;
     private Account testAccount2;
-    private List<LedgerCategory> testCategories;
     private LedgerCategory salary;
     private LedgerCategory shopping;
     private LedgerCategory food;
@@ -63,7 +62,7 @@ public class TransactionControllerTest {
 
         testLedger = ledgerController.createLedger("Test Ledger");
 
-        testCategories = ledgerCategoryDAO.getTreeByLedger(testLedger);
+        List<LedgerCategory> testCategories = ledgerCategoryDAO.getTreeByLedger(testLedger);
         salary = testCategories.stream()
                 .filter(cat -> cat.getName().equals("Salary"))
                 .findFirst()
