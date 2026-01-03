@@ -222,7 +222,7 @@ public class LedgerCategoryControllerTest {
 
     //promote sub-category to top-level
     @Test
-    public void testPromoteSubCategory_Success() {
+    public void testPromote_Success() {
         assertNotNull(lunch.getParent());
         assertEquals(food.getId(), lunch.getParent().getId());
         //promote lunch
@@ -245,13 +245,13 @@ public class LedgerCategoryControllerTest {
     }
 
     @Test
-    public void testPromoteSubCategory_Failure() {
+    public void testPromote_Failure() {
         assertFalse(ledgerCategoryController.promoteSubCategory(food)); //not a sub-category
         assertFalse(ledgerCategoryController.promoteSubCategory(null)); //null category
     }
 
     @Test
-    public void testDemoteCategory_Success() {
+    public void testDemote_Success() {
         assertNull(salary.getParent()); //salary is top-level category
         assertNull(bonus.getParent()); //bonus is top-level category
         assertTrue(ledgerCategoryController.demoteCategory(bonus, salary)); //demote bonus under salary
@@ -275,7 +275,7 @@ public class LedgerCategoryControllerTest {
     }
 
     @Test
-    public void testDemoteCategory_Failure() {
+    public void testDemote_Failure() {
         assertFalse(ledgerCategoryController.demoteCategory(food, salary)); //different types
         assertFalse(ledgerCategoryController.demoteCategory(salary, null)); //parent is null
         assertFalse(ledgerCategoryController.demoteCategory(null, salary)); //category is null
@@ -315,7 +315,7 @@ public class LedgerCategoryControllerTest {
 
     //test LedgerCategory tree structure
     @Test
-    public void testLedgerCategoryTreeStructure() {
+    public void testCategoryTreeStructure() {
         List<LedgerCategory> categories = ledgerCategoryController.getCategoryTreeByLedger(testLedger);
         assertEquals(17, categories.size());
 
