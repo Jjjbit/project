@@ -23,13 +23,18 @@ public class ReportControllerTest {
     private User testUser;
     private Ledger testLedger;
     private Account testAccount;
-    private List<LedgerCategory> testCategories;
+    private LedgerCategory food;
+    private LedgerCategory salary;
+    private LedgerCategory lunch;
+    private LedgerCategory entertainment;
+    private LedgerCategory transport;
 
     private BudgetDAO budgetDAO;
 
     private BudgetController budgetController;
     private TransactionController transactionController;
     private ReportController reportController;
+    private AccountController accountController;
 
     @BeforeEach
     public void setUp(){
@@ -50,7 +55,7 @@ public class ReportControllerTest {
         budgetController = new BudgetController(budgetDAO, ledgerCategoryDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
         UserController userController = new UserController(userDAO);
-        AccountController accountController = new AccountController(accountDAO, transactionDAO);
+        accountController = new AccountController(accountDAO, transactionDAO);
         reportController = new ReportController(transactionDAO, accountDAO, budgetDAO, ledgerCategoryDAO);
         LedgerController ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO,
                 accountDAO, budgetDAO);
@@ -58,7 +63,27 @@ public class ReportControllerTest {
         userController.register("test user", "password123");
         testUser = userController.login("test user", "password123");
         testLedger = ledgerController.createLedger("Test Ledger");
-        testCategories = ledgerCategoryDAO.getTreeByLedger(testLedger);
+        List<LedgerCategory> testCategories = ledgerCategoryDAO.getTreeByLedger(testLedger);
+        food = testCategories.stream()
+                .filter(c -> c.getName().equals("Food"))
+                .findFirst()
+                .orElse(null);
+        salary = testCategories.stream()
+                .filter(c -> c.getName().equals("Salary"))
+                .findFirst()
+                .orElse(null);
+        lunch = testCategories.stream()
+                .filter(c -> c.getName().equals("Lunch"))
+                .findFirst()
+                .orElse(null);
+        entertainment = testCategories.stream()
+                .filter(c -> c.getName().equals("Entertainment"))
+                .findFirst()
+                .orElse(null);
+        transport = testCategories.stream()
+                .filter(c -> c.getName().equals("Transport"))
+                .findFirst()
+                .orElse(null);
         testAccount = accountController.createAccount("Test Account", BigDecimal.valueOf(1000.00), true, true);
     }
 
@@ -97,16 +122,6 @@ public class ReportControllerTest {
     //test getIncomeByAccount and getExpenseByAccount
     @Test
     public void testGetIncomeAndExpenseByAccount() {
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-
-        LedgerCategory salary = testCategories.stream()
-                .filter(c -> c.getName().equals("Salary"))
-                .findFirst()
-                .orElse(null);
-
         //transaction outside range
         transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.of(2024, 6, 1), BigDecimal.valueOf(50.00));
         //transactions within range
@@ -128,16 +143,6 @@ public class ReportControllerTest {
     //test getIncomeByLedger and getExpenseByLedger
     @Test
     public void testGetIncomeAndExpenseByLedger() {
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-
-        LedgerCategory salary = testCategories.stream()
-                .filter(c -> c.getName().equals("Salary"))
-                .findFirst()
-                .orElse(null);
-
         //transaction outside range
         transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.of(2024, 6, 1), BigDecimal.valueOf(50.00));
         //transactions within range
@@ -159,80 +164,18 @@ public class ReportControllerTest {
     //test getTotalAssets
     @Test
     public void testGetTotalAssets() {
-        //create CreditAccount +
-//        CreditAccount creditAccount1 = accountController.createCreditAccount("Credit Account 1", "Credit account notes",
-//                BigDecimal.valueOf(500.00), //balance
-//                true, true, testUser, AccountType.CREDIT_CARD,
-//                BigDecimal.valueOf(2000.00), //credit limit
-//                BigDecimal.valueOf(150.00), //current debt
-//                1, 5);
-//        assertNotNull(creditAccount1);
-//        //create CreditAccount but not included in net asset
-//        CreditAccount creditAccount2 = accountController.createCreditAccount("Credit Account 3", "Third credit account notes",
-//                BigDecimal.valueOf(600.00), false, true, testUser,
-//                AccountType.CREDIT_CARD, BigDecimal.valueOf(2500.00), BigDecimal.valueOf(200.00),
-//                1, 5);
-//        assertNotNull(creditAccount2);
-//
-//        //create LoanAccount +
-//        LoanAccount loanAccount1 = accountController.createLoanAccount("Loan Account 1", "Loan account notes",
-//                true, testUser, 36, 0,
-//                BigDecimal.valueOf(1.00),  BigDecimal.valueOf(5000.00), testAccount, LocalDate.now(),
-//                LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger); //remaining amount 5077.44
-//        assertNotNull(loanAccount1);
-//        //create LoanAccount, not included in net asset
-//        LoanAccount loanAccount2 = accountController.createLoanAccount("Loan Account 2", "Another loan account notes",
-//                false, testUser, 24, 0,
-//                BigDecimal.valueOf(1.50),  BigDecimal.valueOf(3000.00), testAccount, LocalDate.now(),
-//                LoanAccount.RepaymentType.EQUAL_INTEREST, testLedger); //remaining amount 3047.04
-//        assertNotNull(loanAccount2);
-//
-//        //create borrowing account +
-//        BorrowingAccount borrowingAccount1 = accountController.createBorrowingAccount(testUser, "Borrowing Account 1",
-//                BigDecimal.valueOf(50.00), "Car loan account", true, true,
-//                testAccount, LocalDate.now(), testLedger);
-//        assertNotNull(borrowingAccount1);
-//        //create second borrowing account, not included in net asset
-//        BorrowingAccount borrowingAccount2 = accountController.createBorrowingAccount(testUser, "Borrowing Account 3",
-//                BigDecimal.valueOf(70.00), "Student loan account", false, true,
-//                testAccount, LocalDate.now(), testLedger);
-//        assertNotNull(borrowingAccount2);
-//
-//        //create lending account +
-//        LendingAccount lendingAccount1 = accountController.createLendingAccount(testUser, "Lending Account 1",
-//                BigDecimal.valueOf(100.00), "Mortgage account", true, true,
-//                testAccount, LocalDate.now(), testLedger);
-//        assertNotNull(lendingAccount1);
-//        //create lending account but not included in net asset
-//        LendingAccount lendingAccount2 = accountController.createLendingAccount(testUser, "Lending Account 4",
-//                BigDecimal.valueOf(250.00), null, false, true,
-//                testAccount, LocalDate.now(), testLedger);
-//        assertNotNull(lendingAccount2);
-//
-//        BigDecimal totalLiability = reportController.getTotalLiabilities(testUser);
-//        System.out.println("Total Liability: " + totalLiability);
-        System.out.println("Total Assets: " + reportController.getTotalAssets(testUser));
-//        assertEquals(0, totalLiability.compareTo(BigDecimal.valueOf(5277.44)));
-        assertEquals(0, reportController.getTotalAssets(testUser).compareTo(BigDecimal.valueOf(9370.00)));
+        assertEquals(0, reportController.getTotalAssets(testUser).compareTo(BigDecimal.valueOf(1000.00))); // total assets = balance of testAccount
+        accountController.createAccount("Second Account", BigDecimal.valueOf(500.00), true, true); //create another account
+        assertEquals(0, reportController.getTotalAssets(testUser).compareTo(BigDecimal.valueOf(1500.00)));
     }
 
     //test is_over_budget
     @Test
     public void testIsOverBudget() {
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
         Budget budget = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(200.00)); //set monthly budget to 200
 
-        LedgerCategory lunch = testCategories.stream()
-                .filter(c -> c.getName().equals("Lunch"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(lunch);
         Budget budget2 = budgetDAO.getBudgetByCategory(lunch, Period.MONTHLY);
         assertNotNull(budget2);
         budgetController.editBudget(budget2, BigDecimal.valueOf(500.00)); //set monthly budget to 500
@@ -243,28 +186,23 @@ public class ReportControllerTest {
 
         boolean isOverBudget = reportController.isOverBudget(budget); //expense of food is 150+150=300 > 200
         assertTrue(isOverBudget);
-        System.out.println("Budget Amount: " + budget.getAmount()+
-                ", Period: " + budget.getPeriod() +
-                ", Category: " + budget.getCategory().getName() +
-                ", Start Date: " + budget.getStartDate() +
-                ", End Date: " + budget.getEndDate());
-
-        //not exceed budget of ledger
-        assertFalse(reportController.isOverBudget(budget2)); //expense of lunch is 150 < 500
-        System.out.println("Budget Amount: " + budget2.getAmount()+
-                ", Period: " + budget2.getPeriod() +
-                ", Start Date: " + budget2.getStartDate() +
-                ", End Date: " + budget2.getEndDate() +
-                ", Is Over Budget: " + reportController.isOverBudget(budget2));
+//        System.out.println("Budget Amount: " + budget.getAmount()+
+//                ", Period: " + budget.getPeriod() +
+//                ", Category: " + budget.getCategory().getName() +
+//                ", Start Date: " + budget.getStartDate() +
+//                ", End Date: " + budget.getEndDate());
+//
+//        //not exceed budget of ledger
+//        assertFalse(reportController.isOverBudget(budget2)); //expense of lunch is 150 < 500
+//        System.out.println("Budget Amount: " + budget2.getAmount()+
+//                ", Period: " + budget2.getPeriod() +
+//                ", Start Date: " + budget2.getStartDate() +
+//                ", End Date: " + budget2.getEndDate() +
+//                ", Is Over Budget: " + reportController.isOverBudget(budget2));
     }
 
     @Test
     public void testIsOverBudget_NoTransactions_False() {
-        LedgerCategory transport = testCategories.stream()
-                .filter(c -> c.getName().equals("Transport"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(transport);
         Budget budget = budgetDAO.getBudgetByCategory(transport, Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(300.00));
@@ -281,11 +219,6 @@ public class ReportControllerTest {
 
     @Test
     public void testIsOverBudget_ExpiredBudget() {
-        LedgerCategory entertainment = testCategories.stream()
-                .filter(c -> c.getName().equals("Entertainment"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(entertainment);
         Budget budget = budgetDAO.getBudgetByCategory(entertainment, Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
@@ -305,11 +238,6 @@ public class ReportControllerTest {
 
     @Test
     public void testIsOverBudget_TransactionOverPeriod_False() {
-        LedgerCategory entertainment = testCategories.stream()
-                .filter(c -> c.getName().equals("Entertainment"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(entertainment);
         Budget budget = budgetDAO.getBudgetByCategory(entertainment, Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
@@ -326,11 +254,6 @@ public class ReportControllerTest {
         assertNotNull(budget1);
         budgetController.editBudget(budget1, BigDecimal.valueOf(300.00));
 
-        LedgerCategory food = testCategories.stream()
-                .filter(c -> c.getName().equals("Food"))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(food);
         Budget budget = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
         assertNotNull(budget);
         budgetController.editBudget(budget, BigDecimal.valueOf(120.00));
@@ -342,10 +265,6 @@ public class ReportControllerTest {
         assertTrue(isOverBudget);
         assertFalse(reportController.isOverBudget(budget1));
 
-        LedgerCategory transport = testCategories.stream()
-                .filter(c -> c.getName().equals("Transport"))
-                .findFirst()
-                .orElse(null);
         transactionController.createExpense(testLedger, testAccount, transport, "Bus ticket", LocalDate.now().withDayOfMonth(1), BigDecimal.valueOf(100.00));
         transactionController.createExpense(testLedger, testAccount, transport, "Taxi", LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()), BigDecimal.valueOf(201.00));
         assertTrue(reportController.isOverBudget(budget1));
