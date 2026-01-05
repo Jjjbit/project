@@ -190,10 +190,8 @@ public class ReportControllerTest {
     public void testIsOverBudget_NoTransactions_False() {
         Budget budget = budgetDAO.getBudgetByCategory(transport, Period.MONTHLY); //get monthly transport budget for testLedger
         budgetController.editBudget(budget, BigDecimal.valueOf(300.00)); //set monthly transport budget to 300
-
         Budget budget2 = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY); //get monthly total budget for testLedger
         budgetController.editBudget(budget2, BigDecimal.valueOf(800.00)); //set monthly total budget to 800
-
         assertFalse(reportController.isOverBudget(budget));
         assertFalse(reportController.isOverBudget(budget2));
     }
