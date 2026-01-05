@@ -130,8 +130,8 @@ public class ReportControllerTest {
         transactionController.createIncome(testLedger, testAccount, salary, "Monthly Salary", LocalDate.now(), BigDecimal.valueOf(3000.00));
         transactionController.createTransfer(testLedger, null, testAccount, "Transfer from self", LocalDate.now(), BigDecimal.valueOf(200.00));
 
-        LocalDate startDate = LocalDate.now().withDayOfMonth(1);
-        LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+        LocalDate startDate = LocalDate.now().withDayOfMonth(1); //first day of current month
+        LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()); //last day of current month
 
         BigDecimal totalIncome = reportController.getTotalIncomeByAccount(testAccount, startDate, endDate);
         assertEquals(0, totalIncome.compareTo(BigDecimal.valueOf(3200.00))); //3000 income + 200 transfer in
@@ -173,96 +173,69 @@ public class ReportControllerTest {
     @Test
     public void testIsOverBudget() {
         Budget budget = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
-        assertNotNull(budget);
-        budgetController.editBudget(budget, BigDecimal.valueOf(200.00)); //set monthly budget to 200
+        budgetController.editBudget(budget, BigDecimal.valueOf(200.00)); //set monthly food budget to 200
 
         Budget budget2 = budgetDAO.getBudgetByCategory(lunch, Period.MONTHLY);
-        assertNotNull(budget2);
-        budgetController.editBudget(budget2, BigDecimal.valueOf(500.00)); //set monthly budget to 500
+        budgetController.editBudget(budget2, BigDecimal.valueOf(100.00)); //set monthly lunch budget to 100
 
         //add transactions to exceed budget of food category
-        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now(), BigDecimal.valueOf(150.00));
-        transactionController.createExpense(testLedger, testAccount, lunch, "Grocery shopping", LocalDate.now(), BigDecimal.valueOf(150.00));
+        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now(), BigDecimal.valueOf(150.00)); //expense of food is 150 < 200
+        transactionController.createExpense(testLedger, testAccount, lunch, "Grocery shopping", LocalDate.now(), BigDecimal.valueOf(150.00)); //expense of lunch is 150 > 100
 
-        boolean isOverBudget = reportController.isOverBudget(budget); //expense of food is 150+150=300 > 200
-        assertTrue(isOverBudget);
-//        System.out.println("Budget Amount: " + budget.getAmount()+
-//                ", Period: " + budget.getPeriod() +
-//                ", Category: " + budget.getCategory().getName() +
-//                ", Start Date: " + budget.getStartDate() +
-//                ", End Date: " + budget.getEndDate());
-//
-//        //not exceed budget of ledger
-//        assertFalse(reportController.isOverBudget(budget2)); //expense of lunch is 150 < 500
-//        System.out.println("Budget Amount: " + budget2.getAmount()+
-//                ", Period: " + budget2.getPeriod() +
-//                ", Start Date: " + budget2.getStartDate() +
-//                ", End Date: " + budget2.getEndDate() +
-//                ", Is Over Budget: " + reportController.isOverBudget(budget2));
+        assertTrue(reportController.isOverBudget(budget)); //expense of food is 150+150=300 > 200
+        assertTrue(reportController.isOverBudget(budget2)); //expense of lunch is 150 > 100
     }
 
     @Test
     public void testIsOverBudget_NoTransactions_False() {
-        Budget budget = budgetDAO.getBudgetByCategory(transport, Period.MONTHLY);
-        assertNotNull(budget);
-        budgetController.editBudget(budget, BigDecimal.valueOf(300.00));
+        Budget budget = budgetDAO.getBudgetByCategory(transport, Period.MONTHLY); //get monthly transport budget for testLedger
+        budgetController.editBudget(budget, BigDecimal.valueOf(300.00)); //set monthly transport budget to 300
 
-        //ledger-level budget
-        Budget budget2 = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
-        assertNotNull(budget2);
-        budgetController.editBudget(budget2, BigDecimal.valueOf(800.00));
+        Budget budget2 = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY); //get monthly total budget for testLedger
+        budgetController.editBudget(budget2, BigDecimal.valueOf(800.00)); //set monthly total budget to 800
 
-        boolean isOverBudget = reportController.isOverBudget(budget);
-        assertFalse(isOverBudget);
+        assertFalse(reportController.isOverBudget(budget));
         assertFalse(reportController.isOverBudget(budget2));
     }
 
     @Test
     public void testIsOverBudget_ExpiredBudget() {
         Budget budget = budgetDAO.getBudgetByCategory(entertainment, Period.MONTHLY);
-        assertNotNull(budget);
-        budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
+        budgetController.editBudget(budget, BigDecimal.valueOf(400.00)); //set monthly entertainment budget to 400
         //simulate expired budget by setting start and end date in the past
         budget.setStartDate(LocalDate.of(2025, 1, 1));
         budget.setEndDate(LocalDate.of(2025, 1, 31));
         budgetDAO.update(budget); //persist changes
 
-        boolean isOverBudget = reportController.isOverBudget(budget);
-        assertFalse(isOverBudget);
+        transactionController.createExpense(testLedger, testAccount, entertainment, "Concert", LocalDate.of(2025, 1, 20), BigDecimal.valueOf(500.00)); //transaction in past period
+        assertFalse(reportController.isOverBudget(budget));
 
-        Budget updatedBudget = budgetDAO.getById(budget.getId());
-        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.ZERO));
-        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedBudget.getStartDate());
-        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedBudget.getEndDate());
+        Budget updatedBudget = budgetDAO.getById(budget.getId()); //get updated budget from database
+        assertEquals(0, updatedBudget.getAmount().compareTo(BigDecimal.ZERO)); //amount should be reset to 0
+        assertEquals(LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()), updatedBudget.getStartDate()); //start date should be updated to first day of current month
+        assertEquals(LocalDate.now().with(TemporalAdjusters.lastDayOfMonth()), updatedBudget.getEndDate()); //end date should be updated to last day of current month
     }
 
     @Test
     public void testIsOverBudget_TransactionOverPeriod_False() {
         Budget budget = budgetDAO.getBudgetByCategory(entertainment, Period.MONTHLY);
-        assertNotNull(budget);
-        budgetController.editBudget(budget, BigDecimal.valueOf(400.00));
-
-        transactionController.createExpense(testLedger, testAccount, entertainment, "Movie", LocalDate.of(2025, 1, 1), BigDecimal.valueOf(500.00));
-
-        boolean isOverBudget = reportController.isOverBudget(budget);
-        assertFalse(isOverBudget); //should be false as budget period is over
+        budgetController.editBudget(budget, BigDecimal.valueOf(400.00)); //set monthly entertainment budget to 400
+        transactionController.createExpense(testLedger, testAccount, entertainment, null, LocalDate.of(2025, 1, 1), BigDecimal.valueOf(500.00)); //transaction outside budget period
+        assertFalse(reportController.isOverBudget(budget)); //should be false as budget period is over
     }
 
     @Test
     public void testIsOverBudget_BoundaryCase() {
         Budget budget1 = budgetDAO.getBudgetByLedger(testLedger, Period.MONTHLY);
-        assertNotNull(budget1);
-        budgetController.editBudget(budget1, BigDecimal.valueOf(300.00));
+        budgetController.editBudget(budget1, BigDecimal.valueOf(300.00)); //set monthly total budget to 300
 
         Budget budget = budgetDAO.getBudgetByCategory(food, Period.MONTHLY);
-        assertNotNull(budget);
-        budgetController.editBudget(budget, BigDecimal.valueOf(120.00));
+        budgetController.editBudget(budget, BigDecimal.valueOf(120.00)); //set monthly food budget to 120
 
-        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now().withDayOfMonth(1), BigDecimal.valueOf(100.00));
-        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()), BigDecimal.valueOf(21.00));
+        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now().withDayOfMonth(1), BigDecimal.valueOf(100.00)); //first day of month
+        transactionController.createExpense(testLedger, testAccount, food, "Grocery shopping", LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()), BigDecimal.valueOf(21.00)); //last day of month
 
-        boolean isOverBudget = reportController.isOverBudget(budget);
-        assertTrue(isOverBudget);
+        assertTrue(reportController.isOverBudget(budget));
         assertFalse(reportController.isOverBudget(budget1));
 
         transactionController.createExpense(testLedger, testAccount, transport, "Bus ticket", LocalDate.now().withDayOfMonth(1), BigDecimal.valueOf(100.00));

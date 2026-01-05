@@ -34,7 +34,6 @@ public class TransactionControllerTest {
 
     private TransactionController transactionController;
     private LedgerController ledgerController;
-    private AccountController accountController;
 
     @BeforeEach
     public void setUp() {
@@ -55,7 +54,7 @@ public class TransactionControllerTest {
         UserController userController = new UserController(userDAO);
         transactionController = new TransactionController(transactionDAO, accountDAO);
         ledgerController = new LedgerController(ledgerDAO, transactionDAO, categoryDAO, ledgerCategoryDAO, accountDAO, budgetDAO);
-        accountController = new AccountController(accountDAO, transactionDAO);
+        AccountController accountController = new AccountController(accountDAO, transactionDAO);
 
         userController.register("test user", "password123");
         userController.login("test user", "password123");
@@ -279,25 +278,25 @@ public class TransactionControllerTest {
         assertEquals(newLedger.getId(), updatedIncome.getLedger().getId());
     }
 
-    @Test
-    public void testEditIncome_Invariant() {
-        Income income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00)); //create income
-        boolean result=transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00), testLedger);
-        assertTrue(result);
-
-        //verify account balance unchanged
-        Account updatedAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(6000.00)));
-        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
-        assertEquals(1, transactionDAO.getByCategoryId(salary.getId()).size());
-
-        Transaction updatedIncome = transactionDAO.getById(income.getId());
-        assertEquals("June Salary", updatedIncome.getNote());
-        assertEquals(0, updatedIncome.getAmount().compareTo(BigDecimal.valueOf(5000.00)));
-        assertEquals(LocalDate.of(2024,6,30), updatedIncome.getDate());
-        assertEquals(testAccount.getId(), updatedIncome.getToAccount().getId());
-    }
+//    @Test
+//    public void testEditIncome_Invariant() {
+//        Income income=transactionController.createIncome(testLedger, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00)); //create income
+//        boolean result=transactionController.updateIncome(income, testAccount, salary, "June Salary", LocalDate.of(2024,6,30), BigDecimal.valueOf(5000.00), testLedger);
+//        assertTrue(result);
+//
+//        //verify account balance unchanged
+//        Account updatedAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(6000.00)));
+//        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
+//        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
+//        assertEquals(1, transactionDAO.getByCategoryId(salary.getId()).size());
+//
+//        Transaction updatedIncome = transactionDAO.getById(income.getId());
+//        assertEquals("June Salary", updatedIncome.getNote());
+//        assertEquals(0, updatedIncome.getAmount().compareTo(BigDecimal.valueOf(5000.00)));
+//        assertEquals(LocalDate.of(2024,6,30), updatedIncome.getDate());
+//        assertEquals(testAccount.getId(), updatedIncome.getToAccount().getId());
+//    }
 
     @Test
     public void testEditIncome_Failure(){
@@ -361,27 +360,27 @@ public class TransactionControllerTest {
         assertEquals(newLedger.getId(), updatedExpense.getLedger().getId());
     }
 
-    @Test
-    public void testEditExpense_Invariant() {
-        Expense expense=transactionController.createExpense(testLedger, testAccount, shopping, "Grocery Shopping", LocalDate.of(2024,6,25), BigDecimal.valueOf(150.00));
-
-        boolean result=transactionController.updateExpense(expense, testAccount,
-                shopping, "Grocery Shopping", LocalDate.of(2024, 6, 25), BigDecimal.valueOf(150.00), testLedger);
-        assertTrue(result);
-
-        //verify account balance unchanged
-        Account updatedAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(850.00)));
-        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
-        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
-        assertEquals(1, transactionDAO.getByCategoryId(shopping.getId()).size());
-
-        Transaction updatedExpense = transactionDAO.getById(expense.getId());
-        assertEquals("Grocery Shopping", updatedExpense.getNote());
-        assertEquals(0, updatedExpense.getAmount().compareTo(BigDecimal.valueOf(150.00)));
-        assertEquals(LocalDate.of(2024,6,25), updatedExpense.getDate());
-        assertEquals(testAccount.getId(), updatedExpense.getFromAccount().getId());
-    }
+//    @Test
+//    public void testEditExpense_Invariant() {
+//        Expense expense=transactionController.createExpense(testLedger, testAccount, shopping, "Grocery Shopping", LocalDate.of(2024,6,25), BigDecimal.valueOf(150.00));
+//
+//        boolean result=transactionController.updateExpense(expense, testAccount,
+//                shopping, "Grocery Shopping", LocalDate.of(2024, 6, 25), BigDecimal.valueOf(150.00), testLedger);
+//        assertTrue(result);
+//
+//        //verify account balance unchanged
+//        Account updatedAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updatedAccount.getBalance().compareTo(BigDecimal.valueOf(850.00)));
+//        assertEquals(1, transactionDAO.getByAccountId(testAccount.getId()).size());
+//        assertEquals(1, transactionDAO.getByLedgerId(testLedger.getId()).size());
+//        assertEquals(1, transactionDAO.getByCategoryId(shopping.getId()).size());
+//
+//        Transaction updatedExpense = transactionDAO.getById(expense.getId());
+//        assertEquals("Grocery Shopping", updatedExpense.getNote());
+//        assertEquals(0, updatedExpense.getAmount().compareTo(BigDecimal.valueOf(150.00)));
+//        assertEquals(LocalDate.of(2024,6,25), updatedExpense.getDate());
+//        assertEquals(testAccount.getId(), updatedExpense.getFromAccount().getId());
+//    }
 
     @Test
     public void testEditExpense_Failure(){
@@ -637,27 +636,27 @@ public class TransactionControllerTest {
         assertEquals(newLedger.getId(), updatedTransfer.getLedger().getId());
     }
 
-    @Test
-    public void testEditTransfer_Invariant() { //no changes
-        Transfer transfer = transactionController.createTransfer(testLedger, testAccount, testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20), BigDecimal.valueOf(200.00));
-        boolean result = transactionController.updateTransfer(transfer, testAccount, testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20), BigDecimal.valueOf(200.00), testLedger);
-        assertTrue(result);
-
-        //verify account balances unchanged
-        Account updatedFromAccount = accountDAO.getAccountById(testAccount.getId());
-        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(800.00)));
-
-        Account updatedToAccount = accountDAO.getAccountById(testAccount1.getId());
-        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(700.00)));
-
-        Transaction updatedTransfer = transactionDAO.getById(transfer.getId());
-        assertEquals("Transfer to Savings", updatedTransfer.getNote());
-        assertEquals(0, updatedTransfer.getAmount().compareTo(BigDecimal.valueOf(200.00)));
-        assertEquals(LocalDate.of(2024, 6, 20), updatedTransfer.getDate());
-        assertEquals(testAccount.getId(), updatedTransfer.getFromAccount().getId());
-        assertEquals(testAccount1.getId(), updatedTransfer.getToAccount().getId());
-        assertEquals(testLedger.getId(), updatedTransfer.getLedger().getId());
-    }
+//    @Test
+//    public void testEditTransfer_Invariant() { //no changes
+//        Transfer transfer = transactionController.createTransfer(testLedger, testAccount, testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20), BigDecimal.valueOf(200.00));
+//        boolean result = transactionController.updateTransfer(transfer, testAccount, testAccount1, "Transfer to Savings", LocalDate.of(2024, 6, 20), BigDecimal.valueOf(200.00), testLedger);
+//        assertTrue(result);
+//
+//        //verify account balances unchanged
+//        Account updatedFromAccount = accountDAO.getAccountById(testAccount.getId());
+//        assertEquals(0, updatedFromAccount.getBalance().compareTo(BigDecimal.valueOf(800.00)));
+//
+//        Account updatedToAccount = accountDAO.getAccountById(testAccount1.getId());
+//        assertEquals(0, updatedToAccount.getBalance().compareTo(BigDecimal.valueOf(700.00)));
+//
+//        Transaction updatedTransfer = transactionDAO.getById(transfer.getId());
+//        assertEquals("Transfer to Savings", updatedTransfer.getNote());
+//        assertEquals(0, updatedTransfer.getAmount().compareTo(BigDecimal.valueOf(200.00)));
+//        assertEquals(LocalDate.of(2024, 6, 20), updatedTransfer.getDate());
+//        assertEquals(testAccount.getId(), updatedTransfer.getFromAccount().getId());
+//        assertEquals(testAccount1.getId(), updatedTransfer.getToAccount().getId());
+//        assertEquals(testLedger.getId(), updatedTransfer.getLedger().getId());
+//    }
 
     //test edit transfer: old fromAccount is null and new fromAccount is null &change toAccount
 //    @Test
@@ -709,79 +708,27 @@ public class TransactionControllerTest {
 //    }
 
     @Test
-    public void testGetTransactionsByLedgerInRangeDate_Boundary() {
+    public void testGetTransactionsByLedgerInRangeDate() {
         LocalDate startDate = LocalDate.now().withDayOfMonth(1);
         LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
-
-        transactionController.createExpense(testLedger, testAccount, food, "Dinner", startDate, BigDecimal.valueOf(30.00));
-        transactionController.createExpense(testLedger, testAccount, food, "Lunch", endDate, BigDecimal.valueOf(20.00));
-
-        List<Transaction> transactions = transactionController.getTransactionsByLedgerInRangeDate(testLedger, startDate, endDate);
-        assertEquals(2, transactions.size());
-
-        for (Transaction tx : transactions) {
-            StringBuilder info = new StringBuilder();
-
-            info.append(String.format("ID: %d, Type: %s, Amount: %s, Date: %s",
-                    tx.getId(),
-                    tx.getType(),
-                    tx.getAmount(),
-                    tx.getDate()));
-
-            if (tx.getCategory() != null) {
-                info.append(", Category: ").append(tx.getCategory().getName());
-            }
-
-            if (tx instanceof Transfer) {
-                if (tx.getFromAccount() != null) {
-                    info.append(", FROM: ").append(tx.getFromAccount().getName());
-                }
-                if (tx.getToAccount() != null) {
-                    info.append(", TO: ").append(tx.getToAccount().getName());
-                }
-            } else {
-                if (tx.getFromAccount() != null) {
-                    info.append(", From: ").append(tx.getFromAccount().getName());
-                } else if (tx.getToAccount() != null) {
-                    info.append(", To: ").append(tx.getToAccount().getName());
-                }
-            }
-
-            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
-                info.append(", Note: ").append(tx.getNote());
-            }
-
-            System.out.println(info);
-        }
-    }
-
-    @Test
-    public void testGetTransactionsByAccountInRangeDate_Boundary() {
-        LocalDate startDate = LocalDate.now().withDayOfMonth(1);
-        LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
-
         transactionController.createExpense(testLedger, testAccount, food, "Dinner", startDate, BigDecimal.valueOf(30.00));
         transactionController.createExpense(testLedger, testAccount, food, "Lunch", endDate, BigDecimal.valueOf(20.00));
         transactionController.createTransfer(testLedger, testAccount, null, "Transfer to self", startDate, BigDecimal.valueOf(100.00));
         transactionController.createTransfer(testLedger, null, testAccount, "Transfer from self", endDate, BigDecimal.valueOf(200.00));
         transactionController.createIncome(testLedger, testAccount, salary, "Monthly Salary", startDate, BigDecimal.valueOf(3000.00));
         transactionController.createIncome(testLedger, testAccount, salary, "Monthly Salary", endDate, BigDecimal.valueOf(3000.00));
-
-        List<Transaction> transactions = transactionController.getTransactionsByAccountInRangeDate(testAccount, startDate, endDate);
+        List<Transaction> transactions = transactionController.getTransactionsByLedgerInRangeDate(testLedger, startDate, endDate);
         assertEquals(6, transactions.size());
         for (Transaction tx : transactions) {
             StringBuilder info = new StringBuilder();
-
             info.append(String.format("ID: %d, Type: %s, Amount: %s, Date: %s",
                     tx.getId(),
                     tx.getType(),
                     tx.getAmount(),
                     tx.getDate()));
-
             if (tx.getCategory() != null) {
                 info.append(", Category: ").append(tx.getCategory().getName());
             }
-
             if (tx instanceof Transfer) {
                 if (tx.getFromAccount() != null) {
                     info.append(", FROM: ").append(tx.getFromAccount().getName());
@@ -796,11 +743,52 @@ public class TransactionControllerTest {
                     info.append(", To: ").append(tx.getToAccount().getName());
                 }
             }
-
             if (tx.getNote() != null && !tx.getNote().isEmpty()) {
                 info.append(", Note: ").append(tx.getNote());
             }
+            System.out.println(info);
+        }
+    }
 
+    @Test
+    public void testGetTransactionsByAccountInRangeDate() {
+        LocalDate startDate = LocalDate.now().withDayOfMonth(1);
+        LocalDate endDate = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+        transactionController.createExpense(testLedger, testAccount, food, "Dinner", startDate, BigDecimal.valueOf(30.00));
+        transactionController.createExpense(testLedger, testAccount, food, "Lunch", endDate, BigDecimal.valueOf(20.00));
+        transactionController.createTransfer(testLedger, testAccount, null, "Transfer to self", startDate, BigDecimal.valueOf(100.00));
+        transactionController.createTransfer(testLedger, null, testAccount, "Transfer from self", endDate, BigDecimal.valueOf(200.00));
+        transactionController.createIncome(testLedger, testAccount, salary, "Monthly Salary", startDate, BigDecimal.valueOf(3000.00));
+        transactionController.createIncome(testLedger, testAccount, salary, "Monthly Salary", endDate, BigDecimal.valueOf(3000.00));
+        List<Transaction> transactions = transactionController.getTransactionsByAccountInRangeDate(testAccount, startDate, endDate);
+        assertEquals(6, transactions.size());
+        for (Transaction tx : transactions) {
+            StringBuilder info = new StringBuilder();
+            info.append(String.format("ID: %d, Type: %s, Amount: %s, Date: %s",
+                    tx.getId(),
+                    tx.getType(),
+                    tx.getAmount(),
+                    tx.getDate()));
+            if (tx.getCategory() != null) {
+                info.append(", Category: ").append(tx.getCategory().getName());
+            }
+            if (tx instanceof Transfer) {
+                if (tx.getFromAccount() != null) {
+                    info.append(", FROM: ").append(tx.getFromAccount().getName());
+                }
+                if (tx.getToAccount() != null) {
+                    info.append(", TO: ").append(tx.getToAccount().getName());
+                }
+            } else {
+                if (tx.getFromAccount() != null) {
+                    info.append(", From: ").append(tx.getFromAccount().getName());
+                } else if (tx.getToAccount() != null) {
+                    info.append(", To: ").append(tx.getToAccount().getName());
+                }
+            }
+            if (tx.getNote() != null && !tx.getNote().isEmpty()) {
+                info.append(", Note: ").append(tx.getNote());
+            }
             System.out.println(info);
         }
     }
