@@ -159,9 +159,8 @@ public class MainCLI {
         System.out.println("3. Edit Ledger");
         System.out.println("4. Show Ledger's Summary");
         System.out.println("5. Delete Ledger");
-        System.out.println("6. Category Settings");
-        System.out.println("7. Add Transaction");
-        System.out.println("8. Back to Main Menu");
+        System.out.println("6. Add Transaction");
+        System.out.println("7. Back to Main Menu");
         System.out.print("Choose an option: ");
 
         String choice = scanner.nextLine().trim();
@@ -183,17 +182,14 @@ public class MainCLI {
                 ledgerCLI.deleteLedger();
                 break;
             case "6":
-                showCategoryMenu();
-                break;
-            case "7":
                 transactionCLI.addTransaction();
                 break;
-            case "8":
+            case "7":
                 // go back to main menu
                 showMainMenu();
                 break;
             default:
-                System.out.println("Invalid option! Please choose 1-8.");
+                System.out.println("Invalid option! Please choose 1-7.");
                 showLedgerMenu();
         }
     }

@@ -17,8 +17,6 @@ public class UserCLI {
         this.userController = userController;
     }
 
-
-
     public void register() {
         System.out.println("\n=== User Registration ===");
 
@@ -63,18 +61,10 @@ public class UserCLI {
         User user = userController.getCurrentUser();
 
         BigDecimal totalAssets = reportController.getTotalAssets(user);
-        //BigDecimal totalLiabilities = reportController.getTotalLiabilities(user);
-//        BigDecimal netWorth = totalAssets.subtract(totalLiabilities);
-//        BigDecimal totalBorrowing = reportController.getTotalBorrowingAmount(user);
-//        BigDecimal totalLending = reportController.getTotalLendingAmount(user);
 
         System.out.println("\n=== Current User ===");
         System.out.print("\nUsername: " + user.getUsername());
-//        System.out.print(" | Net Worth: " + netWorth);
         System.out.print(" | Total Worth: " + totalAssets);
-//        System.out.print(" | Total Liabilities: " + totalLiabilities);
-//        System.out.print(" | Total Borrowing: " + totalBorrowing);
-//        System.out.print(" | Total Lending: " + totalLending);
     }
 
 

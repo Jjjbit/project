@@ -44,7 +44,7 @@ public class Main {
             //  create CLI layer
             UserCLI userCLI = new UserCLI(userController, reportController);
             AccountCLI accountCLI = new AccountCLI(accountController, userController, reportController, transactionController);
-            LedgerCLI ledgerCLI = new LedgerCLI(userController, reportController, ledgerController, transactionController, ledgerCategoryController, budgetController);
+            LedgerCLI ledgerCLI = new LedgerCLI(userController, reportController, ledgerController, transactionController, budgetController);
             TransactionCLI transactionCLI = new TransactionCLI(transactionController, userController, accountController, ledgerController, ledgerCategoryController);
             BudgetCLI budgetCLI = new BudgetCLI(budgetController, reportController, userController, ledgerController, ledgerCategoryController);
             LedgerCategoryCLI ledgerCategoryCLI = new LedgerCategoryCLI(ledgerCategoryController, userController, ledgerController);

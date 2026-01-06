@@ -13,16 +13,13 @@ public class LedgerCLI {
     private final ReportController reportController;
     private final LedgerController ledgerController;
     private final TransactionController transactionController;
-    private final LedgerCategoryController ledgerCategoryController;
     private final BudgetController budgetController;
     private final Scanner scanner = new Scanner(System.in);
 
     public LedgerCLI(UserController userController, ReportController reportController,
                      LedgerController ledgerController, TransactionController transactionController,
-                     LedgerCategoryController ledgerCategoryController,
                      BudgetController budgetController) {
         this.budgetController = budgetController;
-        this.ledgerCategoryController = ledgerCategoryController;
         this.transactionController = transactionController;
         this.userController = userController;
         this.reportController = reportController;
@@ -187,24 +184,6 @@ public class LedgerCLI {
         System.out.println("Ledger updated successfully.  New ledger name: " + selectedLedger.getName());
     }
 
-//    public void copyLedger(){
-//        System.out.println("\n === Copying a ledger ===");
-//
-//        //select ledger
-//        System.out.println("Select a ledger to copy:");
-//        Ledger selectedLedger = selectLedger();
-//        if(selectedLedger == null) {
-//            return;
-//        }
-//
-//        Ledger copiedLedger = ledgerController.copyLedger(selectedLedger, userController.getCurrentUser());
-//        if(copiedLedger != null) {
-//            System.out.println("Ledger copied successfully. New ledger name: " + copiedLedger.getName());
-//        } else {
-//            System.out.println("Failed to copy ledger.");
-//        }
-//    }
-
     public void deleteLedger() {
         System.out.println("\n === Deleting a ledger ===");
 
@@ -232,57 +211,6 @@ public class LedgerCLI {
         System.out.println("Ledger deleted successfully.");
         viewLedgers();
     }
-
-    public void showCategoryTree(){
-        System.out.println("\n === Ledger Category Tree ===");
-
-        //select ledger
-        System.out.println("Select a ledger to view its category tree:");
-        Ledger selectedLedger = selectLedger();
-        if(selectedLedger == null) {
-            return;
-        }
-
-        List<LedgerCategory> categories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger);
-        if(categories.isEmpty()) {
-            System.out.println("No categories found.");
-            return;
-        }
-        System.out.println("Category Tree for Ledger: " + selectedLedger.getName());
-
-        List<LedgerCategory> expenseRoot = categories.stream()
-                .filter(cat -> cat.getType() == CategoryType.EXPENSE)
-                .filter(cat -> cat.getParent() == null)
-                .toList();
-        List<LedgerCategory> incomeRoot = categories.stream()
-                .filter(cat -> cat.getType() == CategoryType.INCOME)
-                .filter(cat -> cat.getParent() == null)
-                .filter(cat -> !cat.getName().equalsIgnoreCase("Claim Income")) // Exclude "Claim Income" category
-                .toList();
-
-        System.out.println("Expense Categories:");
-        for(LedgerCategory root : expenseRoot) {
-            System.out.println(" Category Name: " + root.getName());
-            List<LedgerCategory> children = categories.stream()
-                    .filter(cat -> cat.getParent() != null && cat.getParent().getId() == root.getId())
-                    .toList();
-            for(LedgerCategory child : children) {
-                System.out.println("  SubCategory Name: " + child.getName());
-            }
-        }
-
-        System.out.println("Income Categories:");
-        for(LedgerCategory root : incomeRoot) {
-            System.out.println(" Category Name: " + root.getName());
-            List<LedgerCategory> children = categories.stream()
-                    .filter(cat -> cat.getParent() != null && cat.getParent().getId() == root.getId())
-                    .toList();
-            for(LedgerCategory child : children) {
-                System.out.println("  SubCategory Name: " + child.getName());
-            }
-        }
-    }
-
 
     //private helper method
     private String inputName(){
