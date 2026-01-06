@@ -1,8 +1,8 @@
 package com.ledger;
 
-import com.ledger.business.*;
-import com.ledger.cli.*;
-import com.ledger.orm.*;
+import com.ledger.BusinessLogic.*;
+import com.ledger.CLI.*;
+import com.ledger.ORM.*;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

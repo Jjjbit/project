@@ -1,9 +1,9 @@
-import com.ledger.business.AccountController;
-import com.ledger.business.LedgerController;
-import com.ledger.business.TransactionController;
-import com.ledger.business.UserController;
-import com.ledger.domain.*;
-import com.ledger.orm.*;
+import com.ledger.BusinessLogic.AccountController;
+import com.ledger.BusinessLogic.LedgerController;
+import com.ledger.BusinessLogic.TransactionController;
+import com.ledger.BusinessLogic.UserController;
+import com.ledger.DomainModel.*;
+import com.ledger.ORM.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

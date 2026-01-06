@@ -1,11 +1,11 @@
-import com.ledger.business.BudgetController;
-import com.ledger.business.LedgerController;
-import com.ledger.business.UserController;
-import com.ledger.domain.Budget;
-import com.ledger.domain.Ledger;
-import com.ledger.domain.LedgerCategory;
-import com.ledger.domain.Period;
-import com.ledger.orm.*;
+import com.ledger.BusinessLogic.BudgetController;
+import com.ledger.BusinessLogic.LedgerController;
+import com.ledger.BusinessLogic.UserController;
+import com.ledger.DomainModel.Budget;
+import com.ledger.DomainModel.Ledger;
+import com.ledger.DomainModel.LedgerCategory;
+import com.ledger.DomainModel.Period;
+import com.ledger.ORM.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

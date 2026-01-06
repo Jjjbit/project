@@ -1,0 +1,93 @@
+package com.ledger.DomainModel;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.YearMonth;
+
+public class Budget {
+
+    private long id;
+    private BigDecimal amount; // Budget amount
+    private Period period; //monthly, yearly
+    private LedgerCategory category; // Category or subcategory
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private Ledger ledger;
+
+    public Budget(){}
+    public Budget(BigDecimal amount, Period period, LedgerCategory category, Ledger ledger) {
+        this.ledger = ledger;
+        this.amount = amount;
+        this.period = period;
+        this.category = category;
+        this.startDate = calculateStartDateForPeriod(LocalDate.now(), this.period);
+        this.endDate = calculateEndDateForPeriod(this.startDate, this.period);
+    }
+    private LocalDate calculateStartDateForPeriod(LocalDate today, Period period) {
+        return switch (period) {
+            case YEARLY -> LocalDate.of(today.getYear(), 1, 1);
+            case MONTHLY -> LocalDate.of(today.getYear(), today.getMonth(), 1);
+        };
+    }
+    private LocalDate calculateEndDateForPeriod(LocalDate startDate, Period period) {
+        return switch (period) {
+            case YEARLY -> LocalDate.of(startDate.getYear(), 12, 31);
+            case MONTHLY -> YearMonth.from(startDate).atEndOfMonth();
+        };
+    }
+
+    public Ledger getLedger() {
+        return ledger;
+    }
+    public void setLedger(Ledger ledger) {
+        this.ledger = ledger;
+    }
+    public void setCategory(LedgerCategory category) {
+        this.category = category;
+    }
+    public LedgerCategory getCategory() {
+        return category;
+    }
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+    public long getId() {
+        return id;
+    }
+    public void setId(long id) {
+        this.id = id;
+    }
+    public BigDecimal getAmount() {
+        return amount;
+    }
+    public Period getPeriod() {
+        return period;
+    }
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+    public void setPeriod(Period period) {
+        this.period = period;
+    }
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void refreshIfExpired() {
+        LocalDate today = LocalDate.now();
+        if (today.isAfter(endDate)) {
+            amount = BigDecimal.ZERO; //reset amount
+            startDate = calculateStartDateForPeriod(today, period);
+            endDate = calculateEndDateForPeriod(startDate, period);
+        }
+    }
+
+}
+
+

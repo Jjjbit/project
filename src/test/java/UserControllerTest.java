@@ -1,7 +1,7 @@
-import com.ledger.business.UserController;
-import com.ledger.domain.User;
-import com.ledger.orm.ConnectionManager;
-import com.ledger.orm.UserDAO;
+import com.ledger.BusinessLogic.UserController;
+import com.ledger.DomainModel.User;
+import com.ledger.ORM.ConnectionManager;
+import com.ledger.ORM.UserDAO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

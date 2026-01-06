@@ -1,6 +1,6 @@
-import com.ledger.business.*;
-import com.ledger.domain.*;
-import com.ledger.orm.*;
+import com.ledger.BusinessLogic.*;
+import com.ledger.DomainModel.*;
+import com.ledger.ORM.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
