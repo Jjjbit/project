@@ -26,14 +26,6 @@ public class AccountCLI {
     public void createAccount() {
         System.out.println("\n=== Create New Account ===");
 
-        //choose account category
-//        AccountCategory category = selectAccountCategory();
-//        if (category == null) return;
-//
-//        //choose account type
-//        AccountType type = selectAccountType(category);
-//        if (type == null) return;
-
         //input common account details
         System.out.print("Enter account name: ");
         String name = inputAccountName();
@@ -106,7 +98,7 @@ public class AccountCLI {
         }
 
         //select included in net worth
-        String includeInNetWorthProm = accountToUpdate.getIncludedInAsset() ? "Current: included in net worth. " : "Current: not included in net worth. ";
+        String includeInNetWorthProm = accountToUpdate.getIncludedInAsset() ? "it is currently: included in net worth. " : "it is currently: not included in net worth. ";
         System.out.print(includeInNetWorthProm + "(press Enter to skip). Include in net worth? (y/n): ");
         String input = scanner.nextLine().trim().toLowerCase();
         boolean newIncludedInNetWorth = accountToUpdate.getIncludedInAsset();
@@ -119,7 +111,7 @@ public class AccountCLI {
         //update selectable and balance
         boolean newSelectable = accountToUpdate.getSelectable();
         BigDecimal newBalance;
-        System.out.print("it is: " + (accountToUpdate.getSelectable() ? "selectable." : "not selectable.") +
+        System.out.print("it is currently: " + (accountToUpdate.getSelectable() ? "selectable." : "not selectable.") +
                 " Do you want to set as selectable? (y/n, press Enter to skip): ");
         input = scanner.nextLine().trim().toLowerCase();
         if(input.equals("y") || input.equals("yes")) {
@@ -144,7 +136,6 @@ public class AccountCLI {
             return;
         }
         System.out.println("Account updated successfully: " + accountToUpdate.getName());
-
     }
 
     public void deleteAccount() {
@@ -231,7 +222,6 @@ public class AccountCLI {
             int month;
             String monthInput = scanner.nextLine().trim();
             if(!monthInput.isEmpty()){
-
                 month = Integer.parseInt(monthInput);
             if(month<1 || month>12){
                 System.out.println("Invalid month. Please enter a value between 1 and 12.");

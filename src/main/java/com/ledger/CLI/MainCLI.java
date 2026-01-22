@@ -283,7 +283,6 @@ public class MainCLI {
         switch (choice) {
             case "1":
                 userCLI.showCurrentUser();
-                //return;
                 break;
             case "2":
                 // change password

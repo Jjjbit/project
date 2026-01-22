@@ -562,9 +562,7 @@ public class TransactionCLI {
             return null;
         }
 
-        List<Account> accountsSelectable = accounts.stream()
-                .filter(Account::getSelectable)
-                .toList();
+        List<Account> accountsSelectable = accountController.getSelectableAccounts(userController.getCurrentUser());
 
         if (accountsSelectable.isEmpty()) {
             System.out.println("No selectable accounts found for the user.");

@@ -171,29 +171,11 @@ public class LedgerCategoryCLI {
             return;
         }
 
-        //select if delete transactions
-//        System.out.print("Are you sure you want to delete this category and all its associated transactions '" + categoryToDelete.getName() + "'? (y/n): ");
-//        String confirmation = scanner.nextLine().trim();
-//        if (confirmation.equalsIgnoreCase("yes") || confirmation.equalsIgnoreCase("y")) {
-            //delete category and delete transactions
         boolean success = ledgerCategoryController.deleteCategory(categoryToDelete);
         if (!success) {
             System.out.println("Failed to delete category.");
             return;
         }
-//        }else {
-//            //delete category and migrate transactions
-//            List<LedgerCategory> categories = ledgerCategoryController.getLedgerCategoryTreeByLedger(selectedLedger).stream()
-//                    .filter(cat -> cat.getId() != categoryToDelete.getId() && cat.getType() == categoryToDelete.getType())
-//                    .toList();
-//            System.out.println("Select a category to migrate transactions to:");
-//            LedgerCategory migrateCategory = selectCategoryWithTree(categories);
-//            boolean success = ledgerCategoryController.deleteCategory(categoryToDelete);
-//            if (!success) {
-//                System.out.println("Failed to delete category.");
-//                return;
-//            }
-//        }
         System.out.println("Category '" + categoryToDelete.getName() + "' deleted successfully.");
         printCategoryTree(selectedLedger);
     }
@@ -239,13 +221,6 @@ public class LedgerCategoryCLI {
             return;
         }
 
-        //select category type
-//        System.out.println("Enter the type of the category to demote: ");
-//        String categoryTypeInput = selectCategoryType();
-//        CategoryType categoryType = categoryTypeInput.equalsIgnoreCase("INCOME") ?
-//                CategoryType.INCOME : CategoryType.EXPENSE;
-
-        //select category
         List<LedgerCategory> allCategories = ledgerCategoryController.getCategoryTreeByLedger(selectedLedger).stream()
                 .filter(cat -> cat.getParent() == null)
                 .toList();
@@ -349,7 +324,6 @@ public class LedgerCategoryCLI {
         List<LedgerCategory> incomeRoot = categories.stream()
                 .filter(cat -> cat.getType() == CategoryType.INCOME)
                 .filter(cat -> cat.getParent() == null)
-                .filter(cat -> !cat.getName().equalsIgnoreCase("Claim Income")) // Exclude "Claim Income" category
                 .toList();
 
         System.out.println("Expense Categories:");
